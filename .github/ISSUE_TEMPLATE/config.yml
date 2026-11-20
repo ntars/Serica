@@ -1,0 +1,10 @@
+# SPDX-License-Identifier: MIT
+# Copyright (c) 2026 行简（Serica）贡献者
+blank_issues_enabled: false
+contact_links:
+  - name: 安全漏洞
+    url: https://github.com/ntars/Serica/security/advisories/new
+    about: 请勿在公开 Issue 中披露未修复漏洞，改用私有安全报告。
+  - name: 先读开发手册与阶段清单
+    url: https://github.com/ntars/Serica/blob/main/docs/roadmap/p0b-p1b.md
+    about: 提问前先确认该事项是否已在阶段清单或决策记录中处理。

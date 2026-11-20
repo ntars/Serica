@@ -1,0 +1,12 @@
+# SPDX-License-Identifier: MIT
+# Copyright (c) 2026 行简（Serica）贡献者
+/build/
+/.cache/
+/.venv/
+/.toolchain/
+/vendor/
+/node_modules/
+/toolchains/
+/sdk/
+/third_party/
+.DS_Store

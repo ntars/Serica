@@ -1,0 +1,22 @@
+#!/bin/sh
+# SPDX-License-Identifier: Apache-2.0
+# Copyright (c) 2026 行简（Serica）贡献者
+set -eu
+root=$(CDPATH= cd -- "$(dirname -- "$0")/.." && pwd)
+cd "$root"
+GO=${GO:-go}
+go_bin="${HOME:-}/.local/go1.27.4/bin"
+if [ -x "$go_bin/go" ]; then PATH="$go_bin:$PATH"; export PATH; fi
+if [ "$("$GO" version | awk '{print $3}')" != "go1.27.4" ]; then
+  echo "需要 go1.27.4" >&2
+  exit 1
+fi
+test -d "$(xcrun --show-sdk-path)" || { echo "缺少 Xcode Command Line Tools SDK" >&2; exit 1; }
+test -f "/System/Library/Fonts/Hiragino Sans GB.ttc" || { echo "缺少系统 CJK 字体" >&2; exit 1; }
+bad_dirs=$(find . -path './.git' -prune -o -type d \( -name vendor -o -name node_modules -o -name .toolchain -o -name toolchains -o -name sdk -o -name third_party -o -name .venv \) -print)
+test -z "$bad_dirs" || { printf '仓库内存在依赖副本目录：\n%s\n' "$bad_dirs" >&2; exit 1; }
+mkdir -p build
+GO111MODULE=off GOPROXY=off CGO_ENABLED=1 "$GO" build -o build/punct-scan bootstrap/tools/punct_scan.go
+build/punct-scan bootstrap/archive/prototype-3.8/lexical.serica
+"$GO" env GOMODCACHE GOCACHE GOBIN | python3 -c 'import os,sys; root=os.path.realpath("."); vals=[x.strip() for x in sys.stdin]; vals += [os.environ.get("PIP_CACHE_DIR") or os.path.expanduser("~/Library/Caches/pip")]; bad=[v for v in vals if v and os.path.commonpath((root,os.path.realpath(v))) == root]; print("依赖缓存路径：", "失败" if bad else "通过"); [print("仓库内路径：", v) for v in bad]; raise SystemExit(bool(bad))'
+echo "环境自检：通过"

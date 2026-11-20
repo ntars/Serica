@@ -1,0 +1,9 @@
+# SPDX-License-Identifier: MIT
+# Copyright (c) 2026 行简（Serica）贡献者
+常量 姓=『行』。
+常量 名=『简』。
+常量 全名=姓+名。
+常量 起点=bitAnd（3，2）。
+常量 终点=bitOr（0，bitXor（4，1））。
+窗口=【标题=『行简 P1b 常量引用』，文本=ifElse（equals（全名，『行简』），
+substring（全名+『语言表达力』，起点，终点）+『可解析』，『常量比较失败』）】。

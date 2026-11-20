@@ -1,0 +1,3 @@
+# SPDX-License-Identifier: MIT
+# Copyright (c) 2026 行简（Serica）贡献者
+窗口=【标题=『位运算参数诊断』，文本=substring（『行简语言』，bitAnd（1），3）】。

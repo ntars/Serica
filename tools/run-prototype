@@ -1,0 +1,19 @@
+#!/bin/sh
+# SPDX-License-Identifier: Apache-2.0
+# Copyright (c) 2026 行简（Serica）贡献者
+set -eu
+root=$(CDPATH= cd -- "$(dirname -- "$0")/.." && pwd)
+cd "$root"
+GO=${GO:-go}
+go_bin="${HOME:-}/.local/go1.27.4/bin"
+if [ -x "$go_bin/go" ]; then PATH="$go_bin:$PATH"; export PATH; fi
+mkdir -p build
+GO111MODULE=off GOPROXY=off CGO_ENABLED=1 "$GO" build -o build/prototype ./bootstrap/archive/prototype-3.8
+fixture_link=bootstrap/prototype
+if [ -e "$fixture_link" ] || [ -L "$fixture_link" ]; then
+  echo "原型兼容路径已存在：$fixture_link" >&2
+  exit 1
+fi
+ln -s archive/prototype-3.8 "$fixture_link"
+trap 'rm -f "$fixture_link"' EXIT HUP INT TERM
+./build/prototype --window

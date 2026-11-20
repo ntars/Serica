@@ -1,0 +1,140 @@
+{
+  "decisions": [
+    {
+      "id": "D-0006",
+      "title": "设计原点与反套壳边界",
+      "decision": "多端同步应用是首要动机；中文是表达媒介，不是差异点。",
+      "check": "每个差异特性执行双向关键字替换测试，并给出模块证据。",
+      "status": "settled",
+      "source": "docs/decisions/0006-anti-shell-and-differentiation.md"
+    },
+    {
+      "id": "D-0007",
+      "title": "自举路线与零依赖定义",
+      "decision": "stage0 至 stage3 分阶段；完全独立要求源码、链接、构建三层全过。",
+      "check": "stage2 与 stage3 四段归一化比较；执行附录 K 命令。",
+      "status": "settled",
+      "source": "docs/decisions/0007-self-hosting-and-zero-dependency.md"
+    },
+    {
+      "id": "D-0008",
+      "title": "反套壳执行与产物判定",
+      "decision": "禁止转译、透传、复用他语言实现及外部工具生成行简产物；仅 bootstrap 种子例外。",
+      "check": "tools/check-independence source；核对依赖登记与产物格式。",
+      "status": "settled",
+      "source": "docs/decisions/0008-anti-shell-enforcement.md"
+    },
+    {
+      "id": "D-0009",
+      "title": "种子语言选用 Go",
+      "decision": "种子主选 Go，使用 go1.27.4；原型三项实测是 P0b 启动门槛。",
+      "check": "make prototype；中文词法、直接产出可执行文件、CoreText 中文窗口均有命令与截图证据。",
+      "status": "settled",
+      "source": "docs/decisions/0009-seed-language-is-go.md"
+    },
+    {
+      "id": "D-0010",
+      "title": "AI 驱动治理与证据等级",
+      "decision": "要求转成机器事实；决策快照、交叉审计和证据等级按手册执行。",
+      "check": "逐项核对 DECISIONS.json；零知识检查记录命令与期望输出。",
+      "status": "settled",
+      "source": "docs/decisions/0010-ai-driven-governance.md"
+    },
+    {
+      "id": "D-0011",
+      "title": "可视化编辑是 AST 编辑视图",
+      "decision": "P6b 可视化编辑等价 .serica AST 文本，能力声明显式，不产出黑盒资源。",
+      "check": "源码导出／回读、双向同步、相同类型与能力检查、无二进制 UI 资源。",
+      "status": "settled",
+      "source": "docs/decisions/0011-visual-editing-is-ast-view.md"
+    },
+    {
+      "id": "D-0012",
+      "title": "语法符号与标准库命名",
+      "decision": "T-2/T-9 冻结中性现代中文关键字、全角符号表；标准库 API 使用英文。",
+      "check": "punct-scan／serica lex 检查 NFC、半角标点与禁用字符。",
+      "status": "settled",
+      "source": "docs/decisions/0012-syntax-symbols-and-stdlib-naming.md"
+    },
+    {
+      "id": "D-0013-T10-TRADEMARK",
+      "title": "行简／Serica 商标检索",
+      "decision": "未核；不得宣称名称已注册。",
+      "check": "首个对外发布前完成法务检索并记录日期与范围。",
+      "status": "pending",
+      "source": "docs/decisions/0013-open-items-closure.md"
+    },
+    {
+      "id": "D-0013-T12-LEGAL",
+      "title": "运行时链接例外法务复核",
+      "decision": "首个对外 release 前复核。",
+      "check": "记录法务复核结论；发布前阻断。",
+      "status": "pending",
+      "source": "docs/decisions/0013-open-items-closure.md"
+    },
+    {
+      "id": "D-0014",
+      "title": "P0b 最小源程序子集",
+      "decision": "stage0 先实现受限通用记录值语法，以标题和文本字段驱动最小窗口程序。",
+      "check": "build 示例并验收原生可执行产物、中文显示与点击改字。",
+      "status": "settled",
+      "source": "docs/decisions/0014-p0b-source-subset.md"
+    },
+    {
+      "id": "D-0015",
+      "title": "P1b 字符串拼接起步语义",
+      "decision": "ASCII + 左结合连接字符串；stage0 编译期求值常量拼接。",
+      "check": "检查 P1b 示例并构建含拼接结果的原生产物。",
+      "status": "settled",
+      "source": "docs/decisions/0015-p1b-string-concatenation.md"
+    },
+    {
+      "id": "D-0016",
+      "title": "P1b 字符串切片语义",
+      "decision": "substring 使用 Unicode 码位零起始、半开区间；stage0 对常量求值。",
+      "check": "检查切片与拼接示例，核对结果字符串进入原生产物。",
+      "status": "settled",
+      "source": "docs/decisions/0016-p1b-string-slicing.md"
+    },
+    {
+      "id": "D-0017",
+      "title": "P1b 字符串相等与常量分支",
+      "decision": "equals 比较码位序列；ifElse 根据 equals 结果选择常量字符串。",
+      "check": "检查包含切片、相等比较和常量分支的示例及其 Mach-O 产物。",
+      "status": "settled",
+      "source": "docs/decisions/0017-p1b-string-equality-and-selection.md"
+    },
+    {
+      "id": "D-0018",
+      "title": "P1b 整数常量索引加法",
+      "decision": "初始版本支持 substring 索引的非负整数常量加法；D-0021 扩展为有符号 64 位编译期算术。",
+      "check": "检查 1+1 与 2+3 索引示例，并验证最大有符号整数加一返回溢出诊断。",
+      "status": "settled",
+      "source": "docs/decisions/0018-p1b-integer-constant-addition.md"
+    },
+    {
+      "id": "D-0019",
+      "title": "P1b 常量位运算子集",
+      "decision": "初始版本支持非负整数常量位函数；D-0021 扩展为有符号 64 位补码位运算。",
+      "check": "用嵌套位函数构建含结果字符串的 Mach-O，并验证错误参数返回 S-3021。",
+      "status": "settled",
+      "source": "docs/decisions/0019-p1b-constant-bitwise-operations.md"
+    },
+    {
+      "id": "D-0020",
+      "title": "P1b 不可变常量绑定与引用",
+      "decision": "支持窗口根绑定前的顶层中文常量；只解析先前声明项，按表达式推断字符串或整数类型并在编译期求值。",
+      "check": "常量引用正例进入 Mach-O；重复、前向/未定义引用和混合类型分别返回预期诊断。",
+      "status": "settled",
+      "source": "docs/decisions/0020-p1b-immutable-constant-bindings.md"
+    },
+    {
+      "id": "D-0021",
+      "title": "P1b 有符号整数常量算术",
+      "decision": "编译期支持有符号 64 位整数的一元负号、分组、加减乘除及补码位运算；检查溢出与除零。",
+      "check": "算术正例进入 Mach-O；乘法/除法/取负溢出、除零和类型错误返回预期诊断。",
+      "status": "settled",
+      "source": "docs/decisions/0021-p1b-signed-integer-constant-arithmetic.md"
+    }
+  ]
+}

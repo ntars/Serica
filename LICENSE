@@ -1,0 +1,18 @@
+<!-- SPDX-License-Identifier: MIT -->
+<!-- Copyright (c) 2026 行简（Serica）贡献者 -->
+
+# 许可入口
+
+本文件不是授权书。行简不采用「一份许可全文覆盖全仓库」的方式，而按目录分层授权；**任何情况下都不要把本文件当作许可全文引用**。
+
+| 范围 | 许可 | 原文 |
+| --- | --- | --- |
+| `docs/`、`README.md`、`examples/`、`tutorial/`、`tests/` | MIT | [LICENSES/MIT.txt](LICENSES/MIT.txt) |
+| `editors/`、`bindings/`、`templates/`、`website/` | MIT | [LICENSES/MIT.txt](LICENSES/MIT.txt) |
+| `compiler/`、`runtime/`、`stdlib/`、`ui/`、`tools/` | Apache-2.0 | [LICENSES/Apache-2.0.txt](LICENSES/Apache-2.0.txt) |
+| `bootstrap/` | Apache-2.0 | [LICENSES/Apache-2.0.txt](LICENSES/Apache-2.0.txt) |
+| 用户程序链接 `stdlib/` 与 `runtime/` 的产物 | 运行时链接例外 | [LICENSES/Serica-Runtime-Exception.txt](LICENSES/Serica-Runtime-Exception.txt) |
+
+机器可读的目录级映射见 [REUSE.toml](REUSE.toml)；一页人话说明见 [LICENSING.md](LICENSING.md)；第三方归属声明见 [NOTICE](NOTICE)。
+
+不设 `MIT OR Apache-2.0` 双许可，也不设贡献者许可协议（CLA）。
