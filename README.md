@@ -6,7 +6,7 @@
 [![当前阶段](https://img.shields.io/badge/%E9%98%B6%E6%AE%B5-P1b%20pre--alpha-yellow?style=flat-square)](#兼容性说明)
 [![已验证平台](https://img.shields.io/badge/%E5%B9%B3%E5%8F%B0-macOS%20arm64-lightgrey?style=flat-square)](#兼容性说明)
 [![许可](https://img.shields.io/badge/%E8%AE%B8%E5%8F%AF-MIT%20%2B%20Apache--2.0-blue?style=flat-square)](./LICENSING.md)
-[![种子规模](https://img.shields.io/badge/%E7%A7%8D%E5%AD%90-1749%2F5000%20%E8%A1%8C-informational?style=flat-square)](#设计细节与工程取舍)
+[![种子规模](https://img.shields.io/badge/%E7%A7%8D%E5%AD%90-1928%2F5000%20%E8%A1%8C-informational?style=flat-square)](#设计细节与工程取舍)
 
 # 行简（Serica）
 
@@ -40,7 +40,7 @@
 
 **不适用场景**
 
-- 写任何需要交付的软件：当前没有可变变量、容器、文件与网络 IO、模块导入，也没有标准库。
+- 写任何需要交付的软件：当前没有可变变量、动态容器、文件与网络 IO、模块导入，也没有完整标准库；仅有编译期常量数组子集。
 - 需要成熟生态与第三方库的项目：包管理器只有决策，没有实现。
 - 复杂中文文本排版：字符串语义是 Unicode 码位，用户感知字符（grapheme cluster）边界尚未定义。
 
@@ -53,7 +53,7 @@
 | 产物是原生可执行文件 | 种子直接写出 Mach-O，不生成 C，不调用 LLVM、汇编器或链接器 | `file build/p0b-window` 输出 `Mach-O 64-bit executable arm64`；`make doctor` 与 `tools/check-independence source` 通过 |
 | 构建可复现 | 相同源码写入相同路径，重复签名构建字节一致 | 2026-11-20 实测 SHA-256 `40513babb5cc02d69e49ebdbb6e73ab0c571d5802d3d44137fee290d7d9f878f` |
 | 中文标注位置双报 | 诊断同时给码位列与显示列，全角字符不再让列号错位 | `build/stage0/serica check examples/diagnostics/p1b-bitwise-arity.serica` 输出 `第 3 行第 38 列（显示第 55 格）` |
-| 种子不可悄悄做大 | 5000 行上限、逐行归因表、P3b 自举后整目录删除 | `find bootstrap -path 'bootstrap/archive' -prune -o -name '*.go' -type f -print0 \| xargs -0 wc -l` 当前 1749 行 |
+| 种子不可悄悄做大 | 5000 行上限、逐行归因表、P3b 自举后整目录删除 | `find bootstrap -path 'bootstrap/archive' -prune -o -name '*.go' -type f -print0 \| xargs -0 wc -l` 当前 1928 行 |
 
 **局限**
 
@@ -69,7 +69,7 @@
 - **词法分析（`serica lex`）**：输入 `.serica` 源码，输出标识符、关键字、普通字符串 `『』`、原始字符串 `「」` 与符号 token；`--stats` 输出统计而不逐条打印。
 - **结构检查（`serica check`）**：解析记录值语法并做窗口字段语义检查，通过时打印 `源程序结构：通过`，失败返回非零退出与四段式诊断。
 - **原生构建（`serica build <源码> -o <产物>`）**：从常量求值结果提取窗口标题与文本，直接写出 macOS arm64 Mach-O，调用系统 `codesign` 做 ad-hoc 签名，输出 `已生成 macOS arm64 程序：<路径>`。
-- **编译期常量求值**：字符串拼接 `+`、码位切片 `substring`、相等比较 `equals`、常量分支 `ifElse`、有符号整数加减乘除（乘除优先、左结合、除法向零截断）与一元负号、位运算 `bitAnd`/`bitOr`/`bitXor`、顶层不可变常量声明与引用。
+- **编译期常量求值**：字符串拼接 `+`、码位切片 `substring`、相等比较 `equals`、常量分支 `ifElse`、有符号整数加减乘除（乘除优先、左结合、除法向零截断）与一元负号、位运算 `bitAnd`/`bitOr`/`bitXor`、同类型字符串/整数常量数组 `array`、零起始 `arrayGet`/`arrayLength`、顶层不可变常量声明与引用。
 - **代码区标点检查（`build/punct-scan`）**：断言源码为 NFC、代码区无半角 `, ; : ( )`、无 U+3000 与零宽字符，输出 `NFC=true 半角标点=0 禁用字符=0`。
 - **独立性检查（`tools/check-independence source`）**：核对源码级独立，禁止把其他语言的实现转译或透传进行简产物。
 - **环境自检（`make doctor`）**：断言 Go 精确版本、系统 SDK、CJK 字体、`punct-scan` 可执行，以及 Go 与 Python 缓存路径均落在仓库之外。
@@ -109,7 +109,7 @@
 - **价值**：自举项目最常见的失败方式是种子越长越像正式实现，最后没人敢删，「零依赖」变成永久口号。
 - **实现方式**：种子只能位于 `bootstrap/`，不超过 5000 行；Go 只按「带 GC 的 C」使用（禁接口、泛型、goroutine、channel、反射、`init`、第三方包）；每个实现行登记在 [docs/build/seed-attribution.md](docs/build/seed-attribution.md)；P3b 自举不动点达成后删除整个目录。
 - **差异化**：删除条件写在仓库里，并配行数与归因的机器计数命令，不靠自觉。
-- **证据**：`find bootstrap -path 'bootstrap/archive' -prune -o -name '*.go' -type f -print0 | xargs -0 wc -l` 当前 1749 行，上限 5000；档位与删除条件见 [docs/build/module-tier-map.md](docs/build/module-tier-map.md)。
+- **证据**：`find bootstrap -path 'bootstrap/archive' -prune -o -name '*.go' -type f -print0 | xargs -0 wc -l` 当前 1928 行，上限 5000；档位与删除条件见 [docs/build/module-tier-map.md](docs/build/module-tier-map.md)。
 
 ## 设计细节与工程取舍
 
@@ -350,7 +350,7 @@ Serica/
 - **瓶颈分析**：未测。已知的结构性约束是常量求值在编译期完成，产物不含运行时求值开销；窗口渲染走系统 AppKit，性能由平台决定。
 - **调优建议**：P1b 阶段门通过前不做性能工作，避免用未定型的实现得出误导性数字。
 
-可复核的量化事实只有两条：活动种子 1749 行（上限 5000）；示例产物为 macOS arm64 Mach-O。
+可复核的量化事实只有两条：活动种子 1928 行（上限 5000）；示例产物为 macOS arm64 Mach-O。
 
 ## 安全与隐私
 
@@ -386,16 +386,16 @@ Serica/
 
 **当前限制**
 
-语言只有受限记录值语法：唯一根节点是 `窗口`，字段只有 `标题` 与 `文本`；没有可变变量、函数、容器、IO、模块导入；所有表达式在编译期求值成常量；字符串语义是 Unicode 码位，未定义用户感知字符边界。
+当前程序仍以唯一 `窗口` 根记录为入口，字段只有 `标题` 与 `文本`；表达式只在编译期求值。已有不可变常量与一维数组子集，尚无用户定义函数、可变变量、动态容器、IO、模块导入；字符串语义按 Unicode 码位处理，未定义用户感知字符边界。
 
 **未实现功能**
 
 | 功能 | 未实现原因 | 计划状态 |
 | --- | --- | --- |
 | 运行时字符串表示与可变变量 | 运行时尚未起步，先验证语法表达力 | P1b 后续 |
-| 动态数组、映射与迭代 | 同上 | P2b |
-| 文件与进程 IO、错误传播 | 同上 | P2b |
-| 模块导入与名称解析 | 同上 | P2b |
+| 动态数组、映射与迭代 | 目前只有编译期不可变数组子集 | P1b 阶段门 |
+| 文件与进程 IO、错误传播 | 运行时与标准库尚未起步 | P1b 阶段门 |
+| 模块导入与名称解析 | 编译器前端尚未实现模块边界 | P1b 阶段门 |
 | `serica fmt`／`lint`／`doc` | 依赖完整词法前端 | P4b |
 | stage1 至 stage3 自举 | 需先达到「能表达并实现自身编译器」 | P3b |
 | 包管理器 `serica add`／`remove`／`update`／`list` | 只有决策，无实现 | P6b 前 |
@@ -413,9 +413,9 @@ Serica/
 | --- | --- | --- |
 | 运行时字符串、可变变量与运行时比较 | 未开始 | P1b 阶段门 |
 | 完整 64 位整数语义与运行时位运算 | 部分完成（常量子集） | P1b 阶段门 |
-| 动态数组、映射、迭代与更新规则 | 未开始 | P2b |
-| 文件与进程 IO、错误返回与传播 | 未开始 | P2b |
-| 模块导入与可重复构建顺序 | 未开始 | P2b |
+| 动态数组、映射、迭代与更新规则 | 部分完成（编译期不可变数组子集） | P1b 阶段门 |
+| 文件与进程 IO、错误返回与传播 | 未开始 | P1b 阶段门 |
+| 模块导入与可重复构建顺序 | 未开始 | P1b 阶段门 |
 | 用行简实现编译器前端与后端基础 | 未开始 | P3b |
 | stage2 与 stage3 四段归一化一致，删除 `bootstrap/` | 未开始 | P3b |
 | `serica fmt`／`lint`／`doc` 接管工具链 | 未开始 | P4b |
@@ -439,7 +439,9 @@ Serica/
 
 Copyright © 2026 行简（Serica）贡献者. Licensed under MIT（规范层与生态层）与 Apache-2.0（核心层与种子层）.
 
-本项目采用分层许可，不设双许可：规范层（`docs/`、`README.md`、`examples/`、`tutorial/`、`tests/`）与生态层（`editors/`、`bindings/`、`templates/`、`website/`）为 MIT；核心层（`compiler/`、`runtime/`、`stdlib/`、`ui/`、`tools/`）与种子层（`bootstrap/`）为 Apache-2.0。原文见 [LICENSES/MIT.txt](LICENSES/MIT.txt) 与 [LICENSES/Apache-2.0.txt](LICENSES/Apache-2.0.txt)，指针见 [LICENSE-MIT](LICENSE-MIT) 与 [LICENSE-APACHE](LICENSE-APACHE)，人话说明见 [LICENSING.md](LICENSING.md)。
+本项目采用分层许可，不设双许可：规范层（`docs/`、`README.md`、`examples/`、`tutorial/`、`tests/`）与生态层（`editors/`、`bindings/`、`templates/`、`website/`）为 MIT；核心层（`compiler/`、`runtime/`、`stdlib/`、`ui/`、`tools/`）与种子层（`bootstrap/`）为 Apache-2.0。原文见 [LICENSE](./LICENSE)（Apache-2.0）与 [LICENSE-MIT](./LICENSE-MIT)（MIT），逐目录映射见 [REUSE.toml](./REUSE.toml)，人话说明见 [LICENSING.md](./LICENSING.md)。
+
+GitHub 仓库侧栏只显示一份许可，因此显示 Apache-2.0：这是四层中义务最重的一份，按它理解整个仓库只会多守义务，不会少守；规范层的 MIT 不影响文档引用、翻译与转载。`LICENSE`、`LICENSE-MIT` 与 `LICENSES/` 下的同名原文**字符级一致**，可用 `make license` 校验，防止两份副本各自漂移。
 
 用户程序经官方工具链链接 `stdlib/` 与 `runtime/` 产生的产物，受[运行时链接例外](LICENSES/Serica-Runtime-Exception.txt)覆盖：分发时无需附带本项目 `NOTICE`、无需提供本项目源码。该例外不覆盖对标准库源码本身的修改，且仍须在首个对外 release 前完成法务复核。
 

@@ -13,3 +13,14 @@ SPDX-FileCopyrightText = "2026 行简（Serica）贡献者"
 path = ["Makefile", "compiler/**", "runtime/**", "stdlib/**", "ui/**", "tools/**", "bootstrap/**"]
 SPDX-License-Identifier = "Apache-2.0"
 SPDX-FileCopyrightText = "2026 行简（Serica）贡献者"
+
+# 根目录许可原文是 LICENSES/ 的逐字节副本，供平台与读者直接取用，不加文件头。
+[[annotations]]
+path = ["LICENSE"]
+SPDX-License-Identifier = "Apache-2.0"
+SPDX-FileCopyrightText = "2026 行简（Serica）贡献者"
+
+[[annotations]]
+path = ["LICENSE-MIT"]
+SPDX-License-Identifier = "MIT"
+SPDX-FileCopyrightText = "2026 行简（Serica）贡献者"

@@ -3,7 +3,7 @@
 
 # 许可说明
 
-行简分四层：规范层与生态层采用 MIT；核心层与种子层采用 Apache-2.0。完整许可原文在 `LICENSES/`，目录级映射在 `REUSE.toml`，入口指针见 `LICENSE`。
+行简分四层：规范层与生态层采用 MIT；核心层与种子层采用 Apache-2.0。完整许可原文在仓库根目录的 `LICENSE`（Apache-2.0）与 `LICENSE-MIT`（MIT），`LICENSES/` 下是同一批原文的 REUSE 副本，目录级映射在 `REUSE.toml`。
 
 | 层 | 目录 | 许可 |
 |---|---|---|
@@ -15,6 +15,20 @@
 用户程序链接行简 `runtime/` 或 `stdlib/` 的例外文本见 `LICENSES/Serica-Runtime-Exception.txt`。该例外不覆盖行简源码的修改、嵌入或单独再分发，也不授予商标权。它在首个对外 release 前仍须法务复核。
 
 第三方依赖保留各自原许可，必须登记、经过许可白名单检查，并进入 `DEPENDENCIES.md`、`NOTICE` 与 `REUSE.toml`。
+
+## GitHub 上显示的是哪一份
+
+GitHub 侧栏只显示一份许可，因此本仓库显示 **Apache-2.0**：
+
+- `LICENSE` 放 Apache-2.0 全文，`LICENSE-MIT` 放 MIT 全文，两者都是可直接识别的一手原文，不放「见某文件」这类指针——指针会让平台识别失败，只显示 Other。
+- 显示义务最重的那一份（Apache-2.0）是安全方向：按它理解整个仓库只会多守义务；若反过来显示 MIT，而 `compiler/` 实际是 Apache-2.0，读者会漏掉 `NOTICE` 与专利条款。
+- 规范层的 MIT 仍然是 MIT：文档照旧可以自由引用、翻译、转载，不需要署名。侧栏显示什么，不改变目录级的授权。
+
+校验两份原文没有各自漂移：
+
+```bash
+make license
+```
 
 ## 常见问题
 
