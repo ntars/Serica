@@ -9,14 +9,16 @@
 
 ## [未发布]
 
+### 移除
+
+- 撤回 Go 种子中的 P1b 语言扩展（字符串拼接、切片、相等与常量分支、整数常量四则运算、位运算、顶层不可变常量、常量数组、静态模块导入）。依据 D-0025「严格执行种子冻结与全阶段门」，这些扩展违反手册 §3.7 与 §4.6 对种子的约束，不能计为阶段验收。活动 `bootstrap/` 现仅处理 P0b 窗口记录子集；`examples/` 中对应的 P1b 样例与 `docs/spec/modules.md` 保留为目标资料，**不表示功能已实现**，`build/stage0/serica check` 对它们返回 `S-2001`／`S-2002`。历史决策 D-0022／D-0023／D-0024 保留用于追溯，不再有效。
+
 ### 新增
 
-- P1b-06 顶层不可变常量声明与引用：`常量 中文名=表达式。`，声明须位于 `窗口` 根绑定之前，字符串与整数按表达式推断类型；仅允许引用此前声明的常量。重复名、前向引用、未定义引用与混合类型加法分别给出诊断。证据：`examples/p1b-constants.serica` 构建产物含「语言表可解析」。
-- P1b-05 常量位运算子集：二元 `bitAnd`、`bitOr`、`bitXor`，允许嵌套与左结合 `+` 组合，结果可供切片索引使用。证据：`examples/p1b-bitwise.serica`；参数错误返回 `S-3021`。
-- P1b-04 有符号 64 位整数常量四则运算：`+`、`-`、`*`、`/`、一元负号与全角括号分组；乘除优先于加减，同级左结合，除法向零截断。溢出返回 `S-3018`，除零返回 `S-3024`，类型不匹配返回 `S-3023`。证据：`examples/p1b-integer-arithmetic.serica`。
-- P1b-03 字符串相等与常量分支：`equals` 比较码位序列，`ifElse` 依据比较结果选择常量字符串，不做隐式 Unicode 规范化。证据：`examples/p1b-string-equality.serica`。
-- P1b-02 字符串切片：`substring` 使用 Unicode 码位零起始、左闭右开区间；参数个数、类型与越界分别返回 `S-3011`、`S-3012`、`S-3013`。证据：`examples/p1b-string-slice.serica`。
-- P1b-01 字符串字面量拼接：表达式 AST 支持左结合 ASCII `+`，仅接受字符串与字符串拼接。证据：`examples/p1b-string-concat.serica`。
+- `make seed-audit`（`tools/check_seed_subset.py`）：断言 Go 种子只用允许的子集与标准库导入，并核对 `docs/build/seed-attribution.md` 归因完整；已并入 `make doctor`。
+- `make test-p0b-scope`（`tools/test_p0b_scope.py`）：断言 P0b 正例通过、缺必填字段返回 `S-3006`，且 5 类代表性 P1b 形式仍被 stage0 拒绝，防止种子边界悄悄回退。
+- `docs/roadmap/p0b-p6b.md`：P0b–P6b 全阶段清单与硬门，替代只在 P0b／P1b 内讨论的阶段判定。
+- `docs/spec/modules.md`、`docs/decisions/0023`–`0025`：模块语法规范（目标设计）与种子冻结、模块语义、种子阶段例外的决策记录。
 
 ### 变更
 
@@ -26,13 +28,14 @@
 
 ### 说明
 
-- 分阶段记录以 `docs/roadmap/p0b-p1b.md` 为准；本文件只保留行为级变更，不复述验收项。
+- 分阶段记录以 `docs/roadmap/p0b-p6b.md` 为准；本文件只保留行为级变更，不复述验收项。
+- 当前阶段为 pre-alpha：P0b 已通过，P1b 未通过。仓库尚无能表达并实现自身编译器的路径与证据，不得据本文件推断语言可用性。
 
 ## [P0b] - 2026-11-20（阶段标记，非版本号）
 
 ### 新增
 
-- stage0 种子编译器：位置化词法器、受限记录值 AST 与手写递归下降解析器、窗口字段语义检查、`lex`／`check`／`build` 三个子命令。证据：`bootstrap/` 当前 1749 行，上限 5000。
+- stage0 种子编译器：位置化词法器、受限记录值 AST 与手写递归下降解析器、窗口字段语义检查、`lex`／`check`／`build` 三个子命令。证据：`make seed-audit` 报 `8 个活动源码文件，1237 行`，上限 5000。
 - 原生产物路径：直接写出 macOS arm64 Mach-O，不生成 C，不调用 LLVM、汇编器或链接器；仅使用系统 `codesign` 做 ad-hoc 签名。证据：`file build/p0b-window` 输出 `Mach-O 64-bit executable arm64`。
 - 最小窗口与中文渲染：产物打开原生窗口显示「行简 P0b」与「点击这里编辑中文」，`NSTextView` 可接受键盘输入。窗口与文本使用已登记的 AppKit／Foundation／libobjc 通道，档位 `[B]` 过渡。
 - 可复现构建：相同源码写入相同路径，重复签名构建字节一致；SHA-256 `40513babb5cc02d69e49ebdbb6e73ab0c571d5802d3d44137fee290d7d9f878f`。

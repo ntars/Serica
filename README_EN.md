@@ -323,6 +323,7 @@ The planned `compiler/`, `runtime/`, `stdlib/`, `ui/`, `editors/`, `bindings/`, 
 - [Lexical symbol table](docs/spec/lexical.md): the frozen fullwidth symbols, code points and forbidden characters.
 - [Editor setup](docs/spec/editor-setup.md): encoding, indentation and CJK monospace font requirements.
 - [Platform support matrix](docs/spec/platform-matrix.md): entry thresholds and non-promises for seven platforms.
+- [Module grammar spec](docs/spec/modules.md): target design; the active stage0 parses only the P0b subset and does not implement imports yet.
 - [Zero-knowledge check commands](docs/build/zero-knowledge-checks.md): a re-runnable command and expected output for each claim.
 - [Module tier map](docs/build/module-tier-map.md): each module's tier, why it cannot be removed, and its deletion condition.
 - [Full stage list](docs/roadmap/p0b-p6b.md): stage gates P0b through P6b, current status and re-runnable evidence.
