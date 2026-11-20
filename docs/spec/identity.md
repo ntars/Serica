@@ -11,7 +11,7 @@
 | 英文名 | Serica；仅在五类指定场合使用 |
 | 名称出处 | 中文名出自《论语·雍也》“居敬而行简，以临其民，不亦可乎？”；英文名取自古罗马对中国的称呼 |
 | 中英文并写 | 行简（Serica） |
-| 仓库 | `ntars/Serica`；截至手册记录日尚未创建 |
+| 仓库 | `ntars/Serica`；2026-11-20 已创建（私有），默认分支 `main` |
 | 包名 | `serica`，全小写 |
 | 命令入口 | `serica` |
 | 源码扩展名 | `.serica` |
@@ -46,4 +46,4 @@
 
 ## 名称与标识可用性（手册记录：2026-11-20）
 
-手册记录：GitHub 账号 `ntars` 存在，`ntars/Serica` 当日为 404；npm 与 PyPI 的 `serica` 当日未占用；crates.io 的 `serica` 已被占用，Rust 绑定名固定为 `serica-lang`。商标可注册性与 `.serica` 扩展名占用未核。发布前须重查可用性并记录日期。
+手册记录：GitHub 账号 `ntars` 存在，`ntars/Serica` 当日为 404，已于 2026-11-20 建仓；npm 与 PyPI 的 `serica` 当日未占用；crates.io 的 `serica` 已被占用，Rust 绑定名固定为 `serica-lang`。商标可注册性与 `.serica` 扩展名占用未核。发布前须重查可用性并记录日期。

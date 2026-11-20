@@ -135,6 +135,14 @@
       "check": "算术正例进入 Mach-O；乘法/除法/取负溢出、除零和类型错误返回预期诊断。",
       "status": "settled",
       "source": "docs/decisions/0021-p1b-signed-integer-constant-arithmetic.md"
+    },
+    {
+      "id": "D-0022",
+      "title": "P1b 编译期不可变数组",
+      "decision": "支持字符串或有符号整数的一维同类型常量数组，提供零起始 arrayGet 与 arrayLength；仅编译期求值。",
+      "check": "数组正例进入 Mach-O；空数组、混合类型、越界、类型与参数错误返回预期诊断。",
+      "status": "settled",
+      "source": "docs/decisions/0022-p1b-constant-arrays.md"
     }
   ]
 }

@@ -69,7 +69,7 @@
 - **词法分析（`serica lex`）**：输入 `.serica` 源码，输出标识符、关键字、普通字符串 `『』`、原始字符串 `「」` 与符号 token；`--stats` 输出统计而不逐条打印。
 - **结构检查（`serica check`）**：解析记录值语法并做窗口字段语义检查，通过时打印 `源程序结构：通过`，失败返回非零退出与四段式诊断。
 - **原生构建（`serica build <源码> -o <产物>`）**：从常量求值结果提取窗口标题与文本，直接写出 macOS arm64 Mach-O，调用系统 `codesign` 做 ad-hoc 签名，输出 `已生成 macOS arm64 程序：<路径>`。
-- **编译期常量求值**：字符串拼接 `+`、码位切片 `substring`、相等比较 `equals`、常量分支 `ifElse`、有符号整数加减乘除与一元负号、位运算 `bitAnd`/`bitOr`/`bitXor`、顶层不可变常量声明与引用。
+- **编译期常量求值**：字符串拼接 `+`、码位切片 `substring`、相等比较 `equals`、常量分支 `ifElse`、有符号整数加减乘除（乘除优先、左结合、除法向零截断）与一元负号、位运算 `bitAnd`/`bitOr`/`bitXor`、顶层不可变常量声明与引用。
 - **代码区标点检查（`build/punct-scan`）**：断言源码为 NFC、代码区无半角 `, ; : ( )`、无 U+3000 与零宽字符，输出 `NFC=true 半角标点=0 禁用字符=0`。
 - **独立性检查（`tools/check-independence source`）**：核对源码级独立，禁止把其他语言的实现转译或透传进行简产物。
 - **环境自检（`make doctor`）**：断言 Go 精确版本、系统 SDK、CJK 字体、`punct-scan` 可执行，以及 Go 与 Python 缓存路径均落在仓库之外。
@@ -380,6 +380,7 @@ Serica/
 | 问题描述 | 影响范围 | 临时规避方案 | 跟踪链接 |
 | --- | --- | --- | --- |
 | `serica lex` 未接入通用 NFC 校验，示例靠 `punct-scan` 单独检查 | 词法层 | 提交前跑 `build/punct-scan <源码>` | P1b 后续任务 |
+| 仓库尚无 CI 工作流，`shell`、`zero`、`independence` 三个 job 未落地 | 合并前的自动把关 | 本地手动跑 `make doctor`、`build/punct-scan`、`./tools/check-independence source` | `.github/workflows/` 待建 |
 | 窗口关闭回调、系统中文输入法、其他 macOS 版本未核验 | 产物可用性 | 只在当前机器验证过的场景使用 | 平台交互矩阵 |
 | 未做第二台物理机器复验 | 可复现性结论强度 | 视为单机结论 | P3b |
 
