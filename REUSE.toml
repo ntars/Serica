@@ -5,7 +5,7 @@ SPDX-PackageName = "行简"
 SPDX-PackageSupplier = "行简（Serica）贡献者"
 
 [[annotations]]
-path = ["README.md", "CONTRIBUTING.md", "CODE_OF_CONDUCT.md", "SECURITY.md", "CHANGELOG.md", "docs/**", "examples/**", "tutorial/**", "tests/**", "editors/**", "bindings/**", "templates/**", "website/**", ".github/**", "LICENSING.md", "DEPENDENCIES.md", "DECISIONS.json"]
+path = ["README.md", "README_EN.md", "CONTRIBUTING.md", "CODE_OF_CONDUCT.md", "SECURITY.md", "CHANGELOG.md", "docs/**", "examples/**", "tutorial/**", "tests/**", "editors/**", "bindings/**", "templates/**", "website/**", ".github/**", "LICENSING.md", "DEPENDENCIES.md", "DECISIONS.json"]
 SPDX-License-Identifier = "MIT"
 SPDX-FileCopyrightText = "2026 行简（Serica）贡献者"
 
