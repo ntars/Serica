@@ -131,7 +131,7 @@ func repair(r rune) string {
 
 func wordKind(text string) string {
 	switch text {
-	case "若", "则", "否", "凡", "每", "毕", "且", "故", "常量":
+	case "若", "则", "否", "凡", "每", "毕", "且", "故":
 		return "关键字"
 	}
 	return "标识符"

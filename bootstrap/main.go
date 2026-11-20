@@ -104,8 +104,7 @@ func readProgram(path string) (*program, *issue) {
 func fieldText(parsed *program, name string) string {
 	for _, item := range parsed.root.fields {
 		if item.name.text == name {
-			text, _ := stringValue(item.value, parsed.constants)
-			return text
+			return item.value.text
 		}
 	}
 	return ""

@@ -1,0 +1,5 @@
+# P1b 规范夹具：传递导入和共享依赖。
+导入 『modules/greeting.serica』。
+导入 『modules/suffix.serica』。
+导入 『modules/./prefix.serica』。
+窗口=【标题=『模块示例』，文本=问候+后缀】。

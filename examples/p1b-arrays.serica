@@ -1,0 +1,7 @@
+# SPDX-License-Identifier: MIT
+# Copyright (c) 2026 行简（Serica）贡献者
+常量 名=array（『行』，『简』）。
+常量 索引=array（-1，0，3，5）。
+常量 起点=arrayGet（索引，arrayLength（索引）-2）。
+常量 终点=arrayGet（索引，arrayLength（索引）-1）。
+窗口=【标题=『行简 P1b 常量数组』，文本=arrayGet（名，0）+arrayGet（名，1）+substring（『行简语言表』，起点，终点）+『，数组通过』】。

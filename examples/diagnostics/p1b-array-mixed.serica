@@ -1,0 +1,4 @@
+# SPDX-License-Identifier: MIT
+# Copyright (c) 2026 行简（Serica）贡献者
+常量 混=array（『行』，1）。
+窗口=【标题=『混合数组诊断』，文本=『不可达』】。

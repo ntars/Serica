@@ -83,66 +83,90 @@
     {
       "id": "D-0015",
       "title": "P1b 字符串拼接起步语义",
-      "decision": "ASCII + 左结合连接字符串；stage0 编译期求值常量拼接。",
-      "check": "检查 P1b 示例并构建含拼接结果的原生产物。",
+      "decision": "P1b 设计目标：ASCII + 左结合连接字符串；当前 stage0 不实现字符串表达式，Go 种子实现已按 D-0025 撤回。",
+      "check": "历史 Go 实现验收已撤回；未来行简实现须以正反例检查拼接语义。",
       "status": "settled",
       "source": "docs/decisions/0015-p1b-string-concatenation.md"
     },
     {
       "id": "D-0016",
       "title": "P1b 字符串切片语义",
-      "decision": "substring 使用 Unicode 码位零起始、半开区间；stage0 对常量求值。",
-      "check": "检查切片与拼接示例，核对结果字符串进入原生产物。",
+      "decision": "P1b 设计目标：substring 使用 Unicode 码位零起始、半开区间；当前 stage0 不实现字符串调用。",
+      "check": "历史 Go 实现验收已撤回；未来行简实现须检查切片正例和边界诊断。",
       "status": "settled",
       "source": "docs/decisions/0016-p1b-string-slicing.md"
     },
     {
       "id": "D-0017",
       "title": "P1b 字符串相等与常量分支",
-      "decision": "equals 比较码位序列；ifElse 根据 equals 结果选择常量字符串。",
-      "check": "检查包含切片、相等比较和常量分支的示例及其 Mach-O 产物。",
+      "decision": "P1b 设计目标：equals 比较码位序列；ifElse 根据 equals 结果选择字符串；当前 stage0 不实现函数调用。",
+      "check": "历史 Go 实现验收已撤回；未来行简实现须检查相等和分支正反例。",
       "status": "settled",
       "source": "docs/decisions/0017-p1b-string-equality-and-selection.md"
     },
     {
       "id": "D-0018",
       "title": "P1b 整数常量索引加法",
-      "decision": "初始版本支持 substring 索引的非负整数常量加法；D-0021 扩展为有符号 64 位编译期算术。",
-      "check": "检查 1+1 与 2+3 索引示例，并验证最大有符号整数加一返回溢出诊断。",
+      "decision": "P1b 设计目标：substring 索引支持有符号 64 位算术；当前 stage0 不实现整数表达式。",
+      "check": "历史 Go 实现验收已撤回；未来行简实现须检查整数边界和溢出诊断。",
       "status": "settled",
       "source": "docs/decisions/0018-p1b-integer-constant-addition.md"
     },
     {
       "id": "D-0019",
       "title": "P1b 常量位运算子集",
-      "decision": "初始版本支持非负整数常量位函数；D-0021 扩展为有符号 64 位补码位运算。",
-      "check": "用嵌套位函数构建含结果字符串的 Mach-O，并验证错误参数返回 S-3021。",
+      "decision": "P1b 设计目标：位运算对有符号 64 位补码执行；当前 stage0 不实现位运算。",
+      "check": "历史 Go 实现验收已撤回；未来行简实现须检查位运算结果与参数诊断。",
       "status": "settled",
       "source": "docs/decisions/0019-p1b-constant-bitwise-operations.md"
     },
     {
       "id": "D-0020",
       "title": "P1b 不可变常量绑定与引用",
-      "decision": "支持窗口根绑定前的顶层中文常量；只解析先前声明项，按表达式推断字符串或整数类型并在编译期求值。",
-      "check": "常量引用正例进入 Mach-O；重复、前向/未定义引用和混合类型分别返回预期诊断。",
+      "decision": "P1b 设计目标：支持先声明后引用的顶层中文常量；当前 stage0 只接受窗口记录字面量，不实现常量绑定。",
+      "check": "历史 Go 实现验收已撤回；未来行简实现须检查常量引用与名称诊断。",
       "status": "settled",
       "source": "docs/decisions/0020-p1b-immutable-constant-bindings.md"
     },
     {
       "id": "D-0021",
       "title": "P1b 有符号整数常量算术",
-      "decision": "编译期支持有符号 64 位整数的一元负号、分组、加减乘除及补码位运算；检查溢出与除零。",
-      "check": "算术正例进入 Mach-O；乘法/除法/取负溢出、除零和类型错误返回预期诊断。",
+      "decision": "P1b 设计目标：有符号 64 位整数支持一元负号、分组、加减乘除和补码位运算；当前 stage0 不实现这些表达式。",
+      "check": "历史 Go 实现验收已撤回；未来行简实现须检查运算、溢出、除零和类型诊断。",
       "status": "settled",
       "source": "docs/decisions/0021-p1b-signed-integer-constant-arithmetic.md"
     },
     {
       "id": "D-0022",
       "title": "P1b 编译期不可变数组",
-      "decision": "支持字符串或有符号整数的一维同类型常量数组，提供零起始 arrayGet 与 arrayLength；仅编译期求值。",
-      "check": "数组正例进入 Mach-O；空数组、混合类型、越界、类型与参数错误返回预期诊断。",
+      "decision": "P1b 设计目标：支持一维同类型字符串/整数数组、arrayGet 与 arrayLength；当前 stage0 不实现数组。",
+      "check": "历史 Go 实现验收已撤回；未来行简实现须检查动态容器、索引边界与类型诊断。",
       "status": "settled",
       "source": "docs/decisions/0022-p1b-constant-arrays.md"
+    },
+    {
+      "id": "D-0023",
+      "title": "P1b 文件模块导入语义",
+      "decision": "定义静态相对文件导入、无环依赖、平面常量名称空间和确定性依赖顺序。",
+      "check": "未来由行简模块实现提供可复跑验收；当前 stage0 不支持导入语法，无实现验收。",
+      "status": "settled",
+      "source": "docs/decisions/0023-p1b-module-import-semantics.md"
+    },
+    {
+      "id": "D-0024",
+      "title": "P1b 阶段 Go 种子范围例外",
+      "decision": "按用户继续推进指示，对既定 P1b 能力作任务范围内的 Go 种子扩展；明确记录其与外部手册 3.7/4.6 冲突。",
+      "check": "每项 P1b 能力有正反例与诊断；维持 Go 子集、5000 行上限、逐行归因并在 P3b 删除种子。",
+      "status": "superseded",
+      "source": "docs/decisions/0024-p1b-seed-stage-exception.md"
+    },
+    {
+      "id": "D-0025",
+      "title": "严格执行种子冻结与全阶段门",
+      "decision": "全项目目标严格执行手册 §3.7/§4.6；D-0024 不再作为例外，现有 Go P1b 扩展不计合规验收。",
+      "check": "阶段清单与实际硬门一致；P1b 通过前不进入 P2b；独立性与自举证据均可复跑。",
+      "status": "settled",
+      "source": "docs/decisions/0025-strict-bootstrap-compliance.md"
     }
   ]
 }

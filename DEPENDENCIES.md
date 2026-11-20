@@ -11,7 +11,7 @@
 | Xcode Command Line Tools | 本机：Xcode 27.2，build 27B52；Apple clang 21.0.0；含系统 `codesign` | 系统 `/Library/Developer/CommandLineTools` | `xcodebuild -version`；`xcrun --show-sdk-path`；`codesign --version` |
 | macOS 系统框架 | 本机 SDK 27.0.1：AppKit、Foundation、CoreText、CoreFoundation、libobjc | 操作系统；不复制进仓库或产物 | SDK stub 位于 `$(xcrun --show-sdk-path)/System/Library/Frameworks` 与 `usr/lib/libobjc.tbd`；产物 `otool -L` 核验系统导入 |
 | Git | 本机 2.54.0（要求 ≥ 2.30） | 系统 `/opt/homebrew/bin/git` | `git --version` |
-| Python 3 | 本机 3.14.5；仅自检／哈希脚本，不进入产物 | 系统 | `python3 --version` |
+| Python 3 | 本机 3.14.5；仅自检、NFC 扫描与哈希脚本，不进入产物 | 系统标准库 | `python3 --version` |
 | CJK 字体 | 系统 Hiragino Sans GB | 系统字体目录 | `test -f '/System/Library/Fonts/Hiragino Sans GB.ttc'` |
 
 本机已将 Go 安装在 `~/.local/go1.27.4`；该目录不在仓库，也未加入 shell 配置。新终端需将 `~/.local/go1.27.4/bin` 加入 `PATH`。Go 1.27.4 发布信息与摘要依据官方发布页：https://go.dev/dl/。

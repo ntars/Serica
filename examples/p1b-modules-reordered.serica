@@ -1,0 +1,5 @@
+# 与 p1b-modules.serica 语义相同，只反转独立导入顺序。
+导入 『modules/suffix.serica』。
+导入 『modules/./prefix.serica』。
+导入 『modules/greeting.serica』。
+窗口=【标题=『模块示例』，文本=问候+后缀】。
