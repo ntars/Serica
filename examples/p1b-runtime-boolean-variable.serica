@@ -1,0 +1,4 @@
+变量 真值=readInteger（）>0。
+变量 命中=0==1。
+若（真值）【赋值 命中=notEquals（readInteger（），0）。】 否【赋值 命中=readInteger（）==0。】。
+程序=【能力=array（『stdout』，『stdin』），输出=ifElse（真值 且 命中，42，-1）】。

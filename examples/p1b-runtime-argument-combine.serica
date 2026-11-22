@@ -1,0 +1,2 @@
+变量 下标=1。
+程序=【能力=array（『stdout』，『args』），输出=textConcat（substring（argumentText（下标），0，1），textConcat（substring（argumentText（下标），1，2），『尾』））】。

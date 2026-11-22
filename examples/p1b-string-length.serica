@@ -1,0 +1,4 @@
+# SPDX-License-Identifier: MIT
+# Copyright (c) 2026 行简（Serica）贡献者
+常量 示例文本=『行简𠮷』。
+窗口=【标题=『P1b 静态文本长度』，文本=ifElse（textLength（示例文本）==3，『静态码位长度为三』，『静态长度错误』）】。

@@ -1,0 +1,1 @@
+程序=【输出=ifElse（equals（1<2，2>3），100，0）+ifElse（notEquals（1<2，0==1），10，0）+ifElse（notEquals（『甲』，『乙』），1，0）】。

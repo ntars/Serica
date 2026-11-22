@@ -1,0 +1,4 @@
+# SPDX-License-Identifier: MIT
+# Copyright (c) 2026 行简（Serica）贡献者
+变量 文本=readText（）。
+程序=【能力=array（『stdout』，『stdin』），输出=textLength（substring（textConcat（文本，『𠮷x』），1，3））】。

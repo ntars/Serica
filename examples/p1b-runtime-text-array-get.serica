@@ -1,0 +1,7 @@
+# SPDX-License-Identifier: Apache-2.0
+# Copyright (c) 2026 行简（Serica）贡献者
+
+变量 文本数组=array（『首』，『尾』）。
+赋值 文本数组=arrayPush（文本数组，readText（））。
+变量 索引=readInteger（）。
+程序=【能力=array（『stdout』，『stdin』，『array.write』），输出=arrayGet（文本数组，索引）】。

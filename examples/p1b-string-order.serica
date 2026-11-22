@@ -1,0 +1,3 @@
+# SPDX-License-Identifier: MIT
+# Copyright (c) 2026 行简（Serica）贡献者
+窗口=【标题=『静态文本顺序』，文本=ifElse（『a』<『b』，『1』，『0』）+ifElse（『b』<=『b』，『2』，『0』）+ifElse（『行』>『简』，『3』，『0』）+ifElse（『𠮷』>=『吉』，『4』，『0』）+ifElse（『a』<『ab』，『5』，『0』）+ifElse（『b』<『a』，『6』，『0』）+ifElse（『b』<『b』，『7』，『0』）+ifElse（『a』<『b』 且 『行』>『简』，『8』，『0』）+ifElse（『z』<『a』 故 『a』<『b』，『9』，『0』）】。

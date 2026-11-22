@@ -1,0 +1,5 @@
+变量 数组=array（5）。
+变量 索引=readInteger（）。
+凡（索引<20）【赋值 数组=arrayPush（数组，索引）。赋值 索引=索引+1。】。
+赋值 数组=arraySet（数组，arrayLength（数组）-1，99）。
+程序=【能力=array（『stdout』，『stdin』，『array.write』），输出=arrayGet（数组，arrayLength（数组）-1）】。

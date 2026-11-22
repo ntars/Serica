@@ -1,0 +1,6 @@
+变量 新值=readText（）。
+变量 文本数组=array（『首』，『中』）。
+赋值 文本数组=arrayPush（文本数组，新值）。
+赋值 文本数组=arraySet（文本数组，1，arrayGet（文本数组，0））。
+变量 索引=readInteger（）。
+程序=【能力=array（『stdout』，『stdin』，『array.write』），输出=textConcat（arrayGet（文本数组，索引），『尾』）】。

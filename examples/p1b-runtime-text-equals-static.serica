@@ -1,0 +1,8 @@
+# SPDX-License-Identifier: MIT
+# Copyright (c) 2026 行简（Serica）贡献者
+常量 目标=『行简』。
+变量 文本=readText（）。
+变量 命中=0。
+若（equals（目标，文本））【赋值 命中=1。】。
+若（notEquals（文本，『行简』））【赋值 命中=2。】。
+程序=【能力=array（『stdout』，『stdin』），输出=命中】。

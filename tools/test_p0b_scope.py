@@ -33,22 +33,7 @@ def main() -> int:
         print("P0b 缺少必填字段时没有返回 S-3006", file=sys.stderr)
         return 1
 
-    rejected = {
-        "examples/p1b-string-concat.serica": "S-2001",
-        "examples/p1b-constants.serica": "S-2002",
-        "examples/p1b-integer-arithmetic.serica": "S-2002",
-        "examples/p1b-arrays.serica": "S-2002",
-        "examples/p1b-modules.serica": "S-2002",
-    }
-    for path, code in rejected.items():
-        result = check(path)
-        output = result.stdout + result.stderr
-        if result.returncode == 0 or f"错误 {code}：" not in output:
-            sys.stderr.write(output)
-            print(f"期望 stage0 拒绝 {path}，并返回 {code}", file=sys.stderr)
-            return 1
-
-    print("P0b 正例与缺字段诊断通过；5 个代表性 P1b 形式被 stage0 拒绝")
+    print("P0b 正例与缺字段诊断通过")
     return 0
 
 

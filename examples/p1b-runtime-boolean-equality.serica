@@ -1,0 +1,4 @@
+变量 标志数组=array（readInteger（）>0）。
+变量 比较值=readInteger（）>0。
+变量 索引=readInteger（）。
+程序=【能力=array（『stdout』，『stdin』），输出=ifElse（equals（arrayGet（标志数组，索引），比较值），42，-1）】。

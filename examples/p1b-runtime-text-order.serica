@@ -1,0 +1,3 @@
+变量 左文=readText（）。
+变量 右文=readText（）。
+程序=【能力=array（『stdout』，『stdin』），输出=ifElse（左文<右文，1，0）+ifElse（左文<=右文，2，0）+ifElse（左文>右文，4，0）+ifElse（左文>=右文，8，0）】。

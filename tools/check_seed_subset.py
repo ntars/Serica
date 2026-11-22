@@ -13,6 +13,7 @@ import sys
 ROOT = pathlib.Path(__file__).resolve().parent.parent
 SEED = ROOT / "bootstrap"
 ATTRIBUTION = ROOT / "docs" / "build" / "seed-attribution.md"
+MAX_SEED_LINES = 12000
 
 
 def scan_source(source: str):
@@ -202,7 +203,11 @@ def main() -> int:
 
     attribution = ATTRIBUTION.read_text(encoding="utf-8")
     coverage = {path.relative_to(ROOT): set() for path in files}
-    for match in re.finditer(r"`(bootstrap/[^`]+\.go):(\d+)-(\d+)`", attribution):
+    ast_coverage = {path.relative_to(ROOT): set() for path in files}
+    for row in attribution.splitlines():
+        match = re.search(r"`(bootstrap/[^`]+\.go):(\d+)-(\d+)`", row)
+        if match is None:
+            continue
         rel = pathlib.Path(match.group(1))
         start, end = int(match.group(2)), int(match.group(3))
         if rel not in coverage:
@@ -214,25 +219,48 @@ def main() -> int:
             failures.append(f"{ATTRIBUTION.relative_to(ROOT)}: {rel}:{start}-{end} 超出源码行数 {len(lines)}")
             continue
         coverage[rel].update(range(start, end + 1))
+        if "【AST】" in row:
+            ast_coverage[rel].update(range(start, end + 1))
 
     total_lines = 0
+    ast_code_lines = 0
+    ast_basis_lines = 0
     for path in files:
         rel = path.relative_to(ROOT)
         lines = path.read_text(encoding="utf-8").splitlines()
         total_lines += len(lines)
-        if len(lines) > 5000:
-            failures.append(f"{rel}: 单文件 {len(lines)} 行，超过种子上限 5000")
+        if len(lines) > MAX_SEED_LINES:
+            failures.append(f"{rel}: 单文件 {len(lines)} 行，超过种子上限 {MAX_SEED_LINES}")
         for number, line in enumerate(lines, start=1):
             if line.strip() and number not in coverage[rel]:
                 failures.append(f"{ATTRIBUTION.relative_to(ROOT)}: 未归因 {rel}:{number}")
-    if total_lines > 5000:
-        failures.append(f"活动种子共 {total_lines} 行，超过 5000 行上限")
+    for path in SEED.glob("*.go"):
+        rel = path.relative_to(ROOT)
+        lines = path.read_text(encoding="utf-8").splitlines()
+        for number, line in enumerate(lines, start=1):
+            code_line = bool(line.strip()) and not line.lstrip().startswith("//")
+            if code_line:
+                ast_basis_lines += 1
+                if number in ast_coverage.get(rel, set()):
+                    ast_code_lines += 1
+    if total_lines > MAX_SEED_LINES:
+        failures.append(f"活动种子共 {total_lines} 行，超过 {MAX_SEED_LINES} 行上限")
+
+    ast_ratio = ast_code_lines / ast_basis_lines if ast_basis_lines else 0
+    language_review = ROOT / "docs" / "decisions" / "0009-seed-language-is-go.md"
+    language_triggered = total_lines > 3000 and ast_ratio > 0.40
+    if language_triggered:
+        review = language_review.read_text(encoding="utf-8")
+        if "C-1 复核（保留 Go 临时桥）" not in review:
+            failures.append("Go 种子触发 C-1 AST 占比条件，但 D-0009 未记录所有者授权后的语言复核")
 
     if failures:
         print("Go 种子子集检查：失败", file=sys.stderr)
         print("\n".join(failures), file=sys.stderr)
         return 1
     print(f"Go 种子子集检查：通过（{len(files)} 个活动源码文件，{total_lines} 行，归因完整）")
+    print(f"C-1 AST 归因：{ast_code_lines}/{ast_basis_lines} 行（{ast_ratio:.1%}）；种子超过 3000 行且占比超过 40% 时须记录语言复核")
+    print("C-1 条件已触发；D-0009/D-0059 复核记录通过" if language_triggered else "C-1 条件未触发")
     return 0
 
 

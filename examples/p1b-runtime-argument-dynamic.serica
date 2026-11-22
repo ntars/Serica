@@ -1,0 +1,3 @@
+变量 下标=1。
+变量 文本=argumentText（下标）。
+程序=【能力=array（『stdout』，『args』），输出=文本】。

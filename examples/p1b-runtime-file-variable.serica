@@ -1,0 +1,3 @@
+变量 文本=readFile（『examples/p1b-runtime-file-fixture.txt』）。
+赋值 文本=textConcat（文本，『！』）。
+程序=【能力=array（『stdout』，『filesystem.read』），输出=文本】。

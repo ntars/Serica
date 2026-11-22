@@ -17,7 +17,7 @@
 | 源码扩展名 | `.serica` |
 | 产物 | 原生可执行文件；Windows 为 `.exe`，其他平台无后缀 |
 | 语言版本 | `主.次.修订` 语义化版本；主版本必须有迁移说明 |
-| 项目阶段 | pre-alpha；P0b 于 2026-11-20 在本机 macOS arm64 通过；P1b 未通过，详见 `docs/roadmap/p0b-p6b.md` |
+| 项目阶段 | pre-alpha；P0b 于 2026-11-20 在本机 macOS arm64 通过；P1b 进行中、阶段门未通过，详见 `docs/roadmap/p0b-p6b.md` |
 
 ## 英文名允许场合
 

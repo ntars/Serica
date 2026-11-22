@@ -5,6 +5,7 @@ package main
 import (
 	"fmt"
 	"os"
+	"path/filepath"
 )
 
 func main() {
@@ -78,20 +79,41 @@ func runBuild(args []string) {
 	}
 	title := fieldText(parsed, "标题")
 	text := fieldText(parsed, "文本")
-	if err := writeMachO(args[2], title, text); err != nil {
+	var err error
+	if parsed.rootName.text == "程序" {
+		err = writeConsoleMachO(args[2], outputExpression(parsed.root), parsed.constants, parsed.statements, parsed.runtimeFunctions, parsed.runtimeFunctionNames)
+	} else {
+		err = writeMachO(args[2], title, text)
+	}
+	if err != nil {
 		fmt.Fprintln(os.Stderr, "生成原生程序失败：", err)
 		os.Exit(1)
 	}
 	fmt.Printf("已生成 macOS arm64 程序：%s\n", args[2])
 }
 
+func outputExpression(root value) value {
+	for _, item := range root.fields {
+		if item.name.text == "输出" {
+			return item.value
+		}
+	}
+	return value{}
+}
+
 func readProgram(path string) (*program, *issue) {
 	source := readSource(path)
 	tokens, problem := lex(source)
 	if problem != nil {
+		problem.pos.file = filepath.Base(path)
 		return nil, problem
 	}
+	setTokenFile(tokens, filepath.Base(path))
 	parsed, problem := parseProgram(tokens, source)
+	if problem != nil {
+		return nil, problem
+	}
+	parsed, problem = loadModules(path, parsed)
 	if problem != nil {
 		return nil, problem
 	}
@@ -104,7 +126,8 @@ func readProgram(path string) (*program, *issue) {
 func fieldText(parsed *program, name string) string {
 	for _, item := range parsed.root.fields {
 		if item.name.text == name {
-			return item.value.text
+			text, _ := stringValue(item.value, parsed.constants)
+			return text
 		}
 	}
 	return ""
@@ -124,7 +147,11 @@ func readSource(path string) string {
 }
 
 func printIssue(problem *issue) {
-	fmt.Fprintf(os.Stderr, "错误 %s：第 %d 行第 %d 列（显示第 %d 格）\n", problem.code, problem.pos.line, problem.pos.code, problem.pos.display)
+	if problem.pos.file != "" {
+		fmt.Fprintf(os.Stderr, "%s:%d:%d（显示第 %d 格）：错误 %s：\n", problem.pos.file, problem.pos.line, problem.pos.code, problem.pos.display, problem.code)
+	} else {
+		fmt.Fprintf(os.Stderr, "错误 %s：第 %d 行第 %d 列（显示第 %d 格）\n", problem.code, problem.pos.line, problem.pos.code, problem.pos.display)
+	}
 	fmt.Fprintf(os.Stderr, "  期望：%s\n  实际：%s\n  建议：%s\n", problem.expected, problem.actual, problem.suggestion)
 }
 

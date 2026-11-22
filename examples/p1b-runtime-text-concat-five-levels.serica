@@ -1,0 +1,2 @@
+变量 文本=readText（）。
+程序=【能力=array（『stdout』，『stdin』），输出=textConcat（textConcat（textConcat（textConcat（textConcat（文本，『甲』），『乙』），『丙』），『丁』），『戊』）】。

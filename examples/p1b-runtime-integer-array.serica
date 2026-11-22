@@ -1,0 +1,6 @@
+# SPDX-License-Identifier: Apache-2.0
+# Copyright (c) 2026 行简（Serica）贡献者
+
+变量 数组=array（readInteger（），20，30）。
+赋值 数组=arraySet（数组，readInteger（），readInteger（））。
+程序=【能力=array（『stdout』，『stdin』，『array.write』），输出=arrayGet（数组，1）】。

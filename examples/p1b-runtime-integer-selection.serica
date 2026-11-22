@@ -1,0 +1,2 @@
+变量 数值=readInteger（）。
+程序=【能力=array（『stdout』，『stdin』），输出=ifElse（equals（数值，5），readInteger（）+1，-1）】。

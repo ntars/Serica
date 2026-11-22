@@ -1,0 +1,5 @@
+# SPDX-License-Identifier: Apache-2.0
+# Copyright (c) 2026 行简（Serica）贡献者
+
+变量 结果=textConcat（substring（readText（），1，3），『尾』）。
+程序=【能力=array（『stdout』，『stdin』），输出=结果】。

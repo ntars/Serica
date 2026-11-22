@@ -1,0 +1,5 @@
+变量 标志数组=array（readInteger（）>0，0==1）。
+赋值 标志数组=arrayPush（标志数组，readInteger（）>0）。
+赋值 标志数组=arraySet（标志数组，1，readInteger（）==1）。
+变量 索引=readInteger（）。
+程序=【能力=array（『stdout』，『stdin』，『array.write』），输出=ifElse（arrayGet（标志数组，索引），42，-1）*100+arrayLength（标志数组）】。

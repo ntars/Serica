@@ -1,0 +1,3 @@
+变量 文本=readText（）。
+变量 结果=成功（textConcat（文本，『！』））。
+程序=【能力=array（『stdout』，『stdin』），输出=结果值（结果）】。

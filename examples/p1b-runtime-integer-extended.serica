@@ -1,0 +1,9 @@
+# SPDX-License-Identifier: Apache-2.0
+# Copyright (c) 2026 行简（Serica）贡献者
+
+变量 被除数=-17。
+变量 除数=5。
+赋值 被除数=被除数%除数。
+变量 位移量=1。
+赋值 被除数=被除数<<位移量。
+程序=【能力=array（『stdout』），输出=被除数】。

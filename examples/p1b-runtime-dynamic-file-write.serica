@@ -1,0 +1,2 @@
+变量 字节=writeFile（argumentText（1），『行简』）。
+程序=【能力=array（『stdout』，『args』，『filesystem.write』），输出=字节】。

@@ -12,18 +12,68 @@ type importedSymbol struct {
 	name    string
 	ordinal uint8
 }
+type importCallPatch struct {
+	word, index int
+}
 type addressReference struct {
 	word     int
 	label    string
 	register uint32
 	code     bool
 }
+type arraySlot struct {
+	data, length, capacity uint32
+	text                   bool
+}
+type mapSlot struct{ data, length, capacity uint32 }
+type resultSlot struct {
+	tag, value, pointer, length uint32
+	text, runtimeText           bool
+}
+type loopTarget struct {
+	continueAt int
+	breaks     []int
+}
+type runtimeCallPatch struct {
+	position int
+	name     string
+}
 type windowCode struct {
-	words      []uint32
-	constants  []byte
-	dataLabels map[string]int
-	codeLabels map[string]int
-	refs       []addressReference
+	words                 []uint32
+	constants             []byte
+	dataLabels            map[string]int
+	codeLabels            map[string]int
+	refs                  []addressReference
+	importCallPatches     []importCallPatch
+	exitIndex             int
+	failurePatches        []conditionalPatch
+	arraySlots            map[string]arraySlot
+	mapSlots              map[string]mapSlot
+	resultSlots           map[string]resultSlot
+	arrayMapIndex         int
+	arrayUnmapIndex       int
+	writeIndex            int
+	fileOpenIndex         int
+	moduleOpenIndex       int
+	moduleControlIndex    int
+	moduleStatIndex       int
+	moduleErrorIndex      int
+	fileCreateIndex       int
+	fileCloseIndex        int
+	fileReadIndex         int
+	textBuffers           map[string]uint32
+	textLengths           map[string]uint32
+	textCapacities        map[string]uint32
+	loopTargets           []loopTarget
+	usesArguments         bool
+	argumentCountOffset   uint32
+	argumentVectorOffset  uint32
+	temporaryBufferOffset uint32
+	slotCount             uint32
+	runtimeFunctions      map[string]functionDecl
+	runtimeFunctionOrder  []string
+	runtimeFunctionAt     map[string]int
+	runtimeCallPatches    []runtimeCallPatch
 }
 
 func makeWindowMachO(title, text string) ([]byte, error) {
@@ -44,7 +94,7 @@ func makeWindowMachO(title, text string) ([]byte, error) {
 	if constOffset+len(c.constants) > int(pageSize) {
 		return nil, fmt.Errorf("标题与文本超过 P0b 窗口产物上限")
 	}
-	if err := c.resolve(uint64(constOffset)); err != nil {
+	if err := c.resolve(uint64(constOffset), dataFileOff); err != nil {
 		return nil, err
 	}
 	bind := makeWindowBinds(imports)
@@ -244,9 +294,8 @@ func (c *windowCode) message(receiver uint32, selector string) {
 }
 
 func (c *windowCode) call(index int) {
-	pc := imageBase + uint64(codeFileOff+len(c.words)*4)
-	target := imageBase + pageSize + uint64(index*8)
-	c.words = append(c.words, adrp(16, target, pc), loadPointer(16, 16, uint32(index*8)), 0xd63f0200)
+	c.importCallPatches = append(c.importCallPatches, importCallPatch{word: len(c.words), index: index})
+	c.words = append(c.words, 0, loadPointer(16, 16, uint32(index*8)), 0xd63f0200)
 }
 
 func (c *windowCode) movRegister(destination, source uint32) {
@@ -304,7 +353,14 @@ func (c *windowCode) loadRectangleRegisters(label string) {
 	}
 }
 
-func (c *windowCode) resolve(constOffset uint64) error {
+func (c *windowCode) resolve(constOffset, importOffset uint64) error {
+	for _, patch := range c.importCallPatches {
+		if patch.index < 0 || patch.index*8 >= 4096 {
+			return fmt.Errorf("系统导入槽超出范围：%d", patch.index)
+		}
+		pc := imageBase + uint64(codeFileOff+patch.word*4)
+		c.words[patch.word] = adrp(16, imageBase+importOffset, pc)
+	}
 	for _, ref := range c.refs {
 		target := uint64(0)
 		if ref.code {

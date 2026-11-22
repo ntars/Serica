@@ -1,0 +1,5 @@
+变量 文本=readText（）。
+变量 起点=readInteger（）。
+变量 终点=readInteger（）。
+赋值 文本=textConcat（substring（文本，起点，终点），『尾』）。
+程序=【能力=array（『stdout』，『stdin』），输出=文本】。

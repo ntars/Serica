@@ -9,7 +9,10 @@ import (
 	"unicode/utf8"
 )
 
-type sourcePosition struct{ line, code, display int }
+type sourcePosition struct {
+	line, code, display int
+	file                string
+}
 type token struct {
 	kind, text string
 	pos        sourcePosition
@@ -49,6 +52,7 @@ func lex(source string) ([]token, *issue) {
 			for i < len(runes) && runes[i] != end {
 				if kind == "字符串" && runes[i] == '\\' {
 					if i+1 >= len(runes) {
+						i++
 						break
 					}
 					i += 2
@@ -110,7 +114,7 @@ func isForbidden(r rune) bool {
 }
 
 func isSymbol(r rune) bool {
-	return strings.ContainsRune("，。()（）『』「」【】+-*/=<>\\", r)
+	return strings.ContainsRune("，。()（）『』「」【】+-*/%=<>\\", r)
 }
 
 func repair(r rune) string {
@@ -131,7 +135,7 @@ func repair(r rune) string {
 
 func wordKind(text string) string {
 	switch text {
-	case "若", "则", "否", "凡", "每", "毕", "且", "故":
+	case "若", "则", "否", "凡", "每", "毕", "且", "故", "跳出", "继续", "返回", "常量", "导入", "函数", "变量", "赋值":
 		return "关键字"
 	}
 	return "标识符"
