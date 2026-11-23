@@ -1,9 +1,0 @@
-函数 读取（开关）能力=array（『stdin』）【
-  变量 项=array（『甲』，『乙』）。
-  变量 索引=readInteger（）。
-  变量 结果=ifElse（开关==1，成功（arrayGet（项，索引）），失败（9））。
-  返回 结果。
-】。
-变量 开关=readInteger（）。
-变量 结果=读取（开关）。
-程序=【能力=array（『stdout』，『stdin』），输出=结果值（结果）】。
