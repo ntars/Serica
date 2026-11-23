@@ -6306,7 +6306,7 @@ def main() -> int:
             ("result-if-else-payload-mismatch", "变量 结果=ifElse（readInteger（）==1，成功（1），成功（『文本』））。\n程序=【能力=array（『stdout』，『stdin』），输出=错误码（结果）】。\n", "S-3023"),
             ("result-if-else-mixed-branch", "变量 结果=ifElse（readInteger（）==1，成功（1），2）。\n程序=【能力=array（『stdout』，『stdin』），输出=错误码（结果）】。\n", "S-3023"),
             ("result-function-hidden-stdin", "函数 读取（开关）=ifElse（开关==1，成功（readText（）），失败（8））。\n变量 结果=读取（1）。\n程序=【能力=array（『stdout』，『stdin』），输出=结果值（结果）】。\n", "S-4106"),
-            ("effectful-ordinary-text-local", "函数 读取（）能力=array（『stdin』）【\n变量 文本=readText（）。\n返回 0。\n】。\n程序=【能力=array（『stdout』，『stdin』），输出=读取（）】。\n", "S-4106"),
+            ("effectful-ordinary-text-local", "函数 读取（）能力=array（『stdin』）【\n变量 文本=readText（）。\n返回 0。\n】。\n程序=【能力=array（『stdout』，『stdin』），输出=读取（）】。\n", "S-3068"),
             ("nested-function-hidden-root-stdin", "函数 读取（）能力=array（『stdin』）=readInteger（）。\n函数 三倍输入（）能力=array（『stdin』）=读取（）*3。\n程序=【能力=array（『stdout』），输出=三倍输入（）】。\n", "S-4106"),
             ("nested-function-hidden-root-array-write", "函数 追加（数组）能力=array（『array.write』）=arrayPush（数组，42）。\n函数 写入（数组）能力=array（『array.write』）=追加（数组）。\n变量 数组=array（7）。\n赋值 数组=写入（数组）。\n程序=【能力=array（『stdout』），输出=arrayLength（数组）】。\n", "S-4106"),
             ("result-to-text-variable", "变量 文本=readText（）。\n变量 结果=成功（42）。\n赋值 文本=结果。\n程序=【能力=array（『stdout』，『stdin』），输出=文本】。\n", "S-3023"),
