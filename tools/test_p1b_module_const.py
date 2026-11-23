@@ -243,6 +243,16 @@ def verify_deferred_calls_and_large_frame(parser, work, output):
             b"5\n", b"15\n",
         ),
         (
+            "函数 加一（数值）能力=array（『stdin』）=数值+1。\n"
+            "程序=【能力=array（『stdout』，『stdin』），输出=加一（readInteger（））】。\n",
+            b"41\n", b"42\n",
+        ),
+        (
+            "函数 加一（数值）能力=array（『stdin』）=数值+1。\n"
+            "程序=【能力=array（『stdout』，『stdin』），输出=加一（1+readInteger（））】。\n",
+            b"40\n", b"42\n",
+        ),
+        (
             "".join(f"变量 数值{index}={index}。\n" for index in range(501))
             + "变量 表=array（4）。\n"
             "程序=【能力=array（『stdout』，『stdin』），输出=数值500+arrayGet（表，0）+readInteger（）】。\n",
@@ -268,12 +278,8 @@ def verify_expansion_errors(parser, work):
     allowed = OUTPUT.replace("『stdout』", "『stdout』，『stdin』")
     cases = (
         ("函数 忽（甲）=1。\n", "忽（2）", "甲", 3065),
-        ("函数 续（甲）=甲+0。\n", "续（readInteger（））", "readInteger", 4106),
-        ("函数 续（甲）=甲+0。\n变量 初=续（1+readInteger（））。\n", "初", "+readInteger", 4106),
-        (
-            "函数 声（）能力=array（『stdin』）=7。\n函数 续（甲）=甲。\n",
-            "续（ifElse（1==1，2，声（）））", "ifElse", 4106,
-        ),
+        ("函数 续（甲）=甲+甲。\n", "续（readInteger（））", "readInteger", 4106),
+        ("函数 忽（甲）=1。\n", "忽（readInteger（））", "甲", 3065),
         (
             "函数 挑（甲，乙，条件）=ifElse（条件，甲，乙）。\n",
             "挑（『行』，substring（『简』，0，7），1==1）", "substring", 3013,

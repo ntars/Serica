@@ -112,7 +112,7 @@ func statementsUseRuntimeArguments(statements []statement) bool {
 	return false
 }
 func isRuntimeTextValue(expression value) bool {
-	return isRuntimeTextInput(expression) || expression.kind == "调用" && (expression.text == "textConcat" || expression.text == "substring" || isTextReturnCall(expression))
+	return isRuntimeTextInput(expression) || expression.kind == "调用" && (expression.text == "textConcat" || expression.text == "substring" || expression.text == "arrayGet" || isTextReturnCall(expression))
 }
 func isStoredTextReturnCall(expression value) bool {
 	return isTextReturnCall(expression)
@@ -159,6 +159,42 @@ func containsTextResultValue(expression value) bool {
 	}
 	return false
 }
+
+// isRuntimeResultScalar reports a result value whose payload is a machine
+// integer or a compile-time literal, neither of which needs an mmap buffer.
+func isRuntimeResultScalar(expression value) bool {
+	if expression.kind != "调用" {
+		return false
+	}
+	if expression.runtimeFunction && expression.runtimeFunctionResult {
+		return true
+	}
+	if expression.text == "结果值" || expression.text == "错误码" || expression.text == "是否失败" {
+		return true
+	}
+	if len(expression.args) != 1 {
+		return false
+	}
+	if expression.text == "成功" {
+		return containsResultStateCall(expression) == false && !containsRuntimeTextInput(expression)
+	}
+	return expression.text == "失败"
+}
+
+func containsResultStateCall(expression value) bool {
+	if expression.kind == "调用" && (expression.text == "是否失败" || expression.text == "错误码" || expression.text == "结果值") && len(expression.args) == 1 {
+		return true
+	}
+	if expression.left != nil && containsResultStateCall(*expression.left) || expression.right != nil && containsResultStateCall(*expression.right) {
+		return true
+	}
+	for _, argument := range expression.args {
+		if containsResultStateCall(argument) {
+			return true
+		}
+	}
+	return false
+}
 func statementsUseRuntimeArray(statements []statement) bool {
 	for _, item := range statements {
 		if item.kind == "变量" && item.value.kind == "调用" && item.value.text == "array" ||
@@ -182,9 +218,90 @@ func isTextResultExtraction(expression value) bool {
 }
 func statementsUseRuntimeTextStorage(statements []statement) bool {
 	for _, item := range statements {
-		if (item.kind == "变量" || item.kind == "赋值") && (isRuntimeTextValue(item.value) || isRuntimeFileRead(item.value) || isRuntimeArgumentText(item.value) || isTextResultExtraction(item.value) || runtimeTextResultExpression(item.value) || isStoredTextReturnCall(item.value)) ||
+		if (item.kind == "变量" || item.kind == "赋值") && (isRuntimeTextValue(item.value) || isRuntimeFileRead(item.value) || isRuntimeArgumentText(item.value) || isTextResultExtraction(item.value) || runtimeTextResultExpression(item.value) || isStoredTextReturnCall(item.value) || isRuntimeResultValue(item.value) && !isRuntimeResultScalar(item.value)) ||
 			statementsUseRuntimeTextStorage(item.body) || statementsUseRuntimeTextStorage(item.otherwise) {
 			return true
+		}
+	}
+	return false
+}
+
+// Runtime function bodies emit real calls, so their effects reach the import table.
+func runtimeFunctionsUseInput(runtimeFunctions map[string]functionDecl) bool {
+	for _, function := range runtimeFunctions {
+		if containsRuntimeIntegerInput(function.body) || containsRuntimeTextInput(function.body) || statementsUseRuntimeIntegerInput(function.statements) || statementsUseRuntimeTextInput(function.statements) {
+			return true
+		}
+	}
+	return false
+}
+
+func runtimeFunctionsUseFileRead(runtimeFunctions map[string]functionDecl, moduleOnly bool) bool {
+	for _, function := range runtimeFunctions {
+		if containsRuntimeFileRead(function.body, moduleOnly) || statementsUseRuntimeFileRead(function.statements, moduleOnly) {
+			return true
+		}
+	}
+	return false
+}
+
+func runtimeFunctionsUseFileWrite(runtimeFunctions map[string]functionDecl) bool {
+	for _, function := range runtimeFunctions {
+		if containsRuntimeFileWrite(function.body) || statementsUseRuntimeFileWrite(function.statements) {
+			return true
+		}
+	}
+	return false
+}
+
+func runtimeFunctionsUseArguments(runtimeFunctions map[string]functionDecl) bool {
+	for _, function := range runtimeFunctions {
+		if containsRuntimeArguments(function.body) || statementsUseRuntimeArguments(function.statements) {
+			return true
+		}
+	}
+	return false
+}
+
+func runtimeFunctionsUseMappedMemory(runtimeFunctions map[string]functionDecl) bool {
+	if runtimeFunctionsUseTextLocals(runtimeFunctions) {
+		return true
+	}
+	for _, function := range runtimeFunctions {
+		if statementsUseRuntimeArray(function.statements) || statementsUseRuntimeMap(function.statements) || statementsUseRuntimeTextStorage(function.statements) {
+			return true
+		}
+	}
+	return false
+}
+
+// Function bodies are emitted with ad hoc frame state, but only the standard
+// runtime helpers that are actually called may be imported.
+func runtimeFunctionsUseSyscall(runtimeFunctions map[string]functionDecl, name string) bool {
+	for _, function := range runtimeFunctions {
+		values := []value{function.body}
+		for _, item := range function.statements {
+			values = append(values, item.value, item.condition)
+		}
+		for _, input := range values {
+			stack := []value{input}
+			for len(stack) > 0 {
+				current := stack[len(stack)-1]
+				stack = stack[:len(stack)-1]
+				if current.kind == "调用" && current.text == name {
+					return true
+				}
+				stack = append(stack, current.args...)
+				for _, field := range current.fields {
+					stack = append(stack, field.value)
+				}
+				if current.left != nil {
+					stack = append(stack, *current.left)
+				}
+				if current.right != nil {
+					stack = append(stack, *current.right)
+				}
+			}
 		}
 	}
 	return false
@@ -296,6 +413,10 @@ func (c *windowCode) emitRuntimeFunctionBody(function functionDecl, constants ma
 	if runtimeFunctionRegisterCount(function) > 8 {
 		return fmt.Errorf("运行时函数需要不超过 8 个展平参数寄存器")
 	}
+	// Failure patches belong to the frame being emitted. Isolate them so a
+	// later root/body cannot patch branches into an earlier function.
+	previousFailurePatches := c.failurePatches
+	c.failurePatches = nil
 	if function.body.kind == "" {
 		return c.emitRuntimeStatementFunctionBody(function, constants)
 	}
@@ -346,6 +467,7 @@ func (c *windowCode) emitRuntimeFunctionBody(function functionDecl, constants ma
 	}
 	c.words = append(c.words, addImmediate(31, 29, 0), loadIntegerSlot(19, 31, 16), loadIntegerSlot(30, 31, 8), loadIntegerSlot(29, 31, 0), addImmediate(31, 31, 32), 0xd65f03c0)
 	c.emitRuntimeFailureBlock(c.exitIndex)
+	c.failurePatches = previousFailurePatches
 	return nil
 }
 
@@ -398,8 +520,16 @@ func (c *windowCode) emitRuntimeStatementFunctionBody(function functionDecl, con
 		}
 		if runtimeStatementLocalType(function, name) == "运行时结果" {
 			offset := uint32(stateCount * 8)
-			localResultSlots[name] = resultSlot{tag: offset, value: offset + 8}
-			stateCount += 2
+			payload := function.localResultPayloads[name]
+			result := resultSlot{tag: offset, value: offset + 8, text: isTextResultPayload(payload), runtimeText: payload == "运行时文本"}
+			if result.text {
+				result.pointer = offset + 16
+				result.length = offset + 24
+				stateCount += 4
+			} else {
+				stateCount += 2
+			}
+			localResultSlots[name] = result
 			continue
 		}
 		slots[name] = uint32(stateCount * 8)
@@ -408,7 +538,11 @@ func (c *windowCode) emitRuntimeStatementFunctionBody(function functionDecl, con
 	if stateCount > 502 {
 		return fmt.Errorf("运行时函数状态超过 502 个槽")
 	}
-	frameSize := uint32(alignOffset(stateCount*8, 16))
+	temporarySize := uint32(360)
+	if level := statementsNeedRuntimeTextConcatScratch(function.statements); level > 0 {
+		temporarySize = runtimeTextConcatBaseScratch + runtimeTextConcatScratchStride*level
+	}
+	frameSize := uint32(alignOffset(stateCount*8+int(temporarySize), 16))
 	c.words = append(c.words, subImmediate(31, 31, 32), storeIntegerSlot(29, 31, 0), storeIntegerSlot(30, 31, 8), storeIntegerSlot(19, 31, 16), addImmediate(29, 31, 0))
 	if frameSize != 0 {
 		c.words = append(c.words, subImmediate(31, 31, frameSize))
@@ -433,10 +567,15 @@ func (c *windowCode) emitRuntimeStatementFunctionBody(function functionDecl, con
 		return fmt.Errorf("运行时函数参数超过 ARM64 展平寄存器 ABI")
 	}
 	previousResultSlots := c.resultSlots
+	previousTextBuffers := c.textBuffers
+	previousTextLengths := c.textLengths
+	previousTextCapacities := c.textCapacities
+	previousTemporaryBufferOffset := c.temporaryBufferOffset
+	previousFailurePatches := c.failurePatches
+	c.failurePatches = nil
+	c.temporaryBufferOffset = uint32(stateCount * 8)
+	// Result slots are frame-local; inherited same-named slots would resolve here.
 	c.resultSlots = map[string]resultSlot{}
-	for name, result := range previousResultSlots {
-		c.resultSlots[name] = result
-	}
 	for name, result := range parameterResultSlots {
 		c.resultSlots[name] = result
 	}
@@ -451,6 +590,19 @@ func (c *windowCode) emitRuntimeStatementFunctionBody(function functionDecl, con
 		for _, name := range localNames {
 			if _, isText := textCapacities[name]; isText {
 				c.words = append(c.words, storeIntegerSlot(0, 19, textBuffers[name]), storeIntegerSlot(0, 19, textLengths[name]), storeIntegerSlot(0, 19, textCapacities[name]))
+			}
+		}
+	}
+	if len(localResultSlots) > 0 {
+		c.words = append(c.words, movz(0, 0))
+		for _, name := range localNames {
+			result, ok := localResultSlots[name]
+			if !ok {
+				continue
+			}
+			c.words = append(c.words, storeIntegerSlot(0, 19, result.tag), storeIntegerSlot(0, 19, result.value))
+			if result.text {
+				c.words = append(c.words, storeIntegerSlot(0, 19, result.pointer), storeIntegerSlot(0, 19, result.length))
 			}
 		}
 	}
@@ -478,7 +630,12 @@ func (c *windowCode) emitRuntimeStatementFunctionBody(function functionDecl, con
 	}
 	c.words = append(c.words, addImmediate(31, 29, 0), loadIntegerSlot(19, 31, 16), loadIntegerSlot(30, 31, 8), loadIntegerSlot(29, 31, 0), addImmediate(31, 31, 32), 0xd65f03c0)
 	c.emitRuntimeFailureBlock(c.exitIndex)
+	c.failurePatches = previousFailurePatches
 	c.resultSlots = previousResultSlots
+	c.textBuffers = previousTextBuffers
+	c.textLengths = previousTextLengths
+	c.textCapacities = previousTextCapacities
+	c.temporaryBufferOffset = previousTemporaryBufferOffset
 	return nil
 }
 
@@ -514,7 +671,12 @@ func (c *windowCode) emitRuntimeTextLocalCleanup(function functionDecl) error {
 func (c *windowCode) emitResultValueRegisters(input value, constants map[string]constantValue, slots map[string]uint32) error {
 	if input.kind == "引用" {
 		if result, exists := c.resultSlots[input.text]; exists {
-			c.words = append(c.words, loadIntegerSlot(0, 19, result.tag), loadIntegerSlot(1, 19, result.value), movz(2, 0), movz(3, 0))
+			c.words = append(c.words, loadIntegerSlot(0, 19, result.tag), loadIntegerSlot(1, 19, result.value))
+			if result.text {
+				c.words = append(c.words, loadIntegerSlot(2, 19, result.pointer), loadIntegerSlot(3, 19, result.length))
+			} else {
+				c.words = append(c.words, movz(2, 0), movz(3, 0))
+			}
 			return nil
 		}
 	}
@@ -522,7 +684,9 @@ func (c *windowCode) emitResultValueRegisters(input value, constants map[string]
 		if err := c.emitRuntimeResultRegisters(input, constants, slots); err != nil {
 			return err
 		}
-		c.words = append(c.words, movz(2, 0), movz(3, 0))
+		if !isTextResultPayload(runtimeResultPayload(input, constants)) {
+			c.words = append(c.words, movz(2, 0), movz(3, 0))
+		}
 		return nil
 	}
 	return fmt.Errorf("运行时结果函数返回必须是结果局部或成功/失败调用")
@@ -741,7 +905,25 @@ func (c *windowCode) emitRuntimeResultRegisters(input value, constants map[strin
 			return nil
 		}
 		if input.text == "成功" && len(input.args) == 1 {
-			if runtimeResultOperandShape(input.args[0]) {
+			argument := input.args[0]
+			if argument.kind == "引用" {
+				if result, exists := c.resultSlots[argument.text]; exists {
+					if result.text {
+						return fmt.Errorf("递归运行时函数暂只支持整数载荷结果转发")
+					}
+					// Re-wrapping an existing integer result preserves its tag/payload
+					// pair instead of treating the reference as an integer payload.
+					c.words = append(c.words, loadIntegerSlot(0, 19, result.tag), loadIntegerSlot(1, 19, result.value), movz(2, 0), movz(3, 0))
+					return nil
+				}
+				// A plain reference is an integer payload, not a result pair.
+				if err := c.emitRuntimeInteger(argument, constants, slots); err != nil {
+					return err
+				}
+				c.words = append(c.words, 0xaa0003e1, movz(0, 0), movz(2, 0), movz(3, 0))
+				return nil
+			}
+			if runtimeResultOperandShape(argument) {
 				if err := c.emitResultValueRegisters(input.args[0], constants, slots); err != nil {
 					return err
 				}
@@ -840,12 +1022,21 @@ func (c *windowCode) emitRuntimeFunctionCall(input value, constants map[string]c
 			continue
 		}
 		if argumentTypes[index] == "运行时结果" {
-			result, exists := c.resultSlots[argument.text]
-			if !exists || result.text {
-				return fmt.Errorf("结果参数需要整数载荷结果变量：%s", argument.text)
+			if result, exists := c.resultSlots[argument.text]; exists {
+				if result.text {
+					return fmt.Errorf("结果参数需要整数载荷结果变量：%s", argument.text)
+				}
+				c.words = append(c.words, loadIntegerSlot(0, 19, result.tag), loadIntegerSlot(1, 19, result.value), storeIntegerSlot(0, 31, offset), storeIntegerSlot(1, 31, offset+8))
+				continue
 			}
-			c.words = append(c.words, loadIntegerSlot(0, 19, result.tag), loadIntegerSlot(1, 19, result.value), storeIntegerSlot(0, 31, offset), storeIntegerSlot(1, 31, offset+8))
-			continue
+			if runtimeResultOperandShape(argument) {
+				if err := c.emitResultValueRegisters(argument, constants, slots); err != nil {
+					return err
+				}
+				c.words = append(c.words, storeIntegerSlot(0, 31, offset), storeIntegerSlot(1, 31, offset+8))
+				continue
+			}
+			return fmt.Errorf("结果参数需要整数载荷结果变量：%s", argument.text)
 		}
 		if err := c.emitRuntimeInteger(argument, constants, slots); err != nil {
 			return err
@@ -915,12 +1106,13 @@ func writeConsoleMachO(path string, expression value, constants map[string]const
 }
 func makeConsoleMachO(expression value, constants map[string]constantValue, statements []statement, runtimeFunctions map[string]functionDecl, runtimeFunctionNames []string) ([]byte, error) {
 	imports := []importedSymbol{{"_write", 1}, {"_exit", 1}}
-	usesInput := containsRuntimeIntegerInput(expression) || containsRuntimeTextInput(expression) || statementsUseRuntimeIntegerInput(statements) || statementsUseRuntimeTextInput(statements)
-	usesFileRead := containsRuntimeFileRead(expression, false) || statementsUseRuntimeFileRead(statements, false)
-	usesModuleRead := containsRuntimeFileRead(expression, true) || statementsUseRuntimeFileRead(statements, true)
-	usesFileWrite := containsRuntimeFileWrite(expression) || statementsUseRuntimeFileWrite(statements)
-	usesArguments := containsRuntimeArguments(expression) || statementsUseRuntimeArguments(statements)
-	usesMappedMemory := statementsUseRuntimeArray(statements) || statementsUseRuntimeMap(statements) || statementsUseRuntimeTextStorage(statements) || runtimeFunctionsUseTextLocals(runtimeFunctions)
+	usesRootInput := containsRuntimeIntegerInput(expression) || containsRuntimeTextInput(expression) || statementsUseRuntimeIntegerInput(statements) || statementsUseRuntimeTextInput(statements)
+	usesInput := usesRootInput || runtimeFunctionsUseSyscall(runtimeFunctions, "readInteger") || runtimeFunctionsUseSyscall(runtimeFunctions, "readText")
+	usesFileRead := containsRuntimeFileRead(expression, false) || statementsUseRuntimeFileRead(statements, false) || runtimeFunctionsUseFileRead(runtimeFunctions, false)
+	usesModuleRead := containsRuntimeFileRead(expression, true) || statementsUseRuntimeFileRead(statements, true) || runtimeFunctionsUseFileRead(runtimeFunctions, true)
+	usesFileWrite := containsRuntimeFileWrite(expression) || statementsUseRuntimeFileWrite(statements) || runtimeFunctionsUseFileWrite(runtimeFunctions)
+	usesArguments := containsRuntimeArguments(expression) || statementsUseRuntimeArguments(statements) || runtimeFunctionsUseArguments(runtimeFunctions)
+	usesMappedMemory := statementsUseRuntimeArray(statements) || statementsUseRuntimeMap(statements) || statementsUseRuntimeTextStorage(statements) || runtimeFunctionsUseMappedMemory(runtimeFunctions) || runtimeFunctionsUseSyscall(runtimeFunctions, "readFile") || runtimeFunctionsUseSyscall(runtimeFunctions, "readModule") || runtimeFunctionsUseSyscall(runtimeFunctions, "readModuleResult")
 	if usesInput || usesFileRead {
 		imports = append([]importedSymbol{{"_read", 1}}, imports...)
 	}
@@ -1048,7 +1240,7 @@ func makeConsoleMachO(expression value, constants map[string]constantValue, stat
 }
 func (c *windowCode) emitConsoleProgram(expression value, constants map[string]constantValue, statements []statement) error {
 	slots := map[string]uint32{}
-	environment := consoleCodegenEnvironment(statements, constants)
+	environment := consoleCodegenEnvironment(statements, constants, c.runtimeFunctions)
 	c.arraySlots = map[string]arraySlot{}
 	c.mapSlots = map[string]mapSlot{}
 	c.resultSlots = map[string]resultSlot{}
@@ -1056,10 +1248,22 @@ func (c *windowCode) emitConsoleProgram(expression value, constants map[string]c
 	if len(c.runtimeFunctionOrder) > 0 {
 		entryJump := c.unconditionalPlaceholder()
 		for _, name := range c.runtimeFunctionOrder {
+			previousResultSlots := c.resultSlots
+			previousTextBuffers := c.textBuffers
+			previousTextLengths := c.textLengths
+			previousTextCapacities := c.textCapacities
+			c.resultSlots = map[string]resultSlot{}
+			c.textBuffers = map[string]uint32{}
+			c.textLengths = map[string]uint32{}
+			c.textCapacities = map[string]uint32{}
 			c.runtimeFunctionAt[name] = len(c.words)
 			if err := c.emitRuntimeFunctionBody(c.runtimeFunctions[name], constants); err != nil {
 				return err
 			}
+			c.resultSlots = previousResultSlots
+			c.textBuffers = previousTextBuffers
+			c.textLengths = previousTextLengths
+			c.textCapacities = previousTextCapacities
 		}
 		c.words[entryJump] = branch(len(c.words) - entryJump)
 	}
@@ -1296,8 +1500,29 @@ func (c *windowCode) emitConsoleProgram(expression value, constants map[string]c
 	c.emitRuntimeFailureBlock(exitIndex)
 	return nil
 }
-func consoleCodegenEnvironment(statements []statement, constants map[string]constantValue) map[string]constantValue {
+func consoleCodegenEnvironment(statements []statement, constants map[string]constantValue, runtimeFunctions map[string]functionDecl) map[string]constantValue {
 	environment := copyConstantEnvironment(constants)
+	for _, function := range runtimeFunctions {
+		parameterTypes := runtimeFunctionParameterTypes(function)
+		for index, parameter := range function.parameters {
+			payload := ""
+			if parameterTypes[index] == "运行时结果" {
+				payload = "整数"
+			}
+			environment[parameter.text] = constantValue{kind: parameterTypes[index], resultPayload: payload}
+		}
+		for _, name := range functionLocalNames(function.statements) {
+			if runtimeStatementLocalType(function, name) != "运行时结果" {
+				continue
+			}
+			for _, item := range function.statements {
+				if item.kind == "变量" && item.name.text == name {
+					environment[name] = constantValue{kind: "运行时结果", resultPayload: runtimeResultPayload(item.value, environment)}
+					break
+				}
+			}
+		}
+	}
 	for _, item := range statements {
 		switch item.kind {
 		case "变量":
@@ -1463,6 +1688,10 @@ func (c *windowCode) emitRuntimeResultValue(name string, input value, constants 
 			if err := c.emitRuntimeResultTextConcat(input.args[0], result, slots, constants); err != nil {
 				return err
 			}
+		case input.args[0].kind == "调用" && input.args[0].text == "arrayGet":
+			if err := c.emitRuntimeResultTextArrayElement(input.args[0], result, slots, constants); err != nil {
+				return err
+			}
 		case input.args[0].kind == "调用" && input.args[0].text == "substring":
 			if err := c.emitRuntimeResultTextSubstring(input.args[0], result, slots, constants); err != nil {
 				return err
@@ -1580,6 +1809,21 @@ func (c *windowCode) emitRuntimeResultTextSubstring(input value, result resultSl
 	c.words = append(c.words, addRegister(7, 2, 3), movz(4, 10), storeByte(4, 7), storeIntegerSlot(3, 19, result.length))
 	return nil
 }
+func (c *windowCode) emitRuntimeResultTextArrayElement(input value, result resultSlot, slots map[string]uint32, constants map[string]constantValue) error {
+	if err := c.emitRuntimeTextOperand(input, slots, constants, 3, 5, c.temporaryBufferOffset+256); err != nil {
+		return err
+	}
+	c.words = append(c.words, loadIntegerSlot(2, 19, result.pointer), movz(6, 0))
+	copyLoop := len(c.words)
+	c.words = append(c.words, compareRegister(6, 3))
+	copyDone := c.conditionalPlaceholder(10) // b.ge
+	c.words = append(c.words, addRegister(7, 5, 6), loadByte(4, 7), addRegister(7, 2, 6), storeByte(4, 7), addImmediate(6, 6, 1))
+	c.words = append(c.words, branch(copyLoop-len(c.words)))
+	c.patchConditional(copyDone, len(c.words))
+	c.words = append(c.words, addRegister(7, 2, 3), movz(4, 10), storeByte(4, 7), storeIntegerSlot(3, 19, result.length))
+	return nil
+}
+
 func (c *windowCode) emitRuntimeResultTextArgument(input value, result resultSlot, slots map[string]uint32, constants map[string]constantValue) error {
 	if err := c.emitRuntimeArgumentTextOperand(input, slots, constants, 3, 5); err != nil {
 		return err
@@ -2476,6 +2720,9 @@ func runtimeResultOperandShape(input value) bool {
 	if input.kind != "调用" {
 		return false
 	}
+	if input.runtimeFunction && len(input.runtimeArgumentTypes) == 0 {
+		return true
+	}
 	if input.runtimeFunctionResult || input.text == "成功" || input.text == "失败" || isModuleReadResult(input) {
 		return true
 	}
@@ -2483,7 +2730,7 @@ func runtimeResultOperandShape(input value) bool {
 }
 
 func (c *windowCode) emitConditionFalseBranches(condition value, constants map[string]constantValue, slots map[string]uint32) ([]conditionFalsePatch, error) {
-	if !containsRuntimeArguments(condition) && !containsRuntimeIntegerInput(condition) && !containsRuntimeTextInput(condition) && !containsIntegerSlotReference(condition, slots) && !containsRuntimeTextVariableReference(condition, c.textBuffers) && !containsTextResultValue(condition) && !containsRuntimeTextReturnCall(condition) {
+	if !containsRuntimeArguments(condition) && !containsRuntimeIntegerInput(condition) && !containsRuntimeTextInput(condition) && !containsIntegerSlotReference(condition, slots) && !containsRuntimeTextVariableReference(condition, c.textBuffers) && !containsTextResultValue(condition) && !containsRuntimeTextReturnCall(condition) && !containsResultStateCall(condition) {
 		selected, err := evaluateBoolean(condition, 0, constants)
 		if err != nil {
 			return nil, fmt.Errorf("无法计算静态布尔条件：%w", err)
@@ -2774,7 +3021,9 @@ func (c *windowCode) emitConsoleString(text string, writeIndex, exitIndex int) e
 	return nil
 }
 func (c *windowCode) emitReadInteger(bufferOffset uint32) error {
-	c.movRegister(28, 20)
+	// readInteger is a primitive, not an ABI frame. Save caller x20 explicitly
+	// rather than caching it in x28, which other text/codegen paths reuse.
+	c.words = append(c.words, subImmediate(31, 31, 16), storeIntegerSlot(20, 31, 0))
 	c.emitConsoleStackAddress(21, bufferOffset)
 	c.movImmediate(20, 0)
 	readLoop := len(c.words)
@@ -2783,7 +3032,7 @@ func (c *windowCode) emitReadInteger(bufferOffset uint32) error {
 	c.movImmediate(0, 0)
 	c.words = append(c.words, addRegister(1, 21, 20))
 	c.movImmediate(2, 1)
-	c.call(0) // read one byte for consistent terminal and pipe behavior
+	c.call(c.fileReadIndex) // read one byte for consistent terminal and pipe behavior
 	c.words = append(c.words, compareImmediate(0, 0))
 	readFailure := c.conditionalPlaceholder(11) // b.lt
 	readEOF := c.conditionalPlaceholder(0)      // b.eq
@@ -2854,7 +3103,7 @@ func (c *windowCode) emitReadInteger(bufferOffset uint32) error {
 	c.movImmediate(0, 1)
 	c.call(c.exitIndex) // _exit(1)
 	afterFailure := len(c.words)
-	c.movRegister(20, 28)
+	c.words = append(c.words, loadIntegerSlot(20, 31, 0), addImmediate(31, 31, 16))
 	for _, patch := range []conditionalPatch{bufferFull, readFailure, readShort, emptyInput, emptyAfterLineFeed, emptyAfterCarriageReturn, emptyAfterMinus, digitTooSmall, digitTooLarge, accumulatorTooSmall, positiveDigitTooLarge, negativeDigitTooLarge} {
 		c.patchConditional(patch, failure)
 	}
@@ -3503,7 +3752,7 @@ func (c *windowCode) emitRuntimeInteger(input value, constants map[string]consta
 		}
 		if input.text == "ifElse" && len(input.args) == 3 {
 			condition := input.args[0]
-			if !containsRuntimeArguments(condition) && !containsRuntimeIntegerInput(condition) && !containsRuntimeTextInput(condition) && !containsIntegerSlotReference(condition, slots) && !containsRuntimeTextVariableReference(condition, c.textBuffers) && !containsTextResultValue(condition) && !containsRuntimeTextReturnCall(condition) {
+			if !containsRuntimeArguments(condition) && !containsRuntimeIntegerInput(condition) && !containsRuntimeTextInput(condition) && !containsIntegerSlotReference(condition, slots) && !containsRuntimeTextVariableReference(condition, c.textBuffers) && !containsTextResultValue(condition) && !containsRuntimeTextReturnCall(condition) && !containsResultStateCall(condition) {
 				selected, problem := evaluateBoolean(condition, 0, constants)
 				if problem != nil {
 					return fmt.Errorf("无法计算整数 ifElse 条件：%w", problem)

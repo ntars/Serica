@@ -77,7 +77,7 @@ func expandProgramFunctions(program *program, payloads map[string]constantValue)
 	}
 	for index := range program.functions {
 		function := program.functions[index]
-		if len(function.statements) == 0 || len(function.effects) == 0 && (containsStatementKind(function.statements, "凡") || blockFunctionUsesRuntimeTextParameter(function)) {
+		if len(function.statements) == 0 || (len(function.effects) == 0 && (containsStatementKind(function.statements, "凡") || blockFunctionUsesRuntimeTextParameter(function) || blockFunctionObservesResultState(function) || blockFunctionReturnsRuntimeCall(function, functions))) || (len(function.effects) != 0 && (containsStatementKind(function.statements, "凡") || blockFunctionConstructsResultLocal(function))) {
 			continue
 		}
 		environment := make(map[string]value, len(function.parameters))
@@ -187,7 +187,7 @@ func recursiveRuntimeFunctions(ordered []functionDecl, functions map[string]func
 	runtime := map[string]functionDecl{}
 	names := []string{}
 	for _, function := range ordered {
-		if len(function.effects) != 0 {
+		if len(function.effects) != 0 && function.body.kind != "" {
 			continue
 		}
 		if function.body.kind != "" && !callGraphReaches(graph, function.name.text, function.name.text, map[string]bool{}) {
@@ -231,14 +231,120 @@ func blockFunctionUsesRuntimeTextParameter(function functionDecl) bool {
 	return false
 }
 
+// blockFunctionObservesResultState keeps result-querying block functions on
+// the statement ABI so lowering cannot replace a result local by its initializer.
+func blockFunctionObservesResultState(function functionDecl) bool {
+	var observed func(value) bool
+	observed = func(input value) bool {
+		if input.kind == "调用" && (input.text == "是否失败" || input.text == "错误码" || input.text == "结果值") && len(input.args) == 1 {
+			return true
+		}
+		for _, argument := range input.args {
+			if observed(argument) {
+				return true
+			}
+		}
+		for _, field := range input.fields {
+			if observed(field.value) {
+				return true
+			}
+		}
+		if input.left != nil && observed(*input.left) || input.right != nil && observed(*input.right) {
+			return true
+		}
+		return false
+	}
+	if observed(function.body) {
+		return true
+	}
+	var visit func([]statement) bool
+	visit = func(items []statement) bool {
+		for _, item := range items {
+			if observed(item.value) || observed(item.condition) || visit(item.body) || visit(item.otherwise) {
+				return true
+			}
+		}
+		return false
+	}
+	return visit(function.statements)
+}
+
+// blockFunctionConstructsResultLocal keeps effectful functions with an
+// explicit result local on the statement-based runtime ABI. The expression
+// lowering path cannot preserve the local's tag/value pair across an effect.
+func blockFunctionConstructsResultLocal(function functionDecl) bool {
+	var constructs func(value) bool
+	constructs = func(input value) bool {
+		if input.kind == "调用" {
+			if input.text == "成功" || input.text == "失败" {
+				return true
+			}
+			if input.text == "ifElse" && len(input.args) == 3 && constructs(input.args[1]) && constructs(input.args[2]) {
+				return true
+			}
+		}
+		for _, argument := range input.args {
+			if constructs(argument) {
+				return true
+			}
+		}
+		for _, field := range input.fields {
+			if constructs(field.value) {
+				return true
+			}
+		}
+		if input.left != nil && constructs(*input.left) || input.right != nil && constructs(*input.right) {
+			return true
+		}
+		return false
+	}
+	var visit func([]statement) bool
+	visit = func(items []statement) bool {
+		for _, item := range items {
+			if item.kind == "变量" && constructs(item.value) || visit(item.body) || visit(item.otherwise) {
+				return true
+			}
+		}
+		return false
+	}
+	return visit(function.statements)
+}
+
+func blockFunctionReturnsRuntimeCall(function functionDecl, functions map[string]functionDecl) bool {
+	var calls func(value) bool
+	calls = func(input value) bool {
+		if input.kind == "调用" {
+			if _, exists := functions[input.text]; exists {
+				return true
+			}
+		}
+		for _, argument := range input.args {
+			if calls(argument) {
+				return true
+			}
+		}
+		return false
+	}
+	var visit func([]statement) bool
+	visit = func(items []statement) bool {
+		for _, item := range items {
+			if item.kind == "返回" && calls(item.value) {
+				return true
+			}
+			if visit(item.body) || visit(item.otherwise) {
+				return true
+			}
+		}
+		return false
+	}
+	return visit(function.statements)
+}
+
 func runtimeResultStateUsesValue(input value, name string, found *bool) bool {
 	if input.kind == "调用" && (input.text == "是否失败" || input.text == "错误码" || input.text == "结果值") && len(input.args) == 1 && input.args[0].kind == "引用" && input.args[0].text == name {
 		*found = true
 	}
 	for _, argument := range input.args {
-		if argument.kind == "引用" && argument.text == name && (input.text == "成功" || input.text == "失败") {
-			*found = true
-		}
 		if runtimeResultStateUsesValue(argument, name, found) {
 			return true
 		}
@@ -353,7 +459,10 @@ func inferRuntimeResultStateParameters(program *program, function functionDecl, 
 	inspectCalls = func(input value) {
 		if input.kind == "调用" && input.text == function.name.text {
 			for index, argument := range input.args {
-				if index >= len(function.parameters) || argument.kind != "引用" {
+				if index >= len(function.parameters) {
+					continue
+				}
+				if argument.kind != "引用" && !isRuntimeResultValue(argument) {
 					continue
 				}
 				kind, problem := constantType(argument, environment)
@@ -806,7 +915,7 @@ func runtimeFunctionParameterTypes(function functionDecl) []string {
 func runtimeFunctionRegisterCount(function functionDecl) int {
 	count := 0
 	for _, parameterType := range runtimeFunctionParameterTypes(function) {
-		if parameterType == "运行时字符串" {
+		if parameterType == "运行时字符串" || parameterType == "运行时结果" {
 			count += 2
 		} else {
 			count++
@@ -856,7 +965,11 @@ func runtimeStatementLocalSlotCount(function functionDecl) int {
 		if runtimeStatementLocalType(function, name) == "运行时字符串" {
 			count += 3
 		} else if runtimeStatementLocalType(function, name) == "运行时结果" {
-			count += 2
+			if isTextResultPayload(function.localResultPayloads[name]) {
+				count += 4
+			} else {
+				count += 2
+			}
 		} else {
 			count++
 		}
@@ -886,6 +999,18 @@ func classifyRuntimeFunctionLocalTypes(program *program, payloads map[string]con
 			environment[parameter.text] = constantValue{kind: runtimeFunctionParameterTypes(function)[index]}
 		}
 		localTypes := map[string]string{}
+		localResultPayloads := map[string]string{}
+		resultObservations := map[string]bool{}
+		var collectResultObservations func([]statement)
+		collectResultObservations = func(items []statement) {
+			for _, item := range items {
+				collectRuntimeResultObservations(item.value, resultObservations)
+				collectRuntimeResultObservations(item.condition, resultObservations)
+				collectResultObservations(item.body)
+				collectResultObservations(item.otherwise)
+			}
+		}
+		collectResultObservations(function.statements)
 		var visit func([]statement)
 		visit = func(items []statement) {
 			for _, item := range items {
@@ -893,6 +1018,11 @@ func classifyRuntimeFunctionLocalTypes(program *program, payloads map[string]con
 				case "变量", "赋值":
 					kind, problem := constantType(item.value, environment)
 					if problem != nil {
+						if item.kind == "变量" && resultObservations[item.name.text] {
+							localTypes[item.name.text] = "运行时结果"
+							localResultPayloads[item.name.text] = "整数"
+							environment[item.name.text] = constantValue{kind: "运行时结果", resultPayload: "整数"}
+						}
 						continue
 					}
 					if item.kind == "变量" {
@@ -909,6 +1039,7 @@ func classifyRuntimeFunctionLocalTypes(program *program, payloads map[string]con
 						constant := constantValue{kind: localTypes[item.name.text]}
 						if kind == "运行时结果" {
 							constant.resultPayload = runtimeResultPayload(item.value, environment)
+							localResultPayloads[item.name.text] = constant.resultPayload
 						}
 						environment[item.name.text] = constant
 						continue
@@ -926,15 +1057,35 @@ func classifyRuntimeFunctionLocalTypes(program *program, payloads map[string]con
 		}
 		visit(function.statements)
 		function.localTypes = localTypes
+		function.localResultPayloads = localResultPayloads
 		program.runtimeFunctions[name] = function
 		for index := range program.functions {
 			if program.functions[index].name.text == name {
 				program.functions[index].localTypes = localTypes
+				program.functions[index].localResultPayloads = localResultPayloads
 				break
 			}
 		}
 	}
 	return nil
+}
+
+func collectRuntimeResultObservations(input value, observations map[string]bool) {
+	if input.kind == "调用" && (input.text == "是否失败" || input.text == "错误码" || input.text == "结果值") && len(input.args) == 1 && input.args[0].kind == "引用" {
+		observations[input.args[0].text] = true
+	}
+	for _, argument := range input.args {
+		collectRuntimeResultObservations(argument, observations)
+	}
+	for _, item := range input.fields {
+		collectRuntimeResultObservations(item.value, observations)
+	}
+	if input.left != nil {
+		collectRuntimeResultObservations(*input.left, observations)
+	}
+	if input.right != nil {
+		collectRuntimeResultObservations(*input.right, observations)
+	}
 }
 
 func annotateRuntimeTextReturns(program *program) {
@@ -951,16 +1102,6 @@ func annotateRuntimeTextReturns(program *program) {
 			}
 		}
 		if function.body.kind != "" || function.runtimeReturnsResult || len(function.statements) == 0 {
-			continue
-		}
-		containsStoredTextReturn := false
-		for _, item := range function.statements {
-			if isTextReturnCall(item.value) {
-				containsStoredTextReturn = true
-				break
-			}
-		}
-		if containsStoredTextReturn {
 			continue
 		}
 		last := function.statements[len(function.statements)-1]
@@ -1106,6 +1247,9 @@ func annotateRuntimeResultPayloads(program *program, constants map[string]consta
 			parameterTypes := runtimeFunctionParameterTypes(function)
 			for index, parameter := range function.parameters {
 				environment[parameter.text] = constantValue{kind: parameterTypes[index]}
+			}
+			for local, payload := range function.localResultPayloads {
+				environment[local] = constantValue{kind: "运行时结果", resultPayload: payload}
 			}
 			payload := runtimeResultReturnPayload(function.body, functions, environment, map[string]bool{name: true})
 			if len(function.statements) > 0 {
@@ -1545,23 +1689,12 @@ func expandFunctionValue(input value, functions map[string]functionDecl, runtime
 			arguments := make(map[string]value, len(function.parameters))
 			for index, parameter := range function.parameters {
 				argument := input.args[index]
-				if containsFunctionEffect(argument, functions) {
-					return value{}, &issue{code: "S-4106", expected: "不含 IO 或可变数组操作的函数实参", actual: "含副作用的实参", suggestion: "先在调用方语句中求值并存入变量，再将变量传给纯函数", pos: argument.pos}
-				}
-				if countFunctionParameter(function.body, parameter.text) == 0 {
+				parameterUses := countFunctionParameter(function.body, parameter.text)
+				if parameterUses == 0 {
 					return value{}, &issue{code: "S-3065", expected: "函数体使用的参数", actual: parameter.text, suggestion: "删除未使用参数或在返回表达式中使用它", pos: parameter.pos}
 				}
-				// Pure functions are inlined by AST substitution; a text-payload
-				// result reference would lose its tag/payload descriptors.
-				if argument.kind == "引用" {
-					stored := payloads[argument.text]
-					payload := stored.resultPayload
-					if payload == "" && stored.kind == "运行时结果" {
-						payload = "整数"
-					}
-					if stored.kind == "运行时结果" && isTextResultPayload(payload) {
-						return value{}, &issue{code: "S-3023", expected: "整数载荷结果参数", actual: "运行时文本载荷结果引用实参", suggestion: "先把文本结果载荷复制到文本变量，再调用纯函数", pos: argument.pos}
-					}
+				if parameterUses != 1 && containsFunctionEffect(argument, functions) {
+					return value{}, &issue{code: "S-4106", expected: "只引用一次的效果函数实参", actual: "效果实参在函数体内被引用 " + strconv.Itoa(parameterUses) + " 次", suggestion: "让纯函数只使用该形参一次，或先在调用方语句中求值并存入变量", pos: argument.pos}
 				}
 				expandedArgument, problem := expandFunctionValue(argument, functions, runtimeFunctions, stack, depth+1, remaining, rootEffects, callPayloads, statements)
 				if problem != nil {
@@ -2061,9 +2194,6 @@ func validateProgram(program *program) *issue {
 	if problem := classifyRuntimeFunctionParameterTypes(program); problem != nil {
 		return problem
 	}
-	if problem := validateRuntimeTextParameterReturns(program); problem != nil {
-		return problem
-	}
 	if problem := classifyRuntimeFunctionLocalTypes(program, constants); problem != nil {
 		return problem
 	}
@@ -2072,7 +2202,10 @@ func validateProgram(program *program) *issue {
 	if problem := validateRuntimeTextReturnCalls(program); problem != nil {
 		return problem
 	}
-	if problem := validateRuntimeFunctions(program, constants); problem != nil {
+	if problem := validateRuntimeFunctions(program, constants, programRootEffects(program.root)); problem != nil {
+		return problem
+	}
+	if problem := validateRuntimeTextParameterReturns(program); problem != nil {
 		return problem
 	}
 	if program.rootName.text == "程序" {
@@ -2146,7 +2279,107 @@ func annotateResultStateCallsInStatements(items []statement, constants map[strin
 	}
 }
 
-func validateRuntimeFunctions(program *program, constants map[string]constantValue) *issue {
+// statementRuntimeEffects collects effects reachable from a statement
+// expression, including effects declared by other runtime functions.
+func statementRuntimeEffects(input value, functions map[string]functionDecl) []string {
+	effects := []string{}
+	seen := map[string]bool{}
+	var walk func(value, map[string]bool)
+	walk = func(current value, active map[string]bool) {
+		if current.kind == "调用" {
+			if isFunctionEffect(current.text) {
+				effect := requiredFunctionEffect(current.text)
+				if !seen[effect] {
+					seen[effect] = true
+					effects = append(effects, effect)
+				}
+			}
+			if function, exists := functions[current.text]; exists && !active[current.text] {
+				next := map[string]bool{current.text: true}
+				for name := range active {
+					next[name] = true
+				}
+				for _, declared := range function.effects {
+					if !seen[declared] {
+						seen[declared] = true
+						effects = append(effects, declared)
+					}
+				}
+				walk(function.body, next)
+				for _, item := range function.statements {
+					walk(item.value, next)
+					walk(item.condition, next)
+				}
+			}
+		}
+		for _, argument := range current.args {
+			walk(argument, active)
+		}
+		for _, field := range current.fields {
+			walk(field.value, active)
+		}
+		if current.left != nil {
+			walk(*current.left, active)
+		}
+		if current.right != nil {
+			walk(*current.right, active)
+		}
+	}
+	walk(input, map[string]bool{})
+	return effects
+}
+
+func hasStatementEffectSupport(input value, functions map[string]functionDecl, allowReadText ...bool) bool {
+	if input.kind == "调用" {
+		if input.text == "readInteger" || len(allowReadText) > 0 && input.text == "readText" {
+			return true
+		}
+		if isFunctionEffect(input.text) && input.text != "readInteger" {
+			return false
+		}
+		if function, exists := functions[input.text]; exists && len(function.effects) > 0 {
+			return false
+		}
+	}
+	for _, argument := range input.args {
+		if !hasStatementEffectSupport(argument, functions, allowReadText...) {
+			return false
+		}
+	}
+	for _, field := range input.fields {
+		if !hasStatementEffectSupport(field.value, functions, allowReadText...) {
+			return false
+		}
+	}
+	if input.left != nil && !hasStatementEffectSupport(*input.left, functions, allowReadText...) {
+		return false
+	}
+	if input.right != nil && !hasStatementEffectSupport(*input.right, functions, allowReadText...) {
+		return false
+	}
+	return true
+}
+
+func hasRuntimeResultEffectSupport(input value, functions map[string]functionDecl) bool {
+	if input.kind == "调用" && input.text == "成功" && len(input.args) == 1 {
+		return hasStatementEffectSupport(input.args[0], functions, true)
+	}
+	if input.kind == "调用" && input.text == "ifElse" && len(input.args) == 3 {
+		return hasStatementEffectSupport(input.args[0], functions) &&
+			hasRuntimeResultEffectSupport(input.args[1], functions) &&
+			hasRuntimeResultEffectSupport(input.args[2], functions)
+	}
+	return hasStatementEffectSupport(input, functions)
+}
+
+func statementEffectSupport(function functionDecl, item statement, input value, functions map[string]functionDecl) bool {
+	if (item.kind == "变量" || item.kind == "赋值") && runtimeStatementLocalType(function, item.name.text) == "运行时结果" {
+		return hasRuntimeResultEffectSupport(input, functions)
+	}
+	return hasStatementEffectSupport(input, functions)
+}
+
+func validateRuntimeFunctions(program *program, constants map[string]constantValue, rootEffects map[string]bool) *issue {
 	functions := make(map[string]functionDecl, len(program.functions))
 	for _, function := range program.functions {
 		functions[function.name.text] = function
@@ -2180,7 +2413,7 @@ func validateRuntimeFunctions(program *program, constants map[string]constantVal
 			}
 			registerResultLocals(function.statements)
 			annotateResultStateCallsInStatements(function.statements, environment)
-			if problem := validateRuntimeStatementFunction(function, constants, functions); problem != nil {
+			if problem := validateRuntimeStatementFunction(function, constants, functions, rootEffects); problem != nil {
 				return problem
 			}
 			continue
@@ -2208,7 +2441,7 @@ func validateRuntimeFunctions(program *program, constants map[string]constantVal
 	return nil
 }
 
-func validateRuntimeStatementFunction(function functionDecl, constants map[string]constantValue, functions map[string]functionDecl) *issue {
+func validateRuntimeStatementFunction(function functionDecl, constants map[string]constantValue, functions map[string]functionDecl, rootEffects map[string]bool) *issue {
 	environment := copyConstantEnvironment(constants)
 	writable := map[string]bool{}
 	parameterTypes := runtimeFunctionParameterTypes(function)
@@ -2224,8 +2457,8 @@ func validateRuntimeStatementFunction(function functionDecl, constants map[strin
 			parameterSlotCount += 2
 		} else {
 			parameterSlotCount++
+			writable[parameter.text] = true
 		}
-		writable[parameter.text] = true
 	}
 	localNames := functionLocalNames(function.statements)
 	seenLocals := map[string]bool{}
@@ -2239,14 +2472,33 @@ func validateRuntimeStatementFunction(function functionDecl, constants map[strin
 	for index, item := range function.statements {
 		values := []value{item.value, item.condition}
 		for _, input := range values {
-			if input.kind != "" && containsFunctionEffect(input, functions) {
-				return &issue{code: "S-4106", expected: "无效果的运行时函数体", actual: "函数体表达式含 IO 效果", suggestion: "把输入求值留在调用方，再向无效果函数传入整数", pos: input.pos}
+			for _, required := range statementRuntimeEffects(input, functions) {
+				if !hasFunctionEffect(function, required) {
+					return &issue{code: "S-4106", expected: "为当前函数声明 " + required + " 效果", actual: required, suggestion: "为当前函数和调用链声明 " + required, pos: item.name.pos}
+				}
+				if !rootEffects[required] {
+					return &issue{code: "S-4106", expected: "程序根能力声明 " + required, actual: required, suggestion: "在程序根能力数组中声明 " + required, pos: item.name.pos}
+				}
+			}
+			if input.kind != "" && !statementEffectSupport(function, item, input, functions) {
+				return &issue{code: "S-4106", expected: "受支持的运行时函数效果", actual: "函数体表达式含未支持的效果", suggestion: "把效果求值移到受支持的运行时语句或由调用方传入", pos: input.pos}
 			}
 		}
 		switch item.kind {
 		case "变量":
 			if _, exists := environment[item.name.text]; exists {
 				return functionBlockIssue(item.name.pos, "唯一的函数局部变量名", item.name.text, "使用未被参数或常量占用的局部变量名")
+			}
+			if !statementEffectSupport(function, item, item.value, functions) {
+				return &issue{code: "S-4106", expected: "受支持的局部变量初值效果", actual: "含未支持的效果", suggestion: "通过函数返回表达式或受支持的运行时语句求值", pos: item.value.pos}
+			}
+			if isTextReturnCall(item.value) {
+				// Nested owned-text returns are rejected after runtime validation.
+				// Keep enough type metadata to validate the remaining statements
+				// without assigning codegen semantics to an unsupported copy.
+				environment[item.name.text] = constantValue{kind: "运行时字符串"}
+				writable[item.name.text] = true
+				break
 			}
 			if runtimeStatementLocalType(function, item.name.text) == "运行时结果" {
 				kind, problem := constantType(item.value, environment)
@@ -2308,10 +2560,10 @@ func validateRuntimeStatementFunction(function functionDecl, constants map[strin
 			if kind != "布尔值" && kind != "运行时布尔值" {
 				return functionBlockIssue(item.condition.pos, "若语句的布尔条件", kind, "若条件使用整数比较、文本比较或逻辑组合")
 			}
-			if problem := validateRuntimeLoopBody(item.body, copyConstantEnvironment(environment), copyWritableVariables(writable), functions, 0); problem != nil {
+			if problem := validateRuntimeLoopBody(item.body, copyConstantEnvironment(environment), copyWritableVariables(writable), functions, rootEffects, function, 0, true); problem != nil {
 				return problem
 			}
-			if problem := validateRuntimeLoopBody(item.otherwise, copyConstantEnvironment(environment), copyWritableVariables(writable), functions, 0); problem != nil {
+			if problem := validateRuntimeLoopBody(item.otherwise, copyConstantEnvironment(environment), copyWritableVariables(writable), functions, rootEffects, function, 0, true); problem != nil {
 				return problem
 			}
 		case "凡":
@@ -2334,7 +2586,7 @@ func validateRuntimeStatementFunction(function functionDecl, constants map[strin
 			if len(item.body) == 0 {
 				return functionBlockIssue(item.name.pos, "非空的凡循环体", "空循环体", "在循环体内更新至少一个整数状态")
 			}
-			if problem := validateRuntimeLoopBody(item.body, copyConstantEnvironment(environment), copyWritableVariables(writable), functions, 1); problem != nil {
+			if problem := validateRuntimeLoopBody(item.body, copyConstantEnvironment(environment), copyWritableVariables(writable), functions, rootEffects, function, 1, false); problem != nil {
 				return problem
 			}
 		case "返回":
@@ -2361,13 +2613,49 @@ func validateRuntimeStatementFunction(function functionDecl, constants map[strin
 			return functionBlockIssue(item.name.pos, "变量、赋值、若、凡或返回语句", item.kind, "顶层使用变量、赋值、若、凡或返回；循环控制放在循环体内")
 		}
 	}
+	if runtimeStatementsAlwaysReturn(function.statements) {
+		return nil
+	}
 	return functionBlockIssue(function.name.pos, "函数块末尾返回整数状态", "缺少返回", "在凡循环之后返回结果")
 }
 
-func validateRuntimeLoopBody(items []statement, environment map[string]constantValue, writable map[string]bool, functions map[string]functionDecl, loopDepth int) *issue {
+// runtimeStatementsAlwaysReturn reports whether a statement list ends in a
+// return on every path, allowing 若/否 branches that each return to terminate a
+// runtime function body.
+func runtimeStatementsAlwaysReturn(items []statement) bool {
+	if len(items) == 0 {
+		return false
+	}
+	last := items[len(items)-1]
+	switch last.kind {
+	case "返回":
+		return true
+	case "若":
+		if len(last.otherwise) == 0 {
+			return false
+		}
+		return runtimeStatementsAlwaysReturn(last.body) && runtimeStatementsAlwaysReturn(last.otherwise)
+	}
+	return false
+}
+
+func validateRuntimeLoopBody(items []statement, environment map[string]constantValue, writable map[string]bool, functions map[string]functionDecl, rootEffects map[string]bool, function functionDecl, loopDepth int, allowResultReturn bool) *issue {
 	for index, item := range items {
-		if item.value.kind != "" && containsFunctionEffect(item.value, functions) || item.condition.kind != "" && containsFunctionEffect(item.condition, functions) {
-			return &issue{code: "S-4106", expected: "无效果的运行时循环体", actual: "循环体表达式含 IO 效果", suggestion: "在进入纯函数前完成输入", pos: item.name.pos}
+		for _, input := range []value{item.value, item.condition} {
+			if input.kind == "" {
+				continue
+			}
+			for _, required := range statementRuntimeEffects(input, functions) {
+				if !hasFunctionEffect(function, required) {
+					return &issue{code: "S-4106", expected: "为循环所在函数声明 " + required + " 效果", actual: required, suggestion: "在函数能力数组中声明该效果", pos: item.name.pos}
+				}
+				if !rootEffects[required] {
+					return &issue{code: "S-4106", expected: "程序根能力声明 " + required, actual: required, suggestion: "在程序根能力数组中声明该效果", pos: item.name.pos}
+				}
+			}
+			if !hasStatementEffectSupport(input, functions) {
+				return &issue{code: "S-4106", expected: "受支持的运行时循环体效果", actual: "循环体表达式含未支持的效果", suggestion: "把效果求值移到受支持的运行时语句或由调用方传入", pos: input.pos}
+			}
 		}
 		switch item.kind {
 		case "变量":
@@ -2402,10 +2690,10 @@ func validateRuntimeLoopBody(items []statement, environment map[string]constantV
 			if kind != "布尔值" && kind != "运行时布尔值" {
 				return functionBlockIssue(item.condition.pos, "若语句的布尔条件", kind, "若条件使用整数比较、文本比较或逻辑组合")
 			}
-			if problem := validateRuntimeLoopBody(item.body, copyConstantEnvironment(environment), copyWritableVariables(writable), functions, loopDepth); problem != nil {
+			if problem := validateRuntimeLoopBody(item.body, copyConstantEnvironment(environment), copyWritableVariables(writable), functions, rootEffects, function, loopDepth, allowResultReturn); problem != nil {
 				return problem
 			}
-			if problem := validateRuntimeLoopBody(item.otherwise, copyConstantEnvironment(environment), copyWritableVariables(writable), functions, loopDepth); problem != nil {
+			if problem := validateRuntimeLoopBody(item.otherwise, copyConstantEnvironment(environment), copyWritableVariables(writable), functions, rootEffects, function, loopDepth, allowResultReturn); problem != nil {
 				return problem
 			}
 		case "凡":
@@ -2428,7 +2716,7 @@ func validateRuntimeLoopBody(items []statement, environment map[string]constantV
 			if len(item.body) == 0 {
 				return functionBlockIssue(item.name.pos, "非空的嵌套凡循环体", "空循环体", "在嵌套循环体内更新整数状态或跳出")
 			}
-			if problem := validateRuntimeLoopBody(item.body, copyConstantEnvironment(environment), copyWritableVariables(writable), functions, loopDepth+1); problem != nil {
+			if problem := validateRuntimeLoopBody(item.body, copyConstantEnvironment(environment), copyWritableVariables(writable), functions, rootEffects, function, loopDepth+1, false); problem != nil {
 				return problem
 			}
 		case "跳出", "继续":
@@ -2443,8 +2731,11 @@ func validateRuntimeLoopBody(items []statement, environment map[string]constantV
 			if problem != nil {
 				return problem
 			}
-			if kind != "整数" && kind != "运行时整数" {
+			if kind != "整数" && kind != "运行时整数" && !(allowResultReturn && kind == "运行时结果") {
 				return functionBlockIssue(item.value.pos, "运行时函数循环体内的整数返回", kind, "返回整数或运行时整数表达式")
+			}
+			if kind == "运行时结果" && !(item.value.kind == "引用" && environment[item.value.text].kind == "运行时结果" || runtimeResultOperandShape(item.value)) {
+				return functionBlockIssue(item.value.pos, "可发射的结果返回表达式", kind, "直接返回结果局部、成功/失败调用或调用返回结果的表达式")
 			}
 		default:
 			return functionBlockIssue(item.name.pos, "变量、赋值、若、凡、跳出、继续或返回语句", item.kind, "使用当前运行时循环体支持的语句")
@@ -3319,7 +3610,7 @@ func constantType(input value, constants map[string]constantValue) (string, *iss
 					return "", problem
 				}
 				if current.text == "成功" {
-					if argumentType == "运行时字符串" && (isRuntimeTextValue(current.args[0]) || isRuntimeArgumentText(current.args[0])) {
+					if argumentType == "运行时字符串" && (isRuntimeTextValue(current.args[0]) || isRuntimeArgumentText(current.args[0]) || current.args[0].kind == "调用" && current.args[0].text == "arrayGet" && len(current.args[0].args) == 2 && current.args[0].args[0].kind == "引用") {
 						// Direct input, bounded concatenation and substring values are copied
 						// into an owned result buffer before the result is stored.
 					} else if argumentType != "整数" && argumentType != "运行时整数" && argumentType != "字符串" {
@@ -3345,14 +3636,12 @@ func constantType(input value, constants map[string]constantValue) (string, *iss
 					return "", &issue{code: "S-3013", expected: "1 个结果变量引用", actual: strconv.Itoa(len(current.args)) + " 个参数", suggestion: "先声明结果变量，再查询其状态", pos: current.pos}
 				}
 				kind = "运行时布尔值"
-				if current.args[0].kind == "引用" {
-					argumentType, problem := constantType(current.args[0], constants)
-					if problem != nil {
-						return "", problem
-					}
-					if argumentType != "运行时结果" {
-						return "", &issue{code: "S-3015", expected: "结果变量", actual: argumentType, suggestion: "使用成功或失败生成的结果值", pos: current.args[0].pos}
-					}
+				argumentType, problem := constantType(current.args[0], constants)
+				if problem != nil {
+					return "", problem
+				}
+				if argumentType != "运行时结果" {
+					return "", &issue{code: "S-3015", expected: "结果变量", actual: argumentType, suggestion: "使用成功或失败生成的结果值", pos: current.args[0].pos}
 				}
 			case "结果值", "错误码":
 				if len(current.args) != 1 || current.args[0].kind != "引用" {

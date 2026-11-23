@@ -59,6 +59,7 @@ type functionDecl struct {
 	runtimeResultPayload string
 	parameterTypes       []string
 	localTypes           map[string]string
+	localResultPayloads  map[string]string
 }
 type statement struct {
 	kind      string

@@ -1127,6 +1127,70 @@
       "check": "make stage0、make test-p1b-runtime、make test-p1b-module-abi 与 make seed-audit 通过；种子 10937/12000 行、C-1 4141/10432（39.7%），归因完整。",
       "status": "settled",
       "source": "docs/decisions/0145-runtime-result-parameter-abi.md"
+    },
+    {
+      "id": "D-0146",
+      "title": "块体函数局部结果的观察与恢复",
+      "decision": "含结果状态查询的无效果块体函数保留语句形态；仅被是否失败、错误码或结果值观察的局部登记为运行时结果，成功和失败组合本身不再决定参数 ABI。整数结果可恢复为成功、原失败状态或由若/否分支跨函数返回，文本参数直接返回仍拒绝。",
+      "check": "make stage0、全部 P1b/P0b 门、make test-p1b-native-emit、make seed-audit、make license 与源码独立性检查通过；运行时门实测恢复成功输出 6、错误码整数 31。当前种子 11897/12000 行、C-1 4838/11334（42.7%）。",
+      "status": "settled",
+      "source": "docs/decisions/0146-block-function-result-recovery.md"
+    },
+    {
+      "id": "D-0147",
+      "title": "效果函数运行时帧内暂存区与结果参数双寄存器计数",
+      "decision": "带 stdin 效果的有语句体函数保留运行时函数 ABI，循环不进入纯函数块 lowering；进入函数体时按状态槽数建立帧内暂存区并临时切换读取偏移，使 readInteger 不再越过当前函数帧。运行时结果参数按相邻标签/值双寄存器计入展平 ABI 预算；函数体失败补丁与结果槽按帧隔离，不继承调用方同名槽。readInteger 显式保存并恢复调用方 x20，不再借用 x28 缓存栈地址。",
+      "check": "make stage0、test-p1b-runtime、test-p1b-static、test-p1b-modules、test-p1b-native-emit 与 doctor 通过；运行时门实测嵌套效果循环输出 15、直接读取循环输出 6、readInteger（）作为加法左操作数时循环输出 6、混合整数/结果参数转发输出 9 或 36、缺失 stdin 能力反例 S-4106；运行时门、静态/模块/原生门与 doctor 在状态边界收紧后复跑通过。readInteger 修复后全量门复跑通过；当前种子 11897/12000 行、C-1 4838/11334（42.7%）。",
+      "status": "settled",
+      "source": "docs/decisions/0147-effect-function-runtime-frame-scratch.md"
+    },
+    {
+      "id": "D-0148",
+      "title": "文本数组元素作为运行时结果载荷",
+      "decision": "成功（arrayGet（文本数组，运行时索引））从动态文本数组读取元素并深复制到独立结果映射；索引仍在执行时检查，负索引与越界无 stdout 并非零退出。",
+      "check": "make test-p1b-runtime 新增索引 0/1 正例和 2/-1 反例，运行时门完整通过；当前 make seed-audit 为 11897 行，C-1 4838/11334（42.7%），归因完整。",
+      "status": "settled",
+      "source": "docs/decisions/0148-runtime-text-array-result-payload.md"
+    },
+    {
+      "id": "D-0149",
+      "title": "结果状态参数查询保留运行时函数 ABI",
+      "decision": "无效果块体函数只要通过是否失败、错误码或结果值观察参数，就保留语句形态和真实 ARM64 调用帧；结果状态参数按相邻标签/值双寄存器进入展平 ABI。成功（参数）和失败（参数）不再单独决定参数类型，根级状态查询仍只接受结果变量引用。",
+      "check": "make test-p1b-runtime 通过混合整数/结果参数转发输入 3 输出 9、输入 -1 输出 36，并恢复 examples/p1b-runtime-recursive-result.serica 的 check；全部 P0b/P1b 门、doctor、许可与源码独立性通过。种子 11897/12000 行、C-1 4838/11334（42.7%）。",
+      "status": "settled",
+      "source": "docs/decisions/0149-result-state-parameter-runtime-abi.md"
+    },
+    {
+      "id": "D-0150",
+      "title": "纯函数内的运行时文本结果引用转发",
+      "decision": "无效果纯函数可以原样转发结果引用、在结果分支间选择并观察结果参数状态；有界 AST 替换保留实参的结果描述符。移除把运行时文本结果实参整体视为嵌套消费的过宽 S-3023，但非引用结果查询、效果函数结果 ABI 与嵌套结果消费继续拒绝。",
+      "check": "make test-p1b-runtime 通过 181 个 arm64 整数形态产物、1 个静态 UTF-8 文本产物、10 个静态文本结果产物、40 个运行时文本结果产物、11 个函数结果边界产物、309 个编译诊断和 118 个运行时拒绝样例；文本转发、成功/失败选择、失败码保留和文本状态查询均有 macOS arm64 实测。种子 11897/12000 行、C-1 4838/11334（42.7%）。",
+      "status": "settled",
+      "source": "docs/decisions/0150-pure-function-text-result-reference-forwarding.md"
+    },
+    {
+      "id": "D-0151",
+      "title": "效果函数内结果局部的语句 ABI",
+      "decision": "带效果且局部直接构造成功/失败结果，或以同型结果分支初始化的语句体函数保留真实运行时函数帧，不进入会展开局部初值的纯表达式 lowering；整数结果继续使用相邻标签/值双槽，失败路径保持原错误码。",
+      "check": "make test-p1b-runtime 通过效果函数整数结果局部的成功与失败 2 个 macOS arm64 正例；当前 183 个整数形态产物、13 个函数结果边界产物、309 个编译诊断和 118 个运行时拒绝样例。静态、模块、模块 ABI、绑定、原生发射和种子门通过；种子 11938/12000 行、C-1 4879/11371（42.9%）。",
+      "status": "settled",
+      "source": "docs/decisions/0151-effectful-result-local-runtime-abi.md"
+    },
+    {
+      "id": "D-0152",
+      "title": "单次引用的效果函数实参",
+      "decision": "纯函数展开允许含直接效果调用或显式效果函数调用的实参，但目标形参在函数体中必须恰好引用一次；效果在唯一引用位置求值，并继续接受逐层函数效果声明和程序根能力复核。零次沿用 S-3065，重复引用继续以 S-4106 拒绝。",
+      "check": "make test-p1b-runtime 新增 readInteger 与显式效果函数实参两个正例，输入 41 均输出 42；重复引用反例保持 S-4106。当前 185 个整数形态产物、13 个函数结果边界产物、309 个编译诊断和 118 个运行时拒绝样例；种子 11939/12000 行、C-1 4880/11372（42.9%）。",
+      "status": "settled",
+      "source": "docs/decisions/0152-single-use-effect-arguments.md"
+    },
+    {
+      "id": "D-0153",
+      "title": "效果函数文本结果局部运行时 ABI",
+      "decision": "带效果的语句体函数可直接以成功（readText（））构造运行时文本结果局部，或在文本成功与失败结果分支间选择；文本结果按标签、值、指针和长度四槽分配，函数入口清零结果局部，返回时通过 x0/x1/x2/x3 交给调用方。普通文本局部初始化和其他效果位置仍保持原拒绝边界。",
+      "check": "make test-p1b-runtime 新增三个效果函数文本结果局部的成功与失败两个 macOS arm64 正例，开关 1 读取三行并输出跨函数文本结果局部，开关 0 无 stdout 以 9 退出；成功产物连续 8 次同路径构建字节一致。当前 187 个整数形态产物、15 个函数结果边界产物、309 个编译诊断和 118 个运行时拒绝样例。种子 11999/12000 行、C-1 4916/11433（43.0%）。",
+      "status": "settled",
+      "source": "docs/decisions/0153-effectful-text-result-local-runtime-abi.md"
     }
   ]
 }

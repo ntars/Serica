@@ -682,7 +682,7 @@ def verify_module_chain(work):
     path = "，".join(map(str, entry.encode()))
     source = f"""导入 『lexer.serica』。
 函数 跳空（文，起）【
-变量 序=起。
+变量 序=起+0。
 若（序==textByteLength（文））【返回 序。】。
 变量 词=读取词元（文，序）。
 凡（bitAnd（词，15）==0）【
