@@ -592,6 +592,40 @@ OWNED_TEXT_RETURN_CASES = [
 ]
 OWNED_TEXT_RETURN_STORAGE_CASES = [
     (
+        "owned text return borrowed equality",
+        "函数 欢迎（来源）【变量 副本=来源。返回 副本。】。\n"
+        "变量 输入=readText（）。\n"
+        "程序=【能力=array（『stdout』，『stdin』），输出=ifElse（equals（欢迎（输入），『行简』），1，0）】。\n",
+        "行简\n",
+        "1\n",
+        0,
+    ),
+    (
+        "owned text return borrowed inequality",
+        "函数 欢迎（来源）【变量 副本=来源。返回 副本。】。\n"
+        "变量 输入=readText（）。\n"
+        "程序=【能力=array（『stdout』，『stdin』），输出=ifElse（notEquals（欢迎（输入），『行简』），1，0）】。\n",
+        "其他\n",
+        "1\n",
+        0,
+    ),
+    (
+        "owned text return length operand",
+        "函数 欢迎（来源）【变量 副本=来源。返回 副本。】。\n"
+        "变量 输入=readText（）。\n"
+        "程序=【能力=array（『stdout』，『stdin』），输出=textLength（欢迎（输入））】。\n",
+        "行简\n",
+        "2\n",
+    ),
+    (
+        "owned supplementary text return length operand",
+        "函数 欢迎（来源）【变量 副本=来源。返回 副本。】。\n"
+        "变量 输入=readText（）。\n"
+        "程序=【能力=array（『stdout』，『stdin』），输出=textLength（欢迎（输入））】。\n",
+        "𠮷野家\n",
+        "3\n",
+    ),
+    (
         "owned text return initializes a variable",
         "函数 欢迎（来源）【变量 副本=来源。返回 副本。】。\n"
         "变量 输入=readText（）。\n"
@@ -914,7 +948,6 @@ RUNTIME_RESULT_ABI_CASES = [
         "程序=【能力=array（『stdout』，『stdin』），输出=错误码（结果）*100+ifElse（是否失败（结果），1，0）】。\n",
         "-1\n",
         "3101\n",
-        0,
     ),
     (
         "mutually recursive result function success",
@@ -924,7 +957,6 @@ RUNTIME_RESULT_ABI_CASES = [
         "程序=【能力=array（『stdout』，『stdin』），输出=结果值（结果）】。\n",
         "6\n",
         "1\n",
-        0,
     ),
     (
         "mutually recursive result function failure",
@@ -936,7 +968,28 @@ RUNTIME_RESULT_ABI_CASES = [
         "",
         17,
     ),
+    (
+        "recursive result state parameter",
+        "函数 累计（次数，结果）=ifElse（次数<=0，结果，累计（次数-1，结果））。\n"
+        "变量 源=失败（7）。\n"
+        "变量 结果=累计（1，源）。\n"
+        "程序=【能力=array（『stdout』），输出=ifElse（是否失败（结果），错误码（结果），0）】。\n",
+        "",
+        "7\n",
+    ),
+    (
+        "mutually recursive result state parameter",
+        "函数 甲（次数，结果）=ifElse（次数<=0，结果，乙（次数-1，结果））。\n"
+        "函数 乙（次数，结果）=ifElse（次数<=0，结果，甲（次数-1，结果））。\n"
+        "变量 源=失败（9）。\n"
+        "变量 结果=甲（2，源）。\n"
+        "程序=【能力=array（『stdout』），输出=ifElse（是否失败（结果），错误码（结果），0）】。\n",
+        "",
+        "9\n",
+    ),
+
 ]
+
 RUNTIME_TEXT_RESULT_ABI_CASES = [
     (
         "recursive result function static text success",
@@ -962,7 +1015,6 @@ RUNTIME_TEXT_RESULT_ABI_CASES = [
         "程序=【能力=array（『stdout』，『stdin』），输出=结果值（结果）】。\n",
         "5\n",
         "奇\n",
-        0,
     ),
     (
         "mutually recursive static text result failure",
@@ -983,7 +1035,6 @@ RUNTIME_TEXT_RESULT_ABI_CASES = [
         "程序=【能力=array（『stdout』，『stdin』），输出=目标】。\n",
         "1\n0\n",
         "一\n",
-        0,
     ),
 ]
 DYNAMIC_TEXT_RESULT_CASES = [
@@ -2408,6 +2459,7 @@ def main() -> int:
                     output,
                     require_integer=expected == "0\n",
                     require_variable_storage=True,
+                    required_imports=(),
                 )
             except RuntimeError as failure:
                 print(f"{label}：{failure}", file=sys.stderr)
@@ -3064,7 +3116,9 @@ def main() -> int:
                 )
                 return 1
 
-        for index, (label, source_text, supplied, expected) in enumerate(RUNTIME_TEXT_PARAMETER_CASES + OWNED_TEXT_RETURN_CASES + OWNED_TEXT_RETURN_STORAGE_CASES):
+        for index, case in enumerate(RUNTIME_TEXT_PARAMETER_CASES + OWNED_TEXT_RETURN_CASES + OWNED_TEXT_RETURN_STORAGE_CASES):
+            label, source_text, supplied, expected = case[:4]
+            expected_code = case[4] if len(case) > 4 else 0
             source = temp / f"runtime-text-parameter-{index}.serica"
             source.write_text(source_text, encoding="utf-8")
             checked = run("check", str(source))
@@ -3075,7 +3129,7 @@ def main() -> int:
                 print(f"{label} 应生成运行时文本参数产物，但编译失败", file=sys.stderr)
                 return 1
             try:
-                required_instructions = ["bl\t", "ret"]
+                required_instructions = ["blr\tx16"]
                 if "readText（" in source_text:
                     required_instructions.append("ldr\tx21, [x19")
                 owned_text_return = index >= len(RUNTIME_TEXT_PARAMETER_CASES)
@@ -3254,6 +3308,21 @@ def main() -> int:
                 "S-3023",
             ),
             (
+                "owned text return borrowed length in a condition",
+                "函数 欢迎（来源）【变量 副本=来源。返回 副本。】。\n"
+                "变量 输入=readText（）。\n若（textLength（欢迎（输入））>0）【】。\n"
+                "程序=【能力=array（『stdout』，『stdin』），输出=0】。\n",
+                "S-3023",
+            ),
+            (
+                "owned text return borrowed equality in a statement",
+                "函数 欢迎（来源）【变量 副本=来源。返回 副本。】。\n"
+                "变量 输入=readText（）。\n"
+                "若（equals（欢迎（输入），『行简』））【】。\n"
+                "程序=【能力=array（『stdout』，『stdin』），输出=0】。\n",
+                "S-3023",
+            ),
+            (
                 "owned text return in another function",
                 "函数 欢迎（来源）【变量 副本=来源。变量 长度=textLength（副本）。返回 副本。】。\n"
                 "函数 代理（来源）=欢迎（来源）。\n"
@@ -3273,7 +3342,7 @@ def main() -> int:
                 "函数 欢迎（来源）【变量 副本=来源。返回 副本。】。\n"
                 "变量 输入=readText（）。\n"
                 "程序=【能力=array（『stdout』，『stdin』），输出=textConcat（欢迎（输入），『尾』）】。\n",
-                "S-3023",
+                "S-3044",
             ),
             (
                 "text parameter returned without owned copy",
@@ -3342,9 +3411,9 @@ def main() -> int:
         invalid_text_return_input = temp / "runtime-text-return-invalid-input.serica"
         invalid_text_return_input.write_text(
             next(
-                source_text
-                for label, source_text, _supplied, _expected in OWNED_TEXT_RETURN_STORAGE_CASES
-                if label == "owned text return initializes a variable"
+                case[1]
+                for case in OWNED_TEXT_RETURN_STORAGE_CASES
+                if case[0] == "owned text return initializes a variable"
             ),
             encoding="utf-8",
         )
@@ -3410,7 +3479,9 @@ def main() -> int:
                 )
                 return 1
 
-        for index, (label, source_text, supplied, expected, expected_code) in enumerate(RUNTIME_RESULT_ABI_CASES):
+        for index, case in enumerate(RUNTIME_RESULT_ABI_CASES):
+            label, source_text, supplied, expected = case[:4]
+            expected_code = case[4] if len(case) > 4 else 0
             source = temp / f"runtime-result-abi-{index}.serica"
             source.write_text(source_text, encoding="utf-8")
             checked = run("check", str(source))
@@ -3425,7 +3496,7 @@ def main() -> int:
                     artifact,
                     require_integer=expected_code == 0,
                     require_variable_storage=True,
-                    require_runtime_input=True,
+                    require_runtime_input="readInteger" in source_text,
                     required_instructions=("bl\t", "ret"),
                 )
             except RuntimeError as failure:
@@ -3448,7 +3519,9 @@ def main() -> int:
                 )
                 return 1
 
-        for index, (label, source_text, supplied, expected, expected_code) in enumerate(RUNTIME_TEXT_RESULT_ABI_CASES):
+        for index, case in enumerate(RUNTIME_TEXT_RESULT_ABI_CASES):
+            label, source_text, supplied, expected = case[:4]
+            expected_code = case[4] if len(case) > 4 else 0
             source = temp / f"runtime-text-result-abi-{index}.serica"
             source.write_text(source_text, encoding="utf-8")
             checked = run("check", str(source))
@@ -3487,7 +3560,9 @@ def main() -> int:
                 )
                 return 1
 
-        for index, (label, source_text, supplied, expected, expected_code) in enumerate(RESULT_FUNCTION_CASES):
+        for index, case in enumerate(RESULT_FUNCTION_CASES):
+            label, source_text, supplied, expected = case[:4]
+            expected_code = case[4] if len(case) > 4 else 0
             source = temp / f"result-function-{index}.serica"
             source.write_text(source_text, encoding="utf-8")
             checked = run("check", str(source))
@@ -5107,13 +5182,6 @@ def main() -> int:
                 "S-3023",
             ),
             (
-                "runtime-result-function-runtime-text-payload-not-yet-supported",
-                "函数 文本结果（数值）=ifElse（数值==0，成功（textConcat（『完』，『成』）），文本结果（数值-1））。\n"
-                "变量 结果=文本结果（readInteger（））。\n"
-                "程序=【能力=array（『stdout』，『stdin』），输出=结果值（结果）】。\n",
-                "S-3023",
-            ),
-            (
                 "function-unknown-call",
                 "函数 计算（数值）=不存在（数值）。\n"
                 "程序=【能力=array（『stdout』），输出=计算（1）】。\n",
@@ -5198,7 +5266,7 @@ def main() -> int:
                 "function-arguments-missing-root-capability",
                 "函数 读取（）能力=array（『args』）=argumentText（1）。\n"
                 "程序=【能力=array（『stdout』），输出=读取（）】。\n",
-                "S-4102",
+                "S-4106",
             ),
             (
                 "file-read-arity",
@@ -5220,7 +5288,7 @@ def main() -> int:
                 "function-file-read-missing-root-capability",
                 "函数 读取（）能力=array（『filesystem.read』）=readFile（『a.txt』）。\n"
                 "程序=【能力=array（『stdout』），输出=读取（）】。\n",
-                "S-4102",
+                "S-4106",
             ),
             (
                 "function-hidden-input",
@@ -5245,7 +5313,7 @@ def main() -> int:
                 "function-effect-missing-root-capability",
                 "函数 读取（）能力=array（『stdin』）=readInteger（）。\n"
                 "程序=【能力=array（『stdout』），输出=读取（）】。\n",
-                "S-4102",
+                "S-4106",
             ),
             (
                 "function-effect-unknown",
@@ -5282,7 +5350,7 @@ def main() -> int:
                 "函数 追加（数组）能力=array（『array.write』）=arrayPush（数组，2）。\n"
                 "变量 数组=array（1）。赋值 数组=追加（数组）。\n"
                 "程序=【能力=array（『stdout』），输出=arrayGet（数组，1）】。\n",
-                "S-4102",
+                "S-4106",
             ),
             (
                 "function-map-write-missing-root-capability",
@@ -5304,7 +5372,7 @@ def main() -> int:
                 "函数 代理（表）能力=array（『map.write』）=写入（表）。\n"
                 "变量 表=映射（）。赋值 表=代理（表）。\n"
                 "程序=【能力=array（『stdout』），输出=映射长（表）】。\n",
-                "S-4102",
+                "S-4106",
             ),
             (
                 "function-array-write-missing-propagation",
@@ -5507,7 +5575,7 @@ def main() -> int:
                 "function-file-write-missing-root-capability",
                 "函数 写入（）能力=array（『filesystem.write』）=writeFile（『x.txt』，『x』）。\n"
                 "程序=【能力=array（『stdout』），输出=写入（）】。\n",
-                "S-4102",
+                "S-4106",
             ),
             (
                 "function-file-write-missing-propagation",
@@ -5734,6 +5802,8 @@ def main() -> int:
             ("integer-result-text-comparison", "变量 结果=成功（42）。\n程序=【能力=array（『stdout』），输出=ifElse（equals（结果值（结果），『42』），1，0）】。\n", "S-3015"),
             ("result-status-no-argument", "变量 结果=成功（1）。\n程序=【能力=array（『stdout』），输出=是否失败（）】。\n", "S-3013"),
             ("result-value-non-reference", "程序=【能力=array（『stdout』），输出=结果值（成功（1））】。\n", "S-3013"),
+            ("result-status-non-reference", "程序=【能力=array（『stdout』），输出=是否失败（成功（1））】。\n", "S-3013"),
+            ("result-error-code-non-reference", "程序=【能力=array（『stdout』），输出=错误码（成功（1））】。\n", "S-3013"),
             ("result-error-wrong-variable", "变量 数值=1。\n程序=【能力=array（『stdout』），输出=错误码（数值）】。\n", "S-3015"),
             ("result-direct-output", "变量 结果=成功（42）。\n程序=【能力=array（『stdout』），输出=结果】。\n", "S-3023"),
             ("result-to-integer-variable", "变量 结果=成功（42）。\n变量 数值=结果。\n程序=【能力=array（『stdout』），输出=数值】。\n", "S-3023"),
@@ -5743,7 +5813,17 @@ def main() -> int:
             ("result-if-else-arity", "变量 结果=ifElse（1==1，成功（1））。\n程序=【能力=array（『stdout』），输出=0】。\n", "S-3016"),
             ("result-if-else-payload-mismatch", "变量 结果=ifElse（readInteger（）==1，成功（1），成功（『文本』））。\n程序=【能力=array（『stdout』，『stdin』），输出=错误码（结果）】。\n", "S-3023"),
             ("result-if-else-mixed-branch", "变量 结果=ifElse（readInteger（）==1，成功（1），2）。\n程序=【能力=array（『stdout』，『stdin』），输出=错误码（结果）】。\n", "S-3023"),
+            (
+                "runtime-result-runtime-text-payload-forwarding-rejected",
+                "函数 判（结果）=ifElse（是否失败（结果），失败（1），成功（1））。\n"
+                "变量 源=成功（readText（））。\n"
+                "变量 结果=判（源）。\n"
+                "程序=【能力=array（『stdout』，『stdin』），输出=错误码（结果）】。\n",
+                "S-3023",
+            ),
             ("result-function-hidden-stdin", "函数 读取（开关）=ifElse（开关==1，成功（readText（）），失败（8））。\n变量 结果=读取（1）。\n程序=【能力=array（『stdout』，『stdin』），输出=结果值（结果）】。\n", "S-4106"),
+            ("nested-function-hidden-root-stdin", "函数 读取（）能力=array（『stdin』）=readInteger（）。\n函数 三倍输入（）能力=array（『stdin』）=读取（）*3。\n程序=【能力=array（『stdout』），输出=三倍输入（）】。\n", "S-4106"),
+            ("nested-function-hidden-root-array-write", "函数 追加（数组）能力=array（『array.write』）=arrayPush（数组，42）。\n函数 写入（数组）能力=array（『array.write』）=追加（数组）。\n变量 数组=array（7）。\n赋值 数组=写入（数组）。\n程序=【能力=array（『stdout』），输出=arrayLength（数组）】。\n", "S-4106"),
             ("result-to-text-variable", "变量 文本=readText（）。\n变量 结果=成功（42）。\n赋值 文本=结果。\n程序=【能力=array（『stdout』，『stdin』），输出=文本】。\n", "S-3023"),
         ]
         for name, source_text, expected_code in result_type_failures:

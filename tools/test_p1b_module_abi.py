@@ -110,7 +110,7 @@ def verify_callsite_text(parser, project, output):
 
 def verify_returns(parser, root, output):
     cases = (
-        ("recursive-result", "累计", (1, 2, 2, 2, 0, 16, 2, -1, 1, 0, 1, 1), b"5\n", b"15\n", ("str\tx1, [x19, #0x8]",)),
+        ("recursive-result", "累计", (1, 2, 2, 2, 0, 16, 2, -1, 1, 0, 1, 1), b"5\n", b"15\n", ("str\tx1, [x19, #0x10]",)),
         (
             "recursive-text-result", "倒数", (1, 1, 1, 3, 0, 16, 4, -1, 1, 0),
             b"3\n", "到达零\n".encode(), ("adr\tx2,", "mov\tx3, #0x9"),
@@ -161,11 +161,11 @@ def verify_diagnostics(parser, project):
         ),
         (
             "函数 欢迎（来源）【变量 副本=来源。返回 副本。】。\n",
-            "textLength（欢迎（『行简』））", "textLength", 3023,
+            "bitAnd（欢迎（『行简』），1）", "bitAnd", 3021,
         ),
         (
             "函数 欢迎（来源）【变量 副本=来源。返回 副本。】。\n",
-            "textLength（欢迎（『行简』））", "textLength（欢迎（『行简』））", 3023,
+            "bitAnd（欢迎（『行简』），1）", "bitAnd（欢迎（『行简』），1）", 3021,
         ),
         (
             "函数 欢迎（来源）【变量 副本=来源。返回 副本。】。\n函数 包（）=欢迎（『行简』）。\n",

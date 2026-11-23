@@ -124,7 +124,7 @@ def main() -> int:
         ):
             root_path.write_text(
                 "".join(f"导入 『{item}』。\n" for item in imports)
-                + "程序=【能力=array（『stdout』），输出=三倍（14）】。\n",
+                + "程序=【能力=array（『stdout』，『stdin』，『array.write』），输出=三倍（14）】。\n",
                 encoding="utf-8",
             )
         function_artifact = temp / "module-function"
@@ -162,7 +162,7 @@ def main() -> int:
         block_function_root = function_project / "block.serica"
         block_function_root.write_text(
             "导入 『modules/math.serica』。\n"
-            "程序=【能力=array（『stdout』），输出=模块修正（26）】。\n",
+            "程序=【能力=array（『stdout』，『stdin』，『array.write』），输出=模块修正（26）】。\n",
             encoding="utf-8",
         )
         block_function_artifact = temp / "module-block-function"
@@ -193,7 +193,7 @@ def main() -> int:
         effect_root = function_project / "effect.serica"
         effect_root.write_text(
             "导入 『modules/math.serica』。\n"
-            "程序=【能力=array（『stdout』，『stdin』），输出=读取（）】。\n",
+            "程序=【能力=array（『stdout』，『stdin』，『array.write』），输出=读取（）】。\n",
             encoding="utf-8",
         )
         effect_artifact = temp / "module-effect-function"
@@ -224,7 +224,7 @@ def main() -> int:
         array_effect_root.write_text(
             "导入 『modules/math.serica』。\n"
             "变量 数组=array（7）。赋值 数组=追加（数组）。\n"
-            "程序=【能力=array（『stdout』，『array.write』），"
+            "程序=【能力=array（『stdout』，『stdin』，『array.write』），"
             "输出=arrayGet（数组，arrayLength（数组）-1）】。\n",
             encoding="utf-8",
         )

@@ -7,7 +7,7 @@
 [![已验证平台](https://img.shields.io/badge/%E5%B9%B3%E5%8F%B0-macOS%20arm64-lightgrey?style=flat-square)](#兼容性说明)
 [![许可](https://img.shields.io/badge/%E8%AE%B8%E5%8F%AF-MIT%20%2B%20Apache--2.0-blue?style=flat-square)](./LICENSING.md)
 [![开发者预览](https://img.shields.io/badge/%E5%8F%91%E8%A1%A8-v0.1.0--dev.1%20%E5%BC%80%E5%8F%91%E8%80%85%E9%A2%84%E8%A7%88-orange?style=flat-square)](RELEASE.md)
-[![种子规模](https://img.shields.io/badge/%E7%A7%8D%E5%AD%90-10403%2F12000%20%E8%A1%8C-informational?style=flat-square)](#设计细节与工程取舍)
+[![种子规模](https://img.shields.io/badge/%E7%A7%8D%E5%AD%90-10937%2F12000%20%E8%A1%8C-informational?style=flat-square)](#设计细节与工程取舍)
 
 # 行简（Serica）
 
@@ -56,7 +56,7 @@
 | 产物是原生可执行文件 | 种子直接写出 Mach-O，不生成 C，不调用 LLVM、汇编器或链接器 | `file build/p0b-window` 输出 `Mach-O 64-bit executable arm64`；`make doctor` 与 `tools/check-independence source` 通过 |
 | 构建可复现 | 相同源码写入相同路径，重复签名构建字节一致 | 2026-11-20 实测 SHA-256 `40513babb5cc02d69e49ebdbb6e73ab0c571d5802d3d44137fee290d7d9f878f` |
 | 中文标注位置双报 | 当前词法、语法、字段和模块错误报告码位列与显示列 | `make test-p0b-scope`、`make test-p1b-static`、`make test-p1b-modules` |
-| 种子约束 | D-0026 临时自举桥、D-0061/D-0087/D-0101 调整至 12000 行预算、逐行归因表、Apache-2.0 和 P3b 删除门 | `make seed-audit`；当前活动种子 10403/12000 行（`make seed-audit`） |
+| 种子约束 | D-0026 临时自举桥、D-0061/D-0087/D-0101 调整至 12000 行预算、逐行归因表、Apache-2.0 和 P3b 删除门 | `make seed-audit`；当前活动种子 10937/12000 行（`make seed-audit`） |
 
 **局限**
 
@@ -112,7 +112,7 @@
 - **价值**：自举项目最常见的失败方式是种子越长越像正式实现，最后没人敢删，「零依赖」变成永久口号。
 - **实现方式**：种子只能位于 `bootstrap/`，按 D-0101 不超过 12000 行；Go 只按「带 GC 的 C」使用（禁接口、泛型、goroutine、channel、反射、`init`、第三方包）；每个实现行登记在 [docs/build/seed-attribution.md](docs/build/seed-attribution.md)；P3b 自举不动点达成后删除整个目录。
 - **差异化**：删除条件写在仓库里，并配行数与归因的机器计数命令，不靠自觉。
-- **证据**：`make seed-audit` 检查 Go 子集、依赖与逐行归因；活动种子 10403/12000 行（由 `make seed-audit` 复核）。D-0026 允许有限临时自举扩展；P3b 仍须删除整个 `bootstrap/`。
+- **证据**：`make seed-audit` 检查 Go 子集、依赖与逐行归因；活动种子 10937/12000 行（由 `make seed-audit` 复核）。D-0026 允许有限临时自举扩展；P3b 仍须删除整个 `bootstrap/`。
 
 ## 设计细节与工程取舍
 
@@ -178,8 +178,8 @@ make doctor
 输出：
 
 ```text
-Go 种子子集检查：通过（12 个活动源码文件，10403 行，归因完整）
-C-1 AST 归因：3781/9944 行（38.0%）；种子超过 3000 行且占比超过 40% 时须记录语言复核
+Go 种子子集检查：通过（12 个活动源码文件，10937 行，归因完整）
+C-1 AST 归因：4141/10432 行（39.7%）；种子超过 3000 行且占比超过 40% 时须记录语言复核
 C-1 条件未触发；D-0009/D-0059 复核记录保留
 bootstrap/archive/prototype-3.8/lexical.serica：NFC=true 半角标点=0 禁用字符=0
 examples/p0b-window.serica：NFC=true 半角标点=0 禁用字符=0
@@ -387,7 +387,7 @@ Serica/
 - **瓶颈分析**：未测。当前仅构建单窗口文字示例，没有通用运行时；窗口渲染走系统 AppKit，性能由平台决定。
 - **调优建议**：P1b 阶段门通过前不做性能工作，避免用未定型的实现得出误导性数字。
 
-可复核的量化事实：活动种子 10403/12000 行（D-0101 上限，由 `make seed-audit` 复核）；示例产物为 macOS arm64 Mach-O。
+可复核的量化事实：活动种子 10937/12000 行（D-0101 上限，由 `make seed-audit` 复核）；示例产物为 macOS arm64 Mach-O。
 
 ## 安全与隐私
 

@@ -3,7 +3,7 @@
 
 # 种子逐行归因
 
-范围：活动 Go 种子包含 `bootstrap/*.go` 与 `bootstrap/tools/*.go`；冻结选型原型 `bootstrap/archive/prototype-3.8/` 不属于活动种子。当前合计 10403 行，低于 D-0101 的 12000 行上限。`【AST】` 只标记语法树、绑定、类型与函数 lowering 的判定行，用于 C-1 阈值复核。
+范围：活动 Go 种子包含 `bootstrap/*.go` 与 `bootstrap/tools/*.go`；冻结选型原型 `bootstrap/archive/prototype-3.8/` 不属于活动种子。当前合计 12000 行以内，低于 D-0101 的 12000 行上限。`【AST】` 只标记语法树、绑定、类型与函数 lowering 的判定行，用于 C-1 阈值复核。
 
 | 文件与行 | 能力 | 对应需求 |
 |---|---|---|
@@ -17,8 +17,8 @@
 | `bootstrap/parser.go:513-842` | 表达式优先级、调用、记录、字符串解码与语法诊断 | D-0118 表达式解析；S-2xxx 诊断 |
 | `bootstrap/semantic.go:1-117` | 【AST】纯函数展开与有界 AST 递归/循环识别 | D-0128；D-0103–D-0104 递归调用帧 |
 | `bootstrap/semantic.go:118-171` | 【AST】递归环、文本参数函数识别与语句形态判定 | D-0106；D-0112 借用文本 ABI |
-| `bootstrap/semantic.go:172-287` | 【AST】运行时文本/整数形参分类与调用实参传播 | D-0112–D-0114 文本参数 ABI |
-| `bootstrap/semantic.go:288-563` | 【AST】参数引用、别名、比较锚点与局部类型分类 | D-0113–D-0114 文本副本与比较 |
+| `bootstrap/semantic.go:172-360` | 【AST】运行时文本/整数/结果形参分类与调用实参传播 | D-0112–D-0114 文本参数 ABI；D-0145 结果参数 ABI |
+| `bootstrap/semantic.go:361-563` | 【AST】参数引用、别名、比较锚点与局部类型分类 | D-0113–D-0114 文本副本与比较 |
 | `bootstrap/semantic.go:564-721` | 【AST】文本返回标注、结果载荷形状与调用结果标注 | D-0106；D-0115 拥有文本返回 |
 | `bootstrap/semantic.go:722-921` | 【AST】结果载荷注释、函数结果形态与调用图 | D-0090–D-0094；D-0104 结果 ABI |
 | `bootstrap/semantic.go:922-1059` | 【AST】纯函数语句与表达式展开 | D-0128–D-0129 静态展开 |
@@ -32,7 +32,7 @@
 | `bootstrap/semantic.go:2385-2980` | 【AST】常量类型求值与类型诊断 | D-0126 绑定类型形态；S-3xxx 诊断 |
 | `bootstrap/semantic.go:2981-3184` | 【AST】文本拼接/切片、布尔比较与条件结果类型 | D-0042–D-0057 文本表达式 |
 | `bootstrap/semantic.go:3185-3391` | 【AST】数组求值、字符串求值与编译期 ifElse | D-0022 常量数组；D-0017 字符串选择 |
-| `bootstrap/semantic.go:3392-3742` | 【AST】布尔、整数、溢出与排序求值和检查算术；顶层文本返回调用存储判定 | D-0019/D-0021/D-0031/D-0034 整数语义；D-0140 调用方存储 |
+| `bootstrap/semantic.go:3392-4409` | 【AST】布尔、整数、溢出与排序求值和检查算术；顶层文本返回调用存储、借用操作数判定与逐层效果能力复核 | D-0019/D-0021/D-0031/D-0034 整数语义；D-0140 调用方存储；D-0143 借用操作数；D-0144 效果能力复核 |
 | `bootstrap/macho.go:1-137` | Mach-O 段、加载命令、签名与 arm64 基础编码 | P0b 原生产物；不调用链接器 |
 | `bootstrap/console_macho.go:1-260` | 运行时表达式/语句判定、条件补丁状态与帧布局基础 | D-0034–D-0041 控制台代码生成 |
 | `bootstrap/console_macho.go:261-291` | 条件真假分支与循环回跳补丁 | D-0037 控制流 |
@@ -43,11 +43,10 @@
 | `bootstrap/console_macho.go:1188-1462` | 结果值、文本变量及职责范围初始化/清理发射 | D-0085–D-0094；D-0114 文本副本 |
 | `bootstrap/console_macho.go:1463-1626` | 顶层语句与局部声明发射 | D-0029–D-0037；D-0109 |
 | `bootstrap/console_macho.go:1627-2207` | 文本拼接、切片、参数文本与比较操作数发射 | D-0042–D-0057；D-0100–D-0113 |
-| `bootstrap/console_macho.go:2208-2477` | 整数比较、失败分支与映射/数组辅助编码 | D-0034–D-0039；D-0086 |
+| `bootstrap/console_macho.go:2208-2477` | 整数比较、文本相等/不等比较的借用描述符保存与释放、失败分支与映射/数组辅助编码 | D-0034–D-0039；D-0086；D-0143 |
 | `bootstrap/console_macho.go:2478-3125` | 整数读取、文本读取、UTF-8 校验、参数与文件 IO | D-0032/D-0040/D-0097–D-0105 |
-| `bootstrap/console_macho.go:3126-3555` | 整数运算、哈希映射与文本长度/字节操作 | D-0027/D-0034/D-0086/D-0116 |
+| `bootstrap/console_macho.go:3126-4315` | 整数运算、哈希映射、文本长度/字节操作与返回描述符借用操作数发射 | D-0027/D-0034/D-0086/D-0116；D-0143 借用操作数 |
 | `bootstrap/console_macho.go:3556-3911` | 动态数组、文本数组与映射内存管理 | D-0039/D-0053/D-0062/D-0139；D-0140 调用方存储 |
-| `bootstrap/console_macho.go:3912-4012` | arm64 立即数、栈地址、跳转与寄存器编码 | 原生指令基元 |
 | `bootstrap/module_read.go:1-70` | 项目限界模块读取的参数验证与形态检查 | D-0122；S-3073 |
 | `bootstrap/module_read.go:71-220` | 目录描述符读取、失败恢复与可恢复结果发射 | D-0122；受限 native 读取桥 |
 | `bootstrap/module_read.go:221-329` | 模块路径字节、目录项核对与路径符号比较 | D-0124；读取失败源位置 |
@@ -65,3 +64,5 @@
 | `bootstrap/tools/check_independence.go:1-102` | 源码依赖、许可证边界与缓存目录检查 | 手册 K.2；`check-independence source` |
 
 当前活动种子是临时自举桥：P0b 窗口与 P1b 前端、语义、运行时和原生控制台发射均在此实现。总数与 C-1 计数由 `python3 tools/check_seed_subset.py` 机器复核；`bootstrap/` 仍须在 P3b 自举不动点达成后整体删除。
+
+C-1 语言复核（临时桥超过 3000 行且 AST 归因占比达到阈值）：当前 4399/10856 行（40.5%）归于 AST/语义与队列调度，全部为 P1b 阶段门之前的临时自举桥代码。该比例仅说明当前 bootstrap 承担语言前端职责，不表示 P2b 行简自编编译器已完成；P3b 删除 bootstrap 前必须重新测量并证明行简编译器达到不动点。触发时按 D-0009/D-0059 的“C-1 复核（保留 Go 临时桥）”执行。

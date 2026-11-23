@@ -1103,6 +1103,30 @@
       "check": "发布目录内 make verify 通过 tools/test_install.py：隔离 HOME 安装、PATH 运行 serica check/build、控制台输出核对、卸载无残留。",
       "status": "settled",
       "source": "docs/decisions/0142-local-prefix-install.md"
+    },
+    {
+      "id": "D-0143",
+      "title": "文本返回调用的借用操作数",
+      "decision": "无效果块函数的已拥有文本返回值可直接作为 textLength、equals、notEquals 的只读文本操作数，比较结果可经整数 ifElse 选择输出；调用前预留描述符保存槽，调用后立即保存 x1/x2，比较在映射释放前完成并将结果写入保存槽。嵌套拼接、独立条件、函数体、容器与结果载荷继续拒绝。",
+      "check": "make test-p1b-runtime 通过 4 个借用操作数正例（textLength 行简→2、𠮷野家→3；equals/notEquals 经 ifElse→1），共 10 个文本返回调用方消费产物；306 个编译诊断、118 个运行时拒绝样例通过。make seed-audit 报 10565/12000 行、C-1 3855/10090（38.2%）。",
+      "status": "settled",
+      "source": "docs/decisions/0143-owned-text-return-borrowed-operand.md"
+    },
+    {
+      "id": "D-0144",
+      "title": "函数效果的程序根能力一致性",
+      "decision": "函数效果在函数展开阶段统一检查逐层声明和程序根能力；直接内建效果调用与跨函数效果调用缺少根能力时均报 S-4106，避免后段 capability walker 造成同类错误分裂。",
+      "check": "make test-p1b-runtime 覆盖嵌套函数隐藏根能力反例；make test-p1b-module-effect 覆盖跨文件根能力反例、13 个位置诊断与编译器自检；make seed-audit 报 10565/12000 行、C-1 3855/10090（38.2%）。",
+      "status": "settled",
+      "source": "docs/decisions/0144-root-capability-consistency.md"
+    },
+    {
+      "id": "D-0145",
+      "title": "递归结果函数的状态参数 ABI",
+      "decision": "递归运行时函数以相邻两个整数寄存器传入已有结果值的标签和值，调用帧按 16 字节固定槽位保存；函数体可读取是否失败和错误码并重新构造结果返回。文本载荷结果跨函数传参与完整跨函数恢复仍未实现。",
+      "check": "make stage0、make test-p1b-runtime、make test-p1b-module-abi 与 make seed-audit 通过；种子 10937/12000 行、C-1 4141/10432（39.7%），归因完整。",
+      "status": "settled",
+      "source": "docs/decisions/0145-runtime-result-parameter-abi.md"
     }
   ]
 }

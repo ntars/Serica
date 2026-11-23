@@ -43,4 +43,4 @@ test-p1b-module-const: stage0 ; @python3 tools/test_p1b_module_const.py
 test-p1b-module-abi: stage0 ; @python3 tools/test_p1b_module_abi.py
 test-p1b-native-emit: native-tools ; @python3 tools/test_p1b_native_emit.py
 release: ; @./tools/build-release.sh
-test-release: ; @python3 tools/test_release.py "${RELEASE_DIR}"
+test-release: ; @dir="$${SERICA_RELEASE_DIR:-dist/serica-$$(sed -n '1p' VERSION)-macos-arm64}"; python3 tools/test_release.py "$$dir"

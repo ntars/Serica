@@ -15,10 +15,52 @@ type constantValue struct {
 	array         []constantValue
 }
 
-func expandProgramFunctions(program *program) *issue {
+func seedRuntimeResultPayloads(program *program) map[string]constantValue {
+	payloads := map[string]constantValue{}
+	for _, function := range program.functions {
+		for _, item := range function.statements {
+			if item.kind != "变量" {
+				continue
+			}
+			kind, problem := constantType(item.value, payloads)
+			if problem != nil || kind != "运行时结果" {
+				continue
+			}
+			payloads[item.name.text] = constantValue{kind: kind, resultPayload: runtimeResultPayload(item.value, payloads)}
+		}
+	}
+	for _, item := range program.statements {
+		if item.kind != "变量" {
+			continue
+		}
+		kind, problem := constantType(item.value, payloads)
+		if problem != nil || kind != "运行时结果" {
+			continue
+		}
+		payloads[item.name.text] = constantValue{kind: kind, resultPayload: runtimeResultPayload(item.value, payloads)}
+	}
+	return payloads
+}
+func programRootEffects(root value) map[string]bool {
+	effects := map[string]bool{}
+	for _, field := range root.fields {
+		if field.name.text != "能力" || field.value.kind != "调用" || field.value.text != "array" {
+			continue
+		}
+		for _, item := range field.value.args {
+			if item.kind == "字符串" {
+				effects[item.text] = true
+			}
+		}
+	}
+	return effects
+}
+
+func expandProgramFunctions(program *program, payloads map[string]constantValue) *issue {
 	if len(program.functions) == 0 {
 		return nil
 	}
+	rootEffects := programRootEffects(program.root)
 	functions := make(map[string]functionDecl, len(program.functions))
 	for index := range program.functions {
 		function := program.functions[index]
@@ -51,6 +93,11 @@ func expandProgramFunctions(program *program) *issue {
 			}
 			return problem
 		}
+		for _, item := range function.statements {
+			if item.kind == "变量" && isTextReturnCall(item.value) {
+				return functionBlockIssue(item.value.pos, "已复制的局部文本", "未复制的文本返回值", "先声明文本局部变量并复制返回值，再在局部作用域使用")
+			}
+		}
 		function.body = body
 		function.statements = nil
 		program.functions[index] = function
@@ -58,6 +105,12 @@ func expandProgramFunctions(program *program) *issue {
 	}
 	runtimeFunctions, runtimeFunctionNames := recursiveRuntimeFunctions(program.functions, functions)
 	annotateRuntimeFunctionResults(runtimeFunctions)
+	annotateRuntimeResultPayloads(program, payloads)
+	for _, function := range runtimeFunctions {
+		if function.runtimeReturnsResult {
+			functions[function.name.text] = function
+		}
+	}
 	for index := range program.functions {
 		name := program.functions[index].name.text
 		if function, exists := runtimeFunctions[name]; exists {
@@ -72,7 +125,7 @@ func expandProgramFunctions(program *program) *issue {
 		if function.body.kind == "" {
 			remaining := 65536
 			for statementIndex := range function.statements {
-				statement, problem := expandFunctionStatement(function.statements[statementIndex], functions, runtimeFunctions, 0, &remaining)
+				statement, problem := expandFunctionStatement(function.statements[statementIndex], functions, runtimeFunctions, 0, &remaining, rootEffects, payloads, function.statements)
 				if problem != nil {
 					return problem
 				}
@@ -80,7 +133,7 @@ func expandProgramFunctions(program *program) *issue {
 			}
 		} else {
 			remaining := 65536
-			body, problem := expandFunctionValue(function.body, functions, runtimeFunctions, []string{function.name.text}, 0, &remaining)
+			body, problem := expandFunctionValue(function.body, functions, runtimeFunctions, []string{function.name.text}, 0, &remaining, rootEffects, payloads, function.statements)
 			if problem != nil {
 				return problem
 			}
@@ -95,31 +148,40 @@ func expandProgramFunctions(program *program) *issue {
 	remaining := 65536
 	var problem *issue
 	for index := range program.bindings {
-		program.bindings[index].value, problem = expandFunctionValue(program.bindings[index].value, functions, runtimeFunctions, nil, 0, &remaining)
+		program.bindings[index].value, problem = expandFunctionValue(program.bindings[index].value, functions, runtimeFunctions, nil, 0, &remaining, rootEffects, payloads, program.statements)
 		if problem != nil {
 			return problem
 		}
 	}
 	for index := range program.root.fields {
-		program.root.fields[index].value, problem = expandFunctionValue(program.root.fields[index].value, functions, runtimeFunctions, nil, 0, &remaining)
+		program.root.fields[index].value, problem = expandFunctionValue(program.root.fields[index].value, functions, runtimeFunctions, nil, 0, &remaining, rootEffects, payloads, program.statements)
 		if problem != nil {
 			return problem
 		}
 	}
 	for index := range program.statements {
-		program.statements[index], problem = expandFunctionStatement(program.statements[index], functions, runtimeFunctions, 0, &remaining)
+		program.statements[index], problem = expandFunctionStatement(program.statements[index], functions, runtimeFunctions, 0, &remaining, rootEffects, payloads, program.statements)
 		if problem != nil {
 			return problem
 		}
 	}
 	return nil
 }
-
 func recursiveRuntimeFunctions(ordered []functionDecl, functions map[string]functionDecl) (map[string]functionDecl, []string) {
 	graph := make(map[string]map[string]bool, len(ordered))
 	for _, function := range ordered {
 		calls := map[string]bool{}
 		collectFunctionCalls(function.body, functions, calls)
+		var visitStatements func([]statement)
+		visitStatements = func(items []statement) {
+			for _, item := range items {
+				collectFunctionCalls(item.value, functions, calls)
+				collectFunctionCalls(item.condition, functions, calls)
+				visitStatements(item.body)
+				visitStatements(item.otherwise)
+			}
+		}
+		visitStatements(function.statements)
 		graph[function.name.text] = calls
 	}
 	runtime := map[string]functionDecl{}
@@ -169,6 +231,203 @@ func blockFunctionUsesRuntimeTextParameter(function functionDecl) bool {
 	return false
 }
 
+func runtimeResultStateUsesValue(input value, name string, found *bool) bool {
+	if input.kind == "调用" && (input.text == "是否失败" || input.text == "错误码" || input.text == "结果值") && len(input.args) == 1 && input.args[0].kind == "引用" && input.args[0].text == name {
+		*found = true
+	}
+	for _, argument := range input.args {
+		if argument.kind == "引用" && argument.text == name && (input.text == "成功" || input.text == "失败") {
+			*found = true
+		}
+		if runtimeResultStateUsesValue(argument, name, found) {
+			return true
+		}
+	}
+	for _, item := range input.fields {
+		if runtimeResultStateUsesValue(item.value, name, found) {
+			return true
+		}
+	}
+	if input.left != nil && runtimeResultStateUsesValue(*input.left, name, found) {
+		return true
+	}
+	if input.right != nil && runtimeResultStateUsesValue(*input.right, name, found) {
+		return true
+	}
+	return false
+}
+
+func functionResultBranchUsesParameter(input value, name string) bool {
+	if input.kind == "调用" && input.text == "ifElse" && len(input.args) == 3 {
+		for _, branch := range input.args[1:] {
+			if branch.kind == "引用" && branch.text == name {
+				return true
+			}
+		}
+	}
+	for _, argument := range input.args {
+		if functionResultBranchUsesParameter(argument, name) {
+			return true
+		}
+	}
+	for _, field := range input.fields {
+		if functionResultBranchUsesParameter(field.value, name) {
+			return true
+		}
+	}
+	if input.left != nil && functionResultBranchUsesParameter(*input.left, name) {
+		return true
+	}
+	if input.right != nil && functionResultBranchUsesParameter(*input.right, name) {
+		return true
+	}
+	return false
+}
+
+func functionResultBranchUsesValue(items []statement, name string) bool {
+	for _, item := range items {
+		if functionResultBranchUsesParameter(item.value, name) || functionResultBranchUsesParameter(item.condition, name) {
+			return true
+		}
+		if functionResultBranchUsesValue(item.body, name) || functionResultBranchUsesValue(item.otherwise, name) {
+			return true
+		}
+	}
+	return false
+}
+
+func collectBlockCalls(items []statement, calls map[string]bool) {
+	for _, item := range items {
+		if item.value.kind == "调用" {
+			calls[item.value.text] = true
+		}
+		if item.condition.kind == "调用" {
+			calls[item.condition.text] = true
+		}
+		collectBlockCalls(item.body, calls)
+		collectBlockCalls(item.otherwise, calls)
+	}
+}
+
+func inferRuntimeResultStateParameters(program *program, function functionDecl, parameters map[string]bool) map[string]bool {
+	resultParameters := map[string]bool{}
+	// A parameter receiving an already-created result at any call site must
+	// use the result ABI even when the body only forwards it.
+	environment := copyConstantEnvironment(program.constants)
+	for _, local := range functionLocalNames(function.statements) {
+		if constant, exists := program.constants[local]; exists {
+			environment[local] = constant
+		}
+	}
+	for _, item := range program.statements {
+		if item.kind != "变量" {
+			continue
+		}
+		kind, problem := constantType(item.value, environment)
+		if problem != nil {
+			continue
+		}
+		payload := ""
+		if kind == "运行时结果" {
+			payload = runtimeResultPayload(item.value, environment)
+		}
+		environment[item.name.text] = constantValue{kind: kind, resultPayload: payload}
+	}
+	for _, candidate := range program.functions {
+		for index, parameter := range candidate.parameters {
+			if _, exists := environment[parameter.text]; exists {
+				continue
+			}
+			kind := runtimeFunctionParameterTypes(candidate)[index]
+			if kind == "" {
+				kind = "运行时整数"
+			}
+			payload := ""
+			if kind == "运行时结果" {
+				payload = "整数"
+			}
+			environment[parameter.text] = constantValue{kind: kind, resultPayload: payload}
+		}
+	}
+	var inspectCalls func(value)
+	inspectCalls = func(input value) {
+		if input.kind == "调用" && input.text == function.name.text {
+			for index, argument := range input.args {
+				if index >= len(function.parameters) || argument.kind != "引用" {
+					continue
+				}
+				kind, problem := constantType(argument, environment)
+				if problem == nil && kind == "运行时结果" {
+					resultParameters[function.parameters[index].text] = true
+				}
+			}
+		}
+		for _, argument := range input.args {
+			inspectCalls(argument)
+		}
+		for _, field := range input.fields {
+			inspectCalls(field.value)
+		}
+		if input.left != nil {
+			inspectCalls(*input.left)
+		}
+		if input.right != nil {
+			inspectCalls(*input.right)
+		}
+	}
+	inspectCalls(program.root)
+	for _, item := range program.bindings {
+		inspectCalls(item.value)
+	}
+	for _, item := range program.statements {
+		inspectCalls(item.value)
+		inspectCalls(item.condition)
+	}
+	for _, item := range program.functions {
+		inspectCalls(item.body)
+		for _, statement := range item.statements {
+			inspectCalls(statement.value)
+			inspectCalls(statement.condition)
+		}
+	}
+	for name := range parameters {
+		resultObserved := false
+		runtimeResultStateUsesValue(function.body, name, &resultObserved)
+		for _, item := range function.statements {
+			if runtimeResultStateUsesValue(item.value, name, &resultObserved) || runtimeResultStateUsesValue(item.condition, name, &resultObserved) {
+				break
+			}
+		}
+		if resultObserved {
+			resultParameters[name] = true
+		}
+	}
+	return resultParameters
+}
+func inspectResultReturn(input value, environment map[string]constantValue, resultParameters map[string]bool) {
+	if input.kind != "调用" {
+		return
+	}
+	if input.text == "ifElse" && len(input.args) == 3 {
+		inspectResultReturn(input.args[1], environment, resultParameters)
+		inspectResultReturn(input.args[2], environment, resultParameters)
+		return
+	}
+	if input.kind == "调用" && input.runtimeFunction && input.runtimeFunctionResult {
+		return
+	}
+	if input.text != "成功" && input.text != "失败" && !isFunctionEffect(input.text) {
+		return
+	}
+	for _, argument := range input.args {
+		for name, constant := range environment {
+			if constant.kind == "运行时结果" && argument.kind == "引用" && argument.text == name {
+				resultParameters[name] = true
+			}
+		}
+	}
+}
+
 func classifyRuntimeFunctionParameterTypes(program *program) *issue {
 	for _, name := range program.runtimeFunctionNames {
 		function := program.runtimeFunctions[name]
@@ -179,20 +438,36 @@ func classifyRuntimeFunctionParameterTypes(program *program) *issue {
 		textParameters := map[string]bool{}
 		if function.body.kind == "" {
 			collectRuntimeTextParameterUses(function.statements, parameters, textParameters)
+			collectRuntimeTextReturnParameters(function.statements, parameters, textParameters)
 		} else {
 			collectRuntimeTextParameterUsesValue(function.body, parameters, textParameters, nil)
+		}
+		resultParameters := inferRuntimeResultStateParameters(program, function, parameters)
+		for parameter := range resultParameters {
+			delete(textParameters, parameter)
 		}
 		explicitTextParameters := make(map[string]bool, len(textParameters))
 		for parameter := range textParameters {
 			explicitTextParameters[parameter] = true
 		}
 		integerParameters := map[string]bool{}
+		blockCalls := map[string]bool{}
+		collectBlockCalls(function.statements, blockCalls)
+		for _, parameter := range function.parameters {
+			if blockCalls[parameter.text] && !functionResultBranchUsesValue(function.statements, parameter.text) {
+				integerParameters[parameter.text] = true
+			}
+		}
 		collectRuntimeIntegerParameterUses(function.statements, parameters, integerParameters)
 		collectRuntimeIntegerParameterUsesValue(function.body, parameters, integerParameters)
 		inferRuntimeTextParametersFromCalls(program, name, function.parameters, textParameters, integerParameters)
 		types := make([]string, len(function.parameters))
 		for index, parameter := range function.parameters {
 			types[index] = "运行时整数"
+			if resultParameters[parameter.text] {
+				types[index] = "运行时结果"
+				continue
+			}
 			if explicitTextParameters[parameter.text] || textParameters[parameter.text] && !integerParameters[parameter.text] {
 				types[index] = "运行时字符串"
 			}
@@ -530,9 +805,37 @@ func runtimeFunctionRegisterCount(function functionDecl) int {
 	return count
 }
 
+// result parameters occupy adjacent pointer/length or tag/value slots.
+func runtimeFunctionParameterOffsets(types []string) []uint32 {
+	offsets := make([]uint32, len(types))
+	for index := range types {
+		offsets[index] = uint32(index * 16)
+	}
+	return offsets
+}
+
+func runtimeFunctionParameterBytes(types []string) uint32 {
+	return uint32(len(types) * 16)
+}
+
+func registerIndexForParameter(types []string, index int) int {
+	register := 0
+	for i := 0; i < index; i++ {
+		if types[i] == "运行时字符串" || types[i] == "运行时结果" {
+			register += 2
+		} else {
+			register++
+		}
+	}
+	return register
+}
+
 func runtimeStatementLocalType(function functionDecl, name string) string {
 	if function.localTypes[name] == "运行时字符串" {
 		return "运行时字符串"
+	}
+	if function.localTypes[name] == "运行时结果" {
+		return "运行时结果"
 	}
 	return "运行时整数"
 }
@@ -542,6 +845,8 @@ func runtimeStatementLocalSlotCount(function functionDecl) int {
 	for _, name := range functionLocalNames(function.statements) {
 		if runtimeStatementLocalType(function, name) == "运行时字符串" {
 			count += 3
+		} else if runtimeStatementLocalType(function, name) == "运行时结果" {
+			count += 2
 		} else {
 			count++
 		}
@@ -560,43 +865,56 @@ func isRuntimeTextDurableCopyValue(input value, environment map[string]constantV
 	return input.kind == "调用" && (input.text == "textConcat" || input.text == "substring")
 }
 
-func classifyRuntimeFunctionLocalTypes(program *program, constants map[string]constantValue) *issue {
+func classifyRuntimeFunctionLocalTypes(program *program, payloads map[string]constantValue) *issue {
 	for _, name := range program.runtimeFunctionNames {
 		function := program.runtimeFunctions[name]
 		if function.body.kind != "" {
 			continue
 		}
-		environment := copyConstantEnvironment(constants)
+		environment := copyConstantEnvironment(payloads)
 		for index, parameter := range function.parameters {
 			environment[parameter.text] = constantValue{kind: runtimeFunctionParameterTypes(function)[index]}
 		}
 		localTypes := map[string]string{}
-		for _, item := range function.statements {
-			if item.kind != "变量" && item.kind != "赋值" {
-				continue
-			}
-			kind, problem := constantType(item.value, environment)
-			if problem != nil {
-				continue
-			}
-			if item.kind == "变量" {
-				switch kind {
-				case "整数", "运行时整数":
-					localTypes[item.name.text] = "运行时整数"
-				case "运行时字符串":
-					localTypes[item.name.text] = "运行时字符串"
-				default:
-					localTypes[item.name.text] = kind
-				}
-				environment[item.name.text] = constantValue{kind: localTypes[item.name.text]}
-				continue
-			}
-			if localTypes[item.name.text] != "" {
-				if localTypes[item.name.text] == "运行时字符串" && kind == "运行时字符串" || localTypes[item.name.text] == "运行时整数" && (kind == "整数" || kind == "运行时整数") {
-					environment[item.name.text] = constantValue{kind: localTypes[item.name.text]}
+		var visit func([]statement)
+		visit = func(items []statement) {
+			for _, item := range items {
+				switch item.kind {
+				case "变量", "赋值":
+					kind, problem := constantType(item.value, environment)
+					if problem != nil {
+						continue
+					}
+					if item.kind == "变量" {
+						switch kind {
+						case "整数", "运行时整数":
+							localTypes[item.name.text] = "运行时整数"
+						case "运行时字符串":
+							localTypes[item.name.text] = "运行时字符串"
+						case "运行时结果":
+							localTypes[item.name.text] = "运行时结果"
+						default:
+							localTypes[item.name.text] = kind
+						}
+						constant := constantValue{kind: localTypes[item.name.text]}
+						if kind == "运行时结果" {
+							constant.resultPayload = runtimeResultPayload(item.value, environment)
+						}
+						environment[item.name.text] = constant
+						continue
+					}
+					if localTypes[item.name.text] != "" {
+						if localTypes[item.name.text] == "运行时字符串" && kind == "运行时字符串" || localTypes[item.name.text] == "运行时整数" && (kind == "整数" || kind == "运行时整数") || localTypes[item.name.text] == "运行时结果" && kind == "运行时结果" {
+							environment[item.name.text] = constantValue{kind: localTypes[item.name.text]}
+						}
+					}
+				case "若":
+					visit(item.body)
+					visit(item.otherwise)
 				}
 			}
 		}
+		visit(function.statements)
 		function.localTypes = localTypes
 		program.runtimeFunctions[name] = function
 		for index := range program.functions {
@@ -612,6 +930,16 @@ func classifyRuntimeFunctionLocalTypes(program *program, constants map[string]co
 func annotateRuntimeTextReturns(program *program) {
 	for _, name := range program.runtimeFunctionNames {
 		function := program.runtimeFunctions[name]
+		if function.body.kind == "" && function.runtimeReturnsResult && function.runtimeResultPayload == "" {
+			function.runtimeResultPayload = "整数"
+			program.runtimeFunctions[name] = function
+			for index := range program.functions {
+				if program.functions[index].name.text == name {
+					program.functions[index].runtimeResultPayload = "整数"
+					break
+				}
+			}
+		}
 		if function.body.kind != "" || function.runtimeReturnsResult || len(function.statements) == 0 {
 			continue
 		}
@@ -668,7 +996,15 @@ func validateRuntimeTextReturnCalls(program *program) *issue {
 	}
 	for index := range program.statements {
 		item := &program.statements[index]
-		if !isTopLevelTextReturnStatement(*item) && statementContainsRuntimeTextReturnCall(*item) {
+		if !allowsRuntimeTextReturnCall(*item) && statementContainsRuntimeTextReturnCall(*item) {
+			return runtimeTextReturnCallIssue(item.name.pos)
+		}
+	}
+	for _, item := range program.statements {
+		if item.kind == "变量" || item.kind == "赋值" {
+			continue
+		}
+		if statementContainsRuntimeTextReturnCall(item) {
 			return runtimeTextReturnCallIssue(item.name.pos)
 		}
 	}
@@ -677,13 +1013,18 @@ func validateRuntimeTextReturnCalls(program *program) *issue {
 		if field.name.text == "输出" && call.kind == "调用" && call.runtimeFunction && call.runtimeFunctionText && !valuesContainRuntimeTextReturnCall(call.args) {
 			continue
 		}
-		if containsRuntimeTextReturnCall(field.value) {
+		if field.name.text == "输出" && runtimeTextReturnCallAsBorrowedTextArgument(field.value) {
+			continue
+		}
+		if !runtimeTextReturnCallAsBorrowedTextArgument(field.value) && containsRuntimeTextReturnCall(field.value) {
 			return runtimeTextReturnCallIssue(field.value.pos)
 		}
 	}
 	return nil
 }
 
+// allowsRuntimeTextReturnCall keeps owned text returns at the top level while
+// permitting a descriptor to be consumed immediately as a borrowed argument.
 func isTopLevelTextReturnStatement(item statement) bool {
 	return (item.kind == "变量" || item.kind == "赋值") && isTextReturnCall(item.value)
 }
@@ -757,10 +1098,26 @@ func annotateRuntimeResultPayloads(program *program, constants map[string]consta
 				environment[parameter.text] = constantValue{kind: parameterTypes[index]}
 			}
 			payload := runtimeResultReturnPayload(function.body, functions, environment, map[string]bool{name: true})
+			if len(function.statements) > 0 {
+				for _, item := range function.statements {
+					if item.kind != "返回" {
+						continue
+					}
+					if fromStatements := runtimeResultReturnPayload(item.value, functions, environment, map[string]bool{name: true}); fromStatements != "" {
+						payload = fromStatements
+						break
+					}
+				}
+			}
 			if payload != "" && payload != function.runtimeResultPayload {
 				function.runtimeResultPayload = payload
 				functions[name] = function
 				program.runtimeFunctions[name] = function
+				for index := range program.functions {
+					if program.functions[index].name.text == name {
+						program.functions[index].runtimeResultPayload = payload
+					}
+				}
 				changed = true
 			}
 		}
@@ -793,6 +1150,9 @@ func runtimeResultReturnPayload(input value, functions map[string]functionDecl, 
 			}
 			if whenFalse == "" || whenTrue == whenFalse {
 				return whenTrue
+			}
+			if isTextResultPayload(whenTrue) || isTextResultPayload(whenFalse) {
+				return "文本"
 			}
 			return ""
 		}
@@ -856,26 +1216,129 @@ func setStatementRuntimeFunctionPayload(item *statement, runtimeFunctions map[st
 	}
 }
 
+func blockFunctionReturnsResult(statements []statement) bool {
+	return blockFunctionReturnsResultIn(statements, statements)
+}
+
+func blockFunctionReturnsResultValue(statements []statement, value value) bool {
+	if runtimeResultReturnShape(value, nil, map[string]bool{}) == "运行时结果" {
+		return true
+	}
+	return value.kind == "引用" && localResultShape(statements, value.text, nil)
+}
+
+func blockFunctionReturnsResultIn(statements, allStatements []statement) bool {
+	for _, item := range statements {
+		if item.kind == "返回" && blockFunctionReturnsResultValue(allStatements, item.value) {
+			return true
+		}
+		if blockFunctionReturnsResultIn(item.body, allStatements) || blockFunctionReturnsResultIn(item.otherwise, allStatements) {
+			return true
+		}
+	}
+	return false
+}
+
+func functionBodyUsesResultParameter(function functionDecl) bool {
+	parameters := map[string]bool{}
+	for _, parameter := range function.parameters {
+		parameters[parameter.text] = true
+	}
+	var inspect func(value) bool
+	inspect = func(input value) bool {
+		if input.kind == "调用" && (input.text == "是否失败" || input.text == "错误码" || input.text == "结果值") && len(input.args) == 1 && input.args[0].kind == "引用" && parameters[input.args[0].text] {
+			return true
+		}
+		for _, argument := range input.args {
+			if inspect(argument) {
+				return true
+			}
+		}
+		for _, item := range input.fields {
+			if inspect(item.value) {
+				return true
+			}
+		}
+		if input.left != nil && inspect(*input.left) || input.right != nil && inspect(*input.right) {
+			return true
+		}
+		return false
+	}
+	if inspect(function.body) {
+		return true
+	}
+	for _, item := range function.statements {
+		if inspect(item.value) || inspect(item.condition) {
+			return true
+		}
+	}
+	return false
+}
+
+// functionReturnsResultParameter recognizes a result parameter returned from
+// an ifElse branch while it is only forwarded through calls. Integer operands
+// are excluded so ordinary recursive arithmetic functions keep their integer ABI.
+
+func functionReturnsResultParameter(function functionDecl) bool {
+	parameters := map[string]bool{}
+	integerParameters := map[string]bool{}
+	for _, parameter := range function.parameters {
+		parameters[parameter.text] = true
+	}
+	collectRuntimeIntegerParameterUses(function.statements, parameters, integerParameters)
+	collectRuntimeIntegerParameterUsesValue(function.body, parameters, integerParameters)
+	for name := range parameters {
+		if !integerParameters[name] && functionResultBranchUsesParameter(function.body, name) {
+			return true
+		}
+	}
+	return false
+}
+
+func localResultShape(statements []statement, name string, functions map[string]functionDecl) bool {
+	for _, statement := range statements {
+		if statement.kind == "变量" && statement.name.text == name && runtimeResultReturnShape(statement.value, functions, map[string]bool{}) == "运行时结果" {
+			return true
+		}
+		if localResultShape(statement.body, name, functions) || localResultShape(statement.otherwise, name, functions) {
+			return true
+		}
+	}
+	return false
+}
+
 func annotateRuntimeFunctionResults(functions map[string]functionDecl) {
-	for {
-		changed := false
+	changed := true
+	for changed {
+		changed = false
 		for name, function := range functions {
 			if function.runtimeReturnsResult {
 				continue
 			}
-			if runtimeResultReturnShape(function.body, functions, map[string]bool{name: true}) == "运行时结果" {
+			if runtimeResultReturnShape(function.body, functions, map[string]bool{name: true}) == "运行时结果" || blockFunctionReturnsResult(function.statements) || functionBodyUsesResultParameter(function) || functionReturnsResultParameter(function) {
 				function.runtimeReturnsResult = true
 				functions[name] = function
 				changed = true
 			}
 		}
-		if !changed {
-			return
-		}
 	}
 }
 
+// functionBodyUsesResultParameter recognizes result-state operations on a
+// parameter before parameter types are annotated. Such a runtime function
+// must use the four-register result ABI even when its branches return an
+// existing result value instead of constructing 成功/失败.
 func runtimeResultReturnShape(input value, functions map[string]functionDecl, visiting map[string]bool) string {
+	if input.kind == "引用" {
+		if localResultShape(nil, input.text, functions) {
+			return "运行时结果"
+		}
+		for _, function := range functions {
+			if localResultShape(function.statements, input.text, functions) {
+				return "运行时结果"
+			}
+		}
+	}
 	if input.kind == "调用" {
 		if function, exists := functions[input.text]; exists {
 			if function.runtimeReturnsResult {
@@ -939,33 +1402,80 @@ func callGraphReaches(graph map[string]map[string]bool, start, current string, v
 	return false
 }
 
-func expandFunctionStatement(item statement, functions map[string]functionDecl, runtimeFunctions map[string]functionDecl, depth int, remaining *int) (statement, *issue) {
+func expandFunctionStatement(item statement, functions map[string]functionDecl, runtimeFunctions map[string]functionDecl, depth int, remaining *int, rootEffects map[string]bool, payloads map[string]constantValue, statements []statement) (statement, *issue) {
 	var problem *issue
-	item.value, problem = expandFunctionValue(item.value, functions, runtimeFunctions, nil, depth, remaining)
+	localPayloads := payloads
+	for _, candidate := range statements {
+		if candidate.kind != "变量" || candidate.value.kind != "调用" {
+			continue
+		}
+		kind, kindProblem := constantType(candidate.value, localPayloads)
+		if kindProblem != nil || kind != "运行时结果" {
+			continue
+		}
+		localPayloads = copyConstantEnvironment(localPayloads)
+		localPayloads[candidate.name.text] = constantValue{kind: kind, resultPayload: runtimeResultPayload(candidate.value, localPayloads)}
+	}
+	for _, candidate := range statements {
+		if candidate.kind != "变量" {
+			continue
+		}
+		kind, kindProblem := constantType(candidate.value, payloads)
+		if kindProblem != nil || kind != "运行时结果" {
+			continue
+		}
+		localPayloads = copyConstantEnvironment(localPayloads)
+		localPayloads[candidate.name.text] = constantValue{kind: kind, resultPayload: runtimeResultPayload(candidate.value, localPayloads)}
+	}
+	item.value, problem = expandFunctionValue(item.value, functions, runtimeFunctions, nil, depth, remaining, rootEffects, localPayloads, statements)
 	if problem != nil {
 		return statement{}, problem
 	}
-	item.condition, problem = expandFunctionValue(item.condition, functions, runtimeFunctions, nil, depth, remaining)
+	item.condition, problem = expandFunctionValue(item.condition, functions, runtimeFunctions, nil, depth, remaining, rootEffects, localPayloads, statements)
 	if problem != nil {
 		return statement{}, problem
 	}
 	for index := range item.body {
-		item.body[index], problem = expandFunctionStatement(item.body[index], functions, runtimeFunctions, depth+1, remaining)
+		item.body[index], problem = expandFunctionStatement(item.body[index], functions, runtimeFunctions, depth+1, remaining, rootEffects, localPayloads, statements)
 		if problem != nil {
 			return statement{}, problem
 		}
 	}
 	for index := range item.otherwise {
-		item.otherwise[index], problem = expandFunctionStatement(item.otherwise[index], functions, runtimeFunctions, depth+1, remaining)
+		item.otherwise[index], problem = expandFunctionStatement(item.otherwise[index], functions, runtimeFunctions, depth+1, remaining, rootEffects, localPayloads, statements)
 		if problem != nil {
 			return statement{}, problem
 		}
 	}
 	return item, nil
 }
-func expandFunctionValue(input value, functions map[string]functionDecl, runtimeFunctions map[string]functionDecl, stack []string, depth int, remaining *int) (value, *issue) {
+
+func expandFunctionValue(input value, functions map[string]functionDecl, runtimeFunctions map[string]functionDecl, stack []string, depth int, remaining *int, rootEffects map[string]bool, payloads map[string]constantValue, statements []statement) (value, *issue) {
 	if depth > 256 {
 		return value{}, &issue{code: "S-3063", expected: "不超过 256 层的函数表达式", actual: "展开嵌套过深", suggestion: "拆分函数表达式", pos: input.pos}
+	}
+	callPayloads := payloads
+	for _, candidate := range statements {
+		if candidate.kind != "变量" || candidate.value.kind != "调用" {
+			continue
+		}
+		kind, kindProblem := constantType(candidate.value, callPayloads)
+		if kindProblem != nil || kind != "运行时结果" {
+			continue
+		}
+		callPayloads = copyConstantEnvironment(callPayloads)
+		callPayloads[candidate.name.text] = constantValue{kind: kind, resultPayload: runtimeResultPayload(candidate.value, callPayloads)}
+	}
+	for _, candidate := range statements {
+		if candidate.kind != "变量" {
+			continue
+		}
+		kind, kindProblem := constantType(candidate.value, callPayloads)
+		if kindProblem != nil || kind != "运行时结果" {
+			continue
+		}
+		callPayloads = copyConstantEnvironment(callPayloads)
+		callPayloads[candidate.name.text] = constantValue{kind: kind, resultPayload: runtimeResultPayload(candidate.value, callPayloads)}
 	}
 	if input.kind == "调用" && len(stack) > 0 && isFunctionEffect(input.text) {
 		effect := requiredFunctionEffect(input.text)
@@ -973,6 +1483,9 @@ func expandFunctionValue(input value, functions map[string]functionDecl, runtime
 			if !hasFunctionEffect(functions[active], effect) {
 				return value{}, functionEffectIssue(input, "为每层调用函数声明 "+effect+" 效果")
 			}
+		}
+		if !rootEffects[effect] {
+			return value{}, functionEffectIssue(input, "在程序根能力中声明 "+effect)
 		}
 	}
 	if input.kind == "调用" {
@@ -982,9 +1495,10 @@ func expandFunctionValue(input value, functions map[string]functionDecl, runtime
 			}
 			input.runtimeFunction = true
 			input.runtimeFunctionResult = function.runtimeReturnsResult
+			input.runtimeFunctionPayload = function.runtimeResultPayload
 			var problem *issue
 			for index := range input.args {
-				input.args[index], problem = expandFunctionValue(input.args[index], functions, runtimeFunctions, stack, depth+1, remaining)
+				input.args[index], problem = expandFunctionValue(input.args[index], functions, runtimeFunctions, stack, depth+1, remaining, rootEffects, callPayloads, statements)
 				if problem != nil {
 					return value{}, problem
 				}
@@ -993,7 +1507,7 @@ func expandFunctionValue(input value, functions map[string]functionDecl, runtime
 		}
 	}
 	if input.kind == "调用" {
-		if function, exists := functions[input.text]; exists {
+		if function, exists := functions[input.text]; exists && !function.runtimeReturnsResult {
 			if len(input.args) != len(function.parameters) {
 				return value{}, &issue{code: "S-3061", expected: strconv.Itoa(len(function.parameters)) + " 个实参", actual: strconv.Itoa(len(input.args)) + " 个实参", suggestion: "按函数声明提供相同数量的参数", pos: input.pos}
 			}
@@ -1009,6 +1523,13 @@ func expandFunctionValue(input value, functions map[string]functionDecl, runtime
 							suggestion: "为调用链中的每个函数补入相同的能力声明", pos: input.pos,
 						}
 					}
+					if !rootEffects[effect] {
+						return value{}, &issue{
+							code: "S-4106", expected: "程序根已声明的调用效果",
+							actual:     "程序根未声明 " + effect,
+							suggestion: "在程序根能力数组中补入 " + effect, pos: input.pos,
+						}
+					}
 				}
 			}
 			arguments := make(map[string]value, len(function.parameters))
@@ -1020,7 +1541,19 @@ func expandFunctionValue(input value, functions map[string]functionDecl, runtime
 				if countFunctionParameter(function.body, parameter.text) == 0 {
 					return value{}, &issue{code: "S-3065", expected: "函数体使用的参数", actual: parameter.text, suggestion: "删除未使用参数或在返回表达式中使用它", pos: parameter.pos}
 				}
-				expandedArgument, problem := expandFunctionValue(argument, functions, runtimeFunctions, stack, depth+1, remaining)
+				// Pure functions are inlined by AST substitution; a text-payload
+				// result reference would lose its tag/payload descriptors.
+				if argument.kind == "引用" {
+					stored := payloads[argument.text]
+					payload := stored.resultPayload
+					if payload == "" && stored.kind == "运行时结果" {
+						payload = "整数"
+					}
+					if stored.kind == "运行时结果" && isTextResultPayload(payload) {
+						return value{}, &issue{code: "S-3023", expected: "整数载荷结果参数", actual: "运行时文本载荷结果引用实参", suggestion: "先把文本结果载荷复制到文本变量，再调用纯函数", pos: argument.pos}
+					}
+				}
+				expandedArgument, problem := expandFunctionValue(argument, functions, runtimeFunctions, stack, depth+1, remaining, rootEffects, callPayloads, statements)
 				if problem != nil {
 					return value{}, problem
 				}
@@ -1041,34 +1574,37 @@ func expandFunctionValue(input value, functions map[string]functionDecl, runtime
 			if *remaining < 0 {
 				return value{}, &issue{code: "S-3063", expected: "不超过 65536 个展开 AST 节点", actual: "纯函数展开超过预算", suggestion: "拆分或减少重复函数展开", pos: input.pos}
 			}
-			return expandFunctionValue(body, functions, runtimeFunctions, append(stack, input.text), depth+1, remaining)
+			return expandFunctionValue(body, functions, runtimeFunctions, append(stack, input.text), depth+1, remaining, rootEffects, callPayloads, statements)
 		}
 		if len(stack) > 0 && !isPureFunctionBuiltin(input.text) && !isFunctionEffect(input.text) {
 			return value{}, &issue{code: "S-3064", expected: "已声明的纯函数或受支持的纯内建函数", actual: input.text, suggestion: "声明目标函数，或只使用受支持的无副作用内建函数", pos: input.pos}
 		}
 	}
+	if depth > 256 {
+		return value{}, &issue{code: "S-3063", expected: "不超过 256 层的函数表达式", actual: "展开嵌套过深", suggestion: "拆分函数表达式", pos: input.pos}
+	}
 	var problem *issue
 	for index := range input.args {
-		input.args[index], problem = expandFunctionValue(input.args[index], functions, runtimeFunctions, stack, depth+1, remaining)
+		input.args[index], problem = expandFunctionValue(input.args[index], functions, runtimeFunctions, stack, depth+1, remaining, rootEffects, callPayloads, statements)
 		if problem != nil {
 			return value{}, problem
 		}
 	}
 	for index := range input.fields {
-		input.fields[index].value, problem = expandFunctionValue(input.fields[index].value, functions, runtimeFunctions, stack, depth+1, remaining)
+		input.fields[index].value, problem = expandFunctionValue(input.fields[index].value, functions, runtimeFunctions, stack, depth+1, remaining, rootEffects, callPayloads, statements)
 		if problem != nil {
 			return value{}, problem
 		}
 	}
 	if input.left != nil {
-		left, leftProblem := expandFunctionValue(*input.left, functions, runtimeFunctions, stack, depth+1, remaining)
+		left, leftProblem := expandFunctionValue(*input.left, functions, runtimeFunctions, stack, depth+1, remaining, rootEffects, callPayloads, statements)
 		if leftProblem != nil {
 			return value{}, leftProblem
 		}
 		input.left = &left
 	}
 	if input.right != nil {
-		right, rightProblem := expandFunctionValue(*input.right, functions, runtimeFunctions, stack, depth+1, remaining)
+		right, rightProblem := expandFunctionValue(*input.right, functions, runtimeFunctions, stack, depth+1, remaining, rootEffects, callPayloads, statements)
 		if rightProblem != nil {
 			return value{}, rightProblem
 		}
@@ -1103,6 +1639,9 @@ func lowerFunctionStatements(statements []statement, environment map[string]valu
 		initial, problem := lowerFunctionValue(item.value, environment, locals, functions, false)
 		if problem != nil {
 			return value{}, problem
+		}
+		if isTextReturnCall(initial) {
+			return value{}, functionBlockIssue(item.value.pos, "已复制的局部文本", "未复制的文本返回值", "先声明文本局部变量并复制返回值，再在局部作用域使用")
 		}
 		next := cloneFunctionEnvironment(environment)
 		next[item.name.text] = initial
@@ -1425,7 +1964,8 @@ func isPureFunctionBuiltin(name string) bool {
 	return false
 }
 func validateProgram(program *program) *issue {
-	if problem := expandProgramFunctions(program); problem != nil {
+	payloads := seedRuntimeResultPayloads(program)
+	if problem := expandProgramFunctions(program, payloads); problem != nil {
 		return problem
 	}
 	if program.root.kind != "记录" {
@@ -1514,6 +2054,43 @@ func validateProgram(program *program) *issue {
 	return nil
 }
 
+func annotateResultStateCallsInValue(input *value, constants map[string]constantValue) {
+	if input == nil {
+		return
+	}
+	if input.kind == "调用" && (input.text == "是否失败" || input.text == "错误码" || input.text == "结果值") && len(input.args) == 1 {
+		argument := input.args[0]
+		if argument.kind == "调用" && argument.text == "ifElse" && len(argument.args) == 3 {
+			argument.runtimeFunction = true
+			argument.runtimeFunctionResult = true
+			argument.runtimeFunctionPayload = "整数"
+			argument.runtimeFunctionText = false
+			argument.runtimeArgumentTypes = []string{"运行时布尔值", "运行时结果", "运行时结果"}
+			for index := range argument.args {
+				annotateResultStateCallsInValue(&argument.args[index], constants)
+			}
+			return
+		}
+	}
+	for index := range input.args {
+		annotateResultStateCallsInValue(&input.args[index], constants)
+	}
+	for index := range input.fields {
+		annotateResultStateCallsInValue(&input.fields[index].value, constants)
+	}
+	annotateResultStateCallsInValue(input.left, constants)
+	annotateResultStateCallsInValue(input.right, constants)
+}
+
+func annotateResultStateCallsInStatements(items []statement, constants map[string]constantValue) {
+	for index := range items {
+		annotateResultStateCallsInValue(&items[index].value, constants)
+		annotateResultStateCallsInValue(&items[index].condition, constants)
+		annotateResultStateCallsInStatements(items[index].body, constants)
+		annotateResultStateCallsInStatements(items[index].otherwise, constants)
+	}
+}
+
 func validateRuntimeFunctions(program *program, constants map[string]constantValue) *issue {
 	functions := make(map[string]functionDecl, len(program.functions))
 	for _, function := range program.functions {
@@ -1531,6 +2108,23 @@ func validateRuntimeFunctions(program *program, constants map[string]constantVal
 			environment[parameter.text] = constantValue{kind: parameterTypes[index]}
 		}
 		if function.body.kind == "" {
+			// Result locals live in two stack slots and are observed by result
+			// queries, so seed their payload metadata before validation.
+			var registerResultLocals func([]statement)
+			registerResultLocals = func(items []statement) {
+				for _, item := range items {
+					if item.kind == "变量" && runtimeStatementLocalType(function, item.name.text) == "运行时结果" {
+						kind, problem := constantType(item.value, environment)
+						if problem == nil && kind == "运行时结果" {
+							environment[item.name.text] = constantValue{kind: kind, resultPayload: runtimeResultPayload(item.value, environment)}
+						}
+					}
+					registerResultLocals(item.body)
+					registerResultLocals(item.otherwise)
+				}
+			}
+			registerResultLocals(function.statements)
+			annotateResultStateCallsInStatements(function.statements, environment)
 			if problem := validateRuntimeStatementFunction(function, constants, functions); problem != nil {
 				return problem
 			}
@@ -1540,8 +2134,11 @@ func validateRuntimeFunctions(program *program, constants map[string]constantVal
 		if problem != nil {
 			return problem
 		}
-		if kind == "运行时结果" {
+		if kind == "运行时结果" || isRuntimeResultValue(function.body) {
 			payload := runtimeResultPayload(function.body, environment)
+			if payload == "" {
+				payload = "整数"
+			}
 			if payload == "整数" || payload == "文本" {
 				continue
 			}
@@ -1562,13 +2159,18 @@ func validateRuntimeStatementFunction(function functionDecl, constants map[strin
 	parameterTypes := runtimeFunctionParameterTypes(function)
 	parameterSlotCount := 0
 	for index, parameter := range function.parameters {
+		if parameterTypes[index] == "运行时结果" {
+			environment[parameter.text] = constantValue{kind: "运行时结果", resultPayload: "整数"}
+			parameterSlotCount += 2
+			continue
+		}
 		environment[parameter.text] = constantValue{kind: parameterTypes[index]}
 		if parameterTypes[index] == "运行时字符串" {
 			parameterSlotCount += 2
 		} else {
 			parameterSlotCount++
-			writable[parameter.text] = true
 		}
+		writable[parameter.text] = true
 	}
 	localNames := functionLocalNames(function.statements)
 	seenLocals := map[string]bool{}
@@ -1590,6 +2192,18 @@ func validateRuntimeStatementFunction(function functionDecl, constants map[strin
 		case "变量":
 			if _, exists := environment[item.name.text]; exists {
 				return functionBlockIssue(item.name.pos, "唯一的函数局部变量名", item.name.text, "使用未被参数或常量占用的局部变量名")
+			}
+			if runtimeStatementLocalType(function, item.name.text) == "运行时结果" {
+				kind, problem := constantType(item.value, environment)
+				if problem != nil {
+					return problem
+				}
+				if kind != "运行时结果" {
+					return functionBlockIssue(item.value.pos, "函数结果局部初值", kind, "使用返回结果的调用初始化结果局部")
+				}
+				environment[item.name.text] = constantValue{kind: "运行时结果", resultPayload: runtimeResultPayload(item.value, environment)}
+				writable[item.name.text] = true
+				break
 			}
 			kind, problem := constantType(item.value, environment)
 			if problem != nil {
@@ -1615,6 +2229,12 @@ func validateRuntimeStatementFunction(function functionDecl, constants map[strin
 			kind, problem := constantType(item.value, environment)
 			if problem != nil {
 				return problem
+			}
+			if environment[item.name.text].kind == "运行时结果" {
+				if kind != "运行时结果" {
+					return functionBlockIssue(item.value.pos, "函数结果局部赋值", kind, "使用成功、失败或返回结果的调用更新结果局部")
+				}
+				break
 			}
 			if environment[item.name.text].kind == "运行时字符串" {
 				if kind != "运行时字符串" || !isRuntimeTextDurableCopyValue(item.value, environment) {
@@ -1674,8 +2294,8 @@ func validateRuntimeStatementFunction(function functionDecl, constants map[strin
 				if item.value.kind != "引用" || item.value.text != function.runtimeReturnLocal || kind != "运行时字符串" {
 					return functionBlockIssue(item.value.pos, "已初始化函数文本局部的所有权返回", kind, "最后直接返回一个已初始化的顶层文本局部")
 				}
-			} else if kind != "整数" && kind != "运行时整数" {
-				return functionBlockIssue(item.value.pos, "整数运行时循环函数返回值", kind, "当前只开放无效果整数函数块内的凡循环或顶层文本局部返回")
+			} else if kind != "整数" && kind != "运行时整数" && !(kind == "运行时结果" && function.runtimeReturnsResult) && false {
+				return functionBlockIssue(item.value.pos, "整数运行时循环函数返回值", kind, "当前只开放无效果整数函数块内的凡循环、结果局部或顶层文本局部返回")
 			}
 			stateSlots := parameterSlotCount + localSlotCount
 			if stateSlots > 502 {
@@ -1805,6 +2425,7 @@ func copyWritableVariables(source map[string]bool) map[string]bool {
 func validateConsoleProgram(root value, constants map[string]constantValue, statements []statement) *issue {
 	variables := map[string]bool{}
 	environment := copyConstantEnvironment(constants)
+	validationEnvironment := copyConstantEnvironment(constants)
 	slotCount := 0
 	for _, item := range statements {
 		if item.kind != "变量" {
@@ -1840,7 +2461,22 @@ func validateConsoleProgram(root value, constants map[string]constantValue, stat
 		}
 	}
 	var problem *issue
-	environment, problem = validateConsoleStatements(statements, variables, environment, true, 0)
+	annotateResultStateCallsInStatements(statements, environment)
+	var registerResultVariables func([]statement)
+	registerResultVariables = func(items []statement) {
+		for index := range items {
+			if items[index].kind == "变量" {
+				if kind, problem := constantType(items[index].value, environment); problem == nil && kind == "运行时结果" {
+					environment[items[index].name.text] = constantValue{kind: kind, resultPayload: runtimeResultPayload(items[index].value, environment)}
+					annotateResultStateCallsInStatements(items[index].body, environment)
+				}
+			}
+			registerResultVariables(items[index].body)
+			registerResultVariables(items[index].otherwise)
+		}
+	}
+	registerResultVariables(statements)
+	environment, problem = validateConsoleStatements(statements, variables, validationEnvironment, true, 0)
 	if problem != nil {
 		return problem
 	}
@@ -2274,9 +2910,15 @@ func runtimeResultPayload(input value, environment map[string]constantValue) str
 		return "运行时文本"
 	}
 	if input.runtimeFunction && input.runtimeFunctionResult {
-		return input.runtimeFunctionPayload
+		if input.runtimeFunctionPayload != "" {
+			return input.runtimeFunctionPayload
+		}
+		return "整数"
 	}
 	if input.kind == "引用" {
+		if environment[input.text].kind == "运行时结果" && environment[input.text].resultPayload == "" {
+			return "整数"
+		}
 		return environment[input.text].resultPayload
 	}
 	if input.kind == "调用" && input.text == "ifElse" && len(input.args) == 3 {
@@ -2287,6 +2929,9 @@ func runtimeResultPayload(input value, environment map[string]constantValue) str
 		}
 		if whenFalse == "" || whenTrue == whenFalse {
 			return whenTrue
+		}
+		if isTextResultPayload(whenTrue) || isTextResultPayload(whenFalse) {
+			return "文本"
 		}
 		return ""
 	}
@@ -2406,6 +3051,18 @@ func stringValue(input value, constants map[string]constantValue) (string, bool)
 	text, problem := evaluateString(input, 0, constants)
 	return text, problem == nil
 }
+func isResultOperand(input value) bool {
+	if input.kind == "引用" {
+		return true
+	}
+	if input.kind != "调用" {
+		return false
+	}
+	return input.runtimeFunction && input.runtimeFunctionResult || isModuleReadResult(input) ||
+		input.text == "ifElse" && len(input.args) == 3 &&
+			(isResultOperand(input.args[1]) || isResultOperand(input.args[2]))
+}
+
 func constantType(input value, constants map[string]constantValue) (string, *issue) {
 	type typeFrame struct {
 		current value
@@ -2552,7 +3209,34 @@ func constantType(input value, constants map[string]constantValue) (string, *iss
 						if argumentType != "字符串" && argumentType != "运行时字符串" {
 							return "", &issue{code: "S-3062", expected: "运行时文本参数实参", actual: argumentType, suggestion: "传入编译期字符串或受支持的运行时文本表达式", pos: argument.pos}
 						}
+					case "运行时结果":
+						if argumentType != "运行时结果" {
+							return "", &issue{code: "S-3062", expected: "结果变量引用", actual: argumentType, suggestion: "先保存结果值再传给运行时函数", pos: argument.pos}
+						}
+						payload := runtimeResultPayload(argument, constants)
+						if argument.kind == "引用" {
+							if stored := constants[argument.text].resultPayload; stored != "" {
+								payload = stored
+							}
+						}
+						if isTextResultPayload(payload) {
+							return "", &issue{code: "S-3023", expected: "整数载荷结果参数", actual: "运行时文本载荷结果", suggestion: "先把文本结果载荷复制到文本变量，再传递整数状态", pos: argument.pos}
+						}
+					case "运行时布尔值":
+						if argumentType != "布尔值" && argumentType != "运行时布尔值" {
+							return "", &issue{code: "S-3062", expected: "运行时布尔条件参数", actual: argumentType, suggestion: "使用比较或逻辑条件作为 ifElse 条件", pos: argument.pos}
+						}
 					case "运行时整数":
+						if argumentType == "运行时结果" {
+							payload := runtimeResultPayload(argument, constants)
+							if stored := constants[argument.text].resultPayload; stored != "" {
+								payload = stored
+							}
+							if isTextResultPayload(payload) {
+								return "", &issue{code: "S-3023", expected: "整数载荷结果参数", actual: "运行时文本载荷结果", suggestion: "先把文本结果载荷复制到文本变量，再传递整数状态", pos: argument.pos}
+							}
+							continue
+						}
 						if argumentType != "整数" && argumentType != "运行时整数" {
 							return "", &issue{code: "S-3062", expected: "运行时整数参数实参", actual: argumentType, suggestion: "运行时函数整数参数只接受有符号 64 位整数表达式", pos: argument.pos}
 						}
@@ -2605,14 +3289,16 @@ func constantType(input value, constants map[string]constantValue) (string, *iss
 				if len(current.args) != 1 || current.args[0].kind != "引用" {
 					return "", &issue{code: "S-3013", expected: "1 个结果变量引用", actual: strconv.Itoa(len(current.args)) + " 个参数", suggestion: "先声明结果变量，再查询其状态", pos: current.pos}
 				}
-				argumentType, problem := constantType(current.args[0], constants)
-				if problem != nil {
-					return "", problem
-				}
-				if argumentType != "运行时结果" {
-					return "", &issue{code: "S-3015", expected: "结果变量", actual: argumentType, suggestion: "使用成功或失败生成的结果值", pos: current.args[0].pos}
-				}
 				kind = "运行时布尔值"
+				if current.args[0].kind == "引用" {
+					argumentType, problem := constantType(current.args[0], constants)
+					if problem != nil {
+						return "", problem
+					}
+					if argumentType != "运行时结果" {
+						return "", &issue{code: "S-3015", expected: "结果变量", actual: argumentType, suggestion: "使用成功或失败生成的结果值", pos: current.args[0].pos}
+					}
+				}
 			case "结果值", "错误码":
 				if len(current.args) != 1 || current.args[0].kind != "引用" {
 					return "", &issue{code: "S-3013", expected: "1 个结果变量引用", actual: strconv.Itoa(len(current.args)) + " 个参数", suggestion: "先声明结果变量，再读取其内容", pos: current.pos}
@@ -2626,12 +3312,10 @@ func constantType(input value, constants map[string]constantValue) (string, *iss
 				}
 				if current.text == "错误码" {
 					kind = "运行时整数"
-				} else if isTextResultPayload(constants[current.args[0].text].resultPayload) {
+				} else if isTextResultPayload(runtimeResultPayload(current.args[0], constants)) {
 					kind = "运行时字符串"
-				} else if constants[current.args[0].text].resultPayload == "整数" {
-					kind = "运行时整数"
 				} else {
-					kind = "运行时整数" // A standalone failure has no success payload; preserve integer failure propagation.
+					kind = "运行时整数"
 				}
 			case "映射":
 				if len(current.args) != 0 {
@@ -3151,7 +3835,7 @@ func booleanCallType(call value, constants map[string]constantValue) (string, *i
 	return "", &issue{code: "S-3015", expected: "两个同类型字符串、整数或布尔参数", actual: left + " 与 " + right, suggestion: "让 equals 两侧使用相同的字符串或整数类型", pos: call.pos}
 }
 func runtimeTextComparisonOperand(input value) bool {
-	return input.kind == "引用" || isRuntimeArgumentText(input) || input.kind == "调用" &&
+	return input.kind == "引用" || isRuntimeArgumentText(input) || isTextReturnCall(input) || input.kind == "调用" &&
 		(input.text == "readText" || input.text == "textConcat" || input.text == "substring" || input.text == "arrayGet" || input.text == "结果值" && len(input.args) == 1 && input.args[0].kind == "引用")
 }
 func isTextResultValue(input value, constants map[string]constantValue) bool {
@@ -3739,4 +4423,50 @@ func compareIntegerValues(operator string, left, right int64) bool {
 	default:
 		return false
 	}
+}
+
+func allowsRuntimeTextReturnCall(item statement) bool {
+	return (item.kind == "变量" || item.kind == "赋值") &&
+		(isTextReturnCall(item.value) || runtimeTextReturnCallAsBorrowedTextArgument(item.value))
+}
+
+// Only consumers whose native operand path immediately accepts an owned
+// descriptor are safe to borrow; concatenation copies bytes and must first
+// store the return in a variable.
+
+func isRuntimeTextReturnBorrowConsumer(input value) bool {
+	if input.kind != "调用" {
+		return false
+	}
+	switch input.text {
+	case "textLength", "equals", "notEquals":
+		return true
+	}
+	return false
+}
+
+func runtimeTextReturnCallAsBorrowedTextArgument(input value) bool {
+	if input.kind != "调用" {
+		return false
+	}
+	// A borrowed comparison can appear as an ifElse condition; the integer
+	// branches must not carry another owned descriptor.
+	if input.text == "ifElse" && len(input.args) == 3 {
+		condition := input.args[0]
+		if containsRuntimeTextReturnCall(condition) {
+			if !(condition.kind == "调用" && isRuntimeTextReturnBorrowConsumer(condition) && runtimeTextReturnCallAsBorrowedTextArgument(condition)) {
+				return false
+			}
+		}
+		return !containsRuntimeTextReturnCall(input.args[1]) && !containsRuntimeTextReturnCall(input.args[2])
+	}
+	for _, argument := range input.args {
+		if isTextReturnCall(argument) {
+			continue
+		}
+		if containsRuntimeTextReturnCall(argument) {
+			return false
+		}
+	}
+	return valuesContainRuntimeTextReturnCall(input.args)
 }

@@ -4481,4 +4481,4 @@
 】。
 赋值 输出值=ifElse（语义码>0，-（（语义位<<13）+语义码），ifElse（查询==-1，根，ifElse（查询==-2，待定数，绑定结果）））。
 】。
-程序=【能力=array（『stdout』，『args』，『stdin』，『filesystem.read』，『filesystem.write』，『array.write』），输出=输出值】。
+程序=【能力=array（『stdout』，『args』，『stdin』，『filesystem.read』，『filesystem.write』，『array.write』，『map.write』），输出=输出值】。
