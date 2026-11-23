@@ -538,7 +538,10 @@ func (c *windowCode) emitRuntimeStatementFunctionBody(function functionDecl, con
 	if stateCount > 502 {
 		return fmt.Errorf("运行时函数状态超过 502 个槽")
 	}
-	temporarySize := uint32(360)
+	temporarySize := uint32(0)
+	if statementsNeedRuntimeTextSubstringScratch(function.statements) {
+		temporarySize = 360
+	}
 	if level := statementsNeedRuntimeTextConcatScratch(function.statements); level > 0 {
 		temporarySize = runtimeTextConcatBaseScratch + runtimeTextConcatScratchStride*level
 	}

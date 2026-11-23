@@ -7,7 +7,7 @@
 [![Verified platform](https://img.shields.io/badge/platform-macOS%20arm64-lightgrey?style=flat-square)](#compatibility)
 [![License](https://img.shields.io/badge/license-MIT%20%2B%20Apache--2.0-blue?style=flat-square)](./LICENSING.md)
 [![Developer preview](https://img.shields.io/badge/release-v0.1.0--dev.1%20preview-orange?style=flat-square)](RELEASE.md)
-[![Seed size](https://img.shields.io/badge/seed-11996%2F12000%20lines-informational?style=flat-square)](#design-details-and-engineering-trade-offs)
+[![Seed size](https://img.shields.io/badge/seed-11999%2F12000%20lines-informational?style=flat-square)](#design-details-and-engineering-trade-offs)
 
 # Serica（行简）
 
@@ -181,7 +181,7 @@ Output:
 
 ```text
 Go 种子子集检查：通过（活动源码行数以 `make seed-audit` 为准，归因完整）
-C-1 AST 归因：4914/11434 行（43.0%）；种子超过 3000 行且占比超过 40% 时须记录语言复核
+C-1 AST 归因：4917/11437 行（43.0%）；种子超过 3000 行且占比超过 40% 时须记录语言复核
 C-1 条件已触发；D-0009/D-0059 复核记录通过
 bootstrap/archive/prototype-3.8/lexical.serica：NFC=true 半角标点=0 禁用字符=0
 examples/p0b-window.serica：NFC=true 半角标点=0 禁用字符=0

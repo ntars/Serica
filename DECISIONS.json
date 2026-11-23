@@ -1195,8 +1195,8 @@
     {
       "id": "D-0154",
       "title": "效果函数拼接与切片文本结果局部",
-      "decision": "带 stdin 效果的语句体函数可把 readText（） 的受支持 textConcat 或 substring 结果放入成功载荷，并保留文本结果四槽返回；函数帧按状态槽、默认临时区和嵌套拼接层数预留帧内 scratch。效果检查仅在成功载荷子树内放行 readText，普通文本局部初始化仍由 S-3068 拒绝。",
-      "check": "make test-p1b-runtime 新增拼接成功输出行简尾、切片成功输出简语及两者失败无 stdout 以 9 退出的 4 个 macOS arm64 正反例；两种成功产物各连续 8 次同路径构建字节一致，普通文本局部反例保持 S-3068。当前 191 个整数形态产物、19 个函数结果边界产物、311 个编译诊断和 118 个运行时拒绝样例。种子 11996/12000 行、C-1 4914/11434（43.0%）。",
+      "decision": "带 stdin 效果的语句体函数可把 readText（） 的受支持 textConcat 或 substring 结果放入成功载荷，并保留文本结果四槽返回；含切片时函数帧保留 360 字节临时区，含拼接时按嵌套层数扩展帧内 scratch。效果检查仅在成功载荷子树内放行 readText，普通文本局部初始化仍由 S-3068 拒绝。",
+      "check": "make test-p1b-runtime 新增拼接成功输出行简尾、切片成功输出简语及两者失败无 stdout 以 9 退出的 4 个 macOS arm64 正反例；两种成功产物各连续 8 次同路径构建字节一致，普通文本局部反例保持 S-3068。当前 191 个整数形态产物、19 个函数结果边界产物、311 个编译诊断和 118 个运行时拒绝样例。种子 11999/12000 行、C-1 4917/11437（43.0%）。",
       "status": "settled",
       "source": "docs/decisions/0154-effectful-concatenated-sliced-text-result-locals.md"
     }
