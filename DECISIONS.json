@@ -1207,6 +1207,14 @@
       "check": "make test-p1b-runtime 新增文本结果参数转发、失败码保留、拼接载荷、内联结果、空文本和补充平面文本 6 个 macOS arm64 场景，并新增混合载荷 S-3062 与文本结果传入整数形参 S-3023 反例；新增成功产物各连续 8 次同路径构建字节一致。完整串行门通过 197 个整数形态产物、25 个函数结果边界产物、315 个编译诊断和 118 个运行时拒绝样例。种子 11979/12000 行、C-1 4856/11417（42.5%）。",
       "status": "settled",
       "source": "docs/decisions/0155-effectful-runtime-text-result-parameter-abi.md"
+    },
+    {
+      "id": "D-0156",
+      "title": "开发者预览 v0.1.0-dev.2 发布复验",
+      "decision": "将开发者预览版本从 v0.1.0-dev.1 递增到 v0.1.0-dev.2，确保 D-0155 之后的内容不装入旧版本标识。继续使用 D-0141/D-0142 的源码运行时目录、压缩包、逐文件 SHA-256、SBOM、本地 prefix 安装/卸载与解压后 make verify；不增加系统安装器、Apple 公证、多机支持或正式版本声明。",
+      "check": "make release 生成 serica-v0.1.0-dev.2-macos-arm64 目录、tar.gz 与 SHA256SUMS.archives；tools/test_release.py 验证逐文件摘要、SBOM、arm64 Mach-O、签名、示例构建/运行和隔离安装/卸载。归档 SHA-256 以 dist/SHA256SUMS.archives 为准；解压归档后 make verify 通过。P1b 阶段门仍未通过。",
+      "status": "settled",
+      "source": "docs/decisions/0156-developer-preview-dev2.md"
     }
   ]
 }

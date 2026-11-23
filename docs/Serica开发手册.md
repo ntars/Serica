@@ -240,7 +240,7 @@ build/stage0/serica build <文件.serica> -o <输出路径>  # 产出 macOS arm6
 **步骤**：
 1. 运行 `python3 tools/check_seed_subset.py`，核对行数、归因完整性和 C-1 输出。
 2. 抽查 `docs/build/seed-attribution.md` 的 D-0131 条目，确认字节写入的能力、类型、范围检查和映射生命周期均有归因。
-3. 抽查 `DECISIONS.json` 最后一条为 D-0155，且 `source` 指向 `docs/decisions/0155-effectful-runtime-text-result-parameter-abi.md`。
+3. 抽查 `DECISIONS.json` 最后一条为 D-0156，且 `source` 指向 `docs/decisions/0156-developer-preview-dev2.md`。
 4. 若后续新增种子行导致归因失败，只补真实能力归因并同步文档，不删除仍被验收门使用的功能。
 
 **验收命令**：
