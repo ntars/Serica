@@ -23,19 +23,20 @@ type importDecl struct {
 	pos  sourcePosition
 }
 type value struct {
-	kind                   string
-	text                   string
-	fields                 []field
-	args                   []value
-	operator               string
-	left                   *value
-	right                  *value
-	pos                    sourcePosition
-	runtimeFunction        bool
-	runtimeFunctionResult  bool
-	runtimeFunctionPayload string
-	runtimeFunctionText    bool
-	runtimeArgumentTypes   []string
+	kind                    string
+	text                    string
+	fields                  []field
+	args                    []value
+	operator                string
+	left                    *value
+	right                   *value
+	pos                     sourcePosition
+	runtimeFunction         bool
+	runtimeFunctionResult   bool
+	runtimeFunctionPayload  string
+	runtimeFunctionText     bool
+	runtimeArgumentTypes    []string
+	runtimeArgumentPayloads []string
 }
 type field struct {
 	name  token
@@ -46,20 +47,21 @@ type binding struct {
 	value value
 }
 type functionDecl struct {
-	name                 token
-	parameters           []token
-	effectDecl           value
-	hasEffects           bool
-	effects              []string
-	body                 value
-	statements           []statement
-	runtimeReturnsResult bool
-	runtimeReturnsText   bool
-	runtimeReturnLocal   string
-	runtimeResultPayload string
-	parameterTypes       []string
-	localTypes           map[string]string
-	localResultPayloads  map[string]string
+	name                    token
+	parameters              []token
+	effectDecl              value
+	hasEffects              bool
+	effects                 []string
+	body                    value
+	statements              []statement
+	runtimeReturnsResult    bool
+	runtimeReturnsText      bool
+	runtimeReturnLocal      string
+	runtimeResultPayload    string
+	parameterTypes          []string
+	parameterResultPayloads map[string]string
+	localTypes              map[string]string
+	localResultPayloads     map[string]string
 }
 type statement struct {
 	kind      string

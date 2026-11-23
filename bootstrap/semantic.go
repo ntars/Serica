@@ -15,6 +15,54 @@ type constantValue struct {
 	array         []constantValue
 }
 
+func walkValue(input value, visit func(value) bool) {
+	if input.kind == "" || !visit(input) {
+		return
+	}
+	for _, argument := range input.args {
+		walkValue(argument, visit)
+	}
+	for _, item := range input.fields {
+		walkValue(item.value, visit)
+	}
+	if input.left != nil {
+		walkValue(*input.left, visit)
+	}
+	if input.right != nil {
+		walkValue(*input.right, visit)
+	}
+}
+
+func walkStatements(items []statement, visit func(statement) bool) {
+	for _, item := range items {
+		if !visit(item) {
+			continue
+		}
+		walkStatements(item.body, visit)
+		walkStatements(item.otherwise, visit)
+	}
+}
+
+func walkProgramValues(program *program, visit func(value) bool) {
+	walkValue(program.root, visit)
+	for _, item := range program.bindings {
+		walkValue(item.value, visit)
+	}
+	walkStatements(program.statements, func(item statement) bool {
+		walkValue(item.value, visit)
+		walkValue(item.condition, visit)
+		return true
+	})
+	for _, function := range program.functions {
+		walkValue(function.body, visit)
+		walkStatements(function.statements, func(item statement) bool {
+			walkValue(item.value, visit)
+			walkValue(item.condition, visit)
+			return true
+		})
+	}
+}
+
 func seedRuntimeResultPayloads(program *program) map[string]constantValue {
 	payloads := map[string]constantValue{}
 	for _, function := range program.functions {
@@ -234,160 +282,96 @@ func blockFunctionUsesRuntimeTextParameter(function functionDecl) bool {
 // blockFunctionObservesResultState keeps result-querying block functions on
 // the statement ABI so lowering cannot replace a result local by its initializer.
 func blockFunctionObservesResultState(function functionDecl) bool {
-	var observed func(value) bool
-	observed = func(input value) bool {
-		if input.kind == "调用" && (input.text == "是否失败" || input.text == "错误码" || input.text == "结果值") && len(input.args) == 1 {
-			return true
-		}
-		for _, argument := range input.args {
-			if observed(argument) {
-				return true
+	observed := func(input value) bool {
+		found := false
+		walkValue(input, func(current value) bool {
+			if current.kind == "调用" && (current.text == "是否失败" || current.text == "错误码" || current.text == "结果值") && len(current.args) == 1 {
+				found = true
+				return false
 			}
-		}
-		for _, field := range input.fields {
-			if observed(field.value) {
-				return true
-			}
-		}
-		if input.left != nil && observed(*input.left) || input.right != nil && observed(*input.right) {
-			return true
-		}
-		return false
+			return !found
+		})
+		return found
 	}
 	if observed(function.body) {
 		return true
 	}
-	var visit func([]statement) bool
-	visit = func(items []statement) bool {
-		for _, item := range items {
-			if observed(item.value) || observed(item.condition) || visit(item.body) || visit(item.otherwise) {
-				return true
-			}
-		}
-		return false
-	}
-	return visit(function.statements)
+	found := false
+	walkStatements(function.statements, func(item statement) bool {
+		found = found || observed(item.value) || observed(item.condition)
+		return !found
+	})
+	return found
 }
 
 // blockFunctionConstructsResultLocal keeps effectful functions with an
 // explicit result local on the statement-based runtime ABI. The expression
 // lowering path cannot preserve the local's tag/value pair across an effect.
 func blockFunctionConstructsResultLocal(function functionDecl) bool {
-	var constructs func(value) bool
-	constructs = func(input value) bool {
-		if input.kind == "调用" {
-			if input.text == "成功" || input.text == "失败" {
-				return true
+	constructs := func(input value) bool {
+		found := false
+		walkValue(input, func(current value) bool {
+			if current.kind == "调用" && (current.text == "成功" || current.text == "失败") {
+				found = true
+				return false
 			}
-			if input.text == "ifElse" && len(input.args) == 3 && constructs(input.args[1]) && constructs(input.args[2]) {
-				return true
-			}
-		}
-		for _, argument := range input.args {
-			if constructs(argument) {
-				return true
-			}
-		}
-		for _, field := range input.fields {
-			if constructs(field.value) {
-				return true
-			}
-		}
-		if input.left != nil && constructs(*input.left) || input.right != nil && constructs(*input.right) {
-			return true
-		}
-		return false
+			return !found
+		})
+		return found
 	}
-	var visit func([]statement) bool
-	visit = func(items []statement) bool {
-		for _, item := range items {
-			if item.kind == "变量" && constructs(item.value) || visit(item.body) || visit(item.otherwise) {
-				return true
-			}
-		}
-		return false
-	}
-	return visit(function.statements)
+	found := false
+	walkStatements(function.statements, func(item statement) bool {
+		found = found || item.kind == "变量" && constructs(item.value)
+		return !found
+	})
+	return found
 }
 
 func blockFunctionReturnsRuntimeCall(function functionDecl, functions map[string]functionDecl) bool {
-	var calls func(value) bool
-	calls = func(input value) bool {
-		if input.kind == "调用" {
-			if _, exists := functions[input.text]; exists {
-				return true
-			}
+	found := false
+	walkStatements(function.statements, func(item statement) bool {
+		if item.kind != "返回" {
+			return true
 		}
-		for _, argument := range input.args {
-			if calls(argument) {
-				return true
+		walkValue(item.value, func(current value) bool {
+			if current.kind == "调用" {
+				if _, exists := functions[current.text]; exists {
+					found = true
+					return false
+				}
 			}
-		}
-		return false
-	}
-	var visit func([]statement) bool
-	visit = func(items []statement) bool {
-		for _, item := range items {
-			if item.kind == "返回" && calls(item.value) {
-				return true
-			}
-			if visit(item.body) || visit(item.otherwise) {
-				return true
-			}
-		}
-		return false
-	}
-	return visit(function.statements)
+			return !found
+		})
+		return !found
+	})
+	return found
 }
 
 func runtimeResultStateUsesValue(input value, name string, found *bool) bool {
-	if input.kind == "调用" && (input.text == "是否失败" || input.text == "错误码" || input.text == "结果值") && len(input.args) == 1 && input.args[0].kind == "引用" && input.args[0].text == name {
-		*found = true
-	}
-	for _, argument := range input.args {
-		if runtimeResultStateUsesValue(argument, name, found) {
-			return true
+	walkValue(input, func(current value) bool {
+		if current.kind == "调用" && (current.text == "是否失败" || current.text == "错误码" || current.text == "结果值") && len(current.args) == 1 && current.args[0].kind == "引用" && current.args[0].text == name {
+			*found = true
+			return false
 		}
-	}
-	for _, item := range input.fields {
-		if runtimeResultStateUsesValue(item.value, name, found) {
-			return true
-		}
-	}
-	if input.left != nil && runtimeResultStateUsesValue(*input.left, name, found) {
-		return true
-	}
-	if input.right != nil && runtimeResultStateUsesValue(*input.right, name, found) {
-		return true
-	}
-	return false
+		return !*found
+	})
+	return *found
 }
 
 func functionResultBranchUsesParameter(input value, name string) bool {
-	if input.kind == "调用" && input.text == "ifElse" && len(input.args) == 3 {
-		for _, branch := range input.args[1:] {
-			if branch.kind == "引用" && branch.text == name {
-				return true
+	found := false
+	walkValue(input, func(current value) bool {
+		if current.kind == "调用" && current.text == "ifElse" && len(current.args) == 3 {
+			for _, branch := range current.args[1:] {
+				if branch.kind == "引用" && branch.text == name {
+					found = true
+					return false
+				}
 			}
 		}
-	}
-	for _, argument := range input.args {
-		if functionResultBranchUsesParameter(argument, name) {
-			return true
-		}
-	}
-	for _, field := range input.fields {
-		if functionResultBranchUsesParameter(field.value, name) {
-			return true
-		}
-	}
-	if input.left != nil && functionResultBranchUsesParameter(*input.left, name) {
-		return true
-	}
-	if input.right != nil && functionResultBranchUsesParameter(*input.right, name) {
-		return true
-	}
-	return false
+		return !found
+	})
+	return found
 }
 
 func functionResultBranchUsesValue(items []statement, name string) bool {
@@ -450,7 +434,7 @@ func inferRuntimeResultStateParameters(program *program, function functionDecl, 
 			}
 			payload := ""
 			if kind == "运行时结果" {
-				payload = "整数"
+				payload = runtimeResultParameterPayload(candidate, parameter.text)
 			}
 			environment[parameter.text] = constantValue{kind: kind, resultPayload: payload}
 		}
@@ -513,6 +497,75 @@ func inferRuntimeResultStateParameters(program *program, function functionDecl, 
 	}
 	return resultParameters
 }
+
+func inferRuntimeResultParameterPayloads(program *program, functionName string, parameters []token, types []string) (map[string]string, *issue) {
+	payloads := map[string]string{}
+	environment := copyConstantEnvironment(program.constants)
+	for _, item := range program.statements {
+		if item.kind != "变量" {
+			continue
+		}
+		kind, problem := constantType(item.value, environment)
+		if problem != nil {
+			continue
+		}
+		payload := ""
+		if kind == "运行时结果" {
+			payload = runtimeResultPayload(item.value, environment)
+		}
+		environment[item.name.text] = constantValue{kind: kind, resultPayload: payload}
+	}
+	for _, candidate := range program.functions {
+		candidateTypes := runtimeFunctionParameterTypes(candidate)
+		for index, parameter := range candidate.parameters {
+			if _, exists := environment[parameter.text]; exists {
+				continue
+			}
+			kind := candidateTypes[index]
+			if kind == "" {
+				kind = "运行时整数"
+			}
+			payload := ""
+			if kind == "运行时结果" {
+				payload = runtimeResultParameterPayload(candidate, parameter.text)
+			}
+			environment[parameter.text] = constantValue{kind: kind, resultPayload: payload}
+		}
+	}
+	var problem *issue
+	walkProgramValues(program, func(input value) bool {
+		if problem != nil {
+			return false
+		}
+		if input.kind == "调用" && input.text == functionName {
+			for index, argument := range input.args {
+				if index >= len(types) || index >= len(parameters) || types[index] != "运行时结果" {
+					continue
+				}
+				payload := runtimeResultPayload(argument, environment)
+				if payload == "" {
+					continue
+				}
+				name := parameters[index].text
+				if previous, exists := payloads[name]; exists && isTextResultPayload(previous) != isTextResultPayload(payload) {
+					problem = &issue{code: "S-3062", expected: "同一结果形参的载荷形态一致", actual: previous + " 与 " + payload, suggestion: "用不同函数或先转换结果载荷", pos: argument.pos}
+					return false
+				}
+				if isTextResultPayload(payload) {
+					payloads[name] = "运行时文本"
+				} else {
+					payloads[name] = "整数"
+				}
+			}
+		}
+		return true
+	})
+	if problem != nil {
+		return nil, problem
+	}
+	return payloads, nil
+}
+
 func inspectResultReturn(input value, environment map[string]constantValue, resultParameters map[string]bool) {
 	if input.kind != "调用" {
 		return
@@ -595,11 +648,17 @@ func classifyRuntimeFunctionParameterTypes(program *program) *issue {
 				}
 			}
 		}
+		payloads, problem := inferRuntimeResultParameterPayloads(program, name, function.parameters, types)
+		if problem != nil {
+			return problem
+		}
+		function.parameterResultPayloads = payloads
 		function.parameterTypes = types
 		program.runtimeFunctions[name] = function
 		for index := range program.functions {
 			if program.functions[index].name.text == name {
 				program.functions[index].parameterTypes = types
+				program.functions[index].parameterResultPayloads = payloads
 				break
 			}
 		}
@@ -638,45 +697,35 @@ func inferRuntimeTextParametersFromCalls(program *program, functionName string, 
 }
 
 func collectRuntimeTextFunctionCallArguments(input value, environment map[string]constantValue, functionName string, parameters []token, textParameters, integerParameters map[string]bool) {
-	if input.kind == "调用" && input.text == functionName {
-		for index, argument := range input.args {
-			// This pass only gathers positive type evidence. A malformed or
-			// runtime-only argument must not surface its inner diagnostic before
-			// the actual runtime-function call boundary reports S-3062.
-			kind, problem := constantType(argument, environment)
-			if problem != nil || index >= len(parameters) || kind == "" {
-				continue
-			}
-			parameterName := parameters[index].text
-			if kind == "字符串" || kind == "运行时字符串" {
-				textParameters[parameterName] = true
-			}
-			if kind == "整数" || kind == "运行时整数" {
-				integerParameters[parameterName] = true
+	walkValue(input, func(current value) bool {
+		if current.kind == "调用" && current.text == functionName {
+			for index, argument := range current.args {
+				// This pass only gathers positive type evidence. A malformed or
+				// runtime-only argument must not surface its inner diagnostic before
+				// the actual runtime-function call boundary reports S-3062.
+				kind, problem := constantType(argument, environment)
+				if problem != nil || index >= len(parameters) || kind == "" {
+					continue
+				}
+				parameterName := parameters[index].text
+				if kind == "字符串" || kind == "运行时字符串" {
+					textParameters[parameterName] = true
+				}
+				if kind == "整数" || kind == "运行时整数" {
+					integerParameters[parameterName] = true
+				}
 			}
 		}
-	}
-	for _, argument := range input.args {
-		collectRuntimeTextFunctionCallArguments(argument, environment, functionName, parameters, textParameters, integerParameters)
-	}
-	for _, item := range input.fields {
-		collectRuntimeTextFunctionCallArguments(item.value, environment, functionName, parameters, textParameters, integerParameters)
-	}
-	if input.left != nil {
-		collectRuntimeTextFunctionCallArguments(*input.left, environment, functionName, parameters, textParameters, integerParameters)
-	}
-	if input.right != nil {
-		collectRuntimeTextFunctionCallArguments(*input.right, environment, functionName, parameters, textParameters, integerParameters)
-	}
+		return true
+	})
 }
 
 func collectRuntimeIntegerParameterUses(items []statement, parameters, integerParameters map[string]bool) {
-	for _, item := range items {
+	walkStatements(items, func(item statement) bool {
 		collectRuntimeIntegerParameterUsesValue(item.value, parameters, integerParameters)
 		collectRuntimeIntegerParameterUsesValue(item.condition, parameters, integerParameters)
-		collectRuntimeIntegerParameterUses(item.body, parameters, integerParameters)
-		collectRuntimeIntegerParameterUses(item.otherwise, parameters, integerParameters)
-	}
+		return true
+	})
 }
 
 func isRuntimeTextValueOperation(name string) bool {
@@ -688,49 +737,31 @@ func isRuntimeTextValueOperation(name string) bool {
 }
 
 func collectRuntimeIntegerParameterUsesValue(input value, parameters, integerParameters map[string]bool) {
-	integerOperation := input.kind == "表达式" && (input.operator == "-" || input.operator == "*" || input.operator == "/" || input.operator == "%" || input.operator == "<<" || input.operator == ">>")
-	integerAddition := input.kind == "表达式" && input.operator == "+" && input.left != nil && input.right != nil && (input.left.kind == "整数" || input.right.kind == "整数")
-	integerComparison := input.kind == "比较" && input.left != nil && input.right != nil && (input.left.kind == "整数" || input.right.kind == "整数")
-	integerEquality := input.kind == "调用" && (input.text == "equals" || input.text == "notEquals") && len(input.args) == 2 && (input.args[0].kind == "整数" || input.args[1].kind == "整数")
-	if integerOperation || integerAddition || integerComparison || integerEquality {
-		markRuntimeIntegerParameterReferences(input, parameters, integerParameters)
-	}
-	if input.kind == "调用" && input.text == "textByteAt" && len(input.args) == 2 && input.args[1].kind == "引用" {
-		markRuntimeIntegerParameterReferences(input.args[1], parameters, integerParameters)
-	}
-	for _, argument := range input.args {
-		collectRuntimeIntegerParameterUsesValue(argument, parameters, integerParameters)
-	}
-	for _, item := range input.fields {
-		collectRuntimeIntegerParameterUsesValue(item.value, parameters, integerParameters)
-	}
-	if input.left != nil {
-		collectRuntimeIntegerParameterUsesValue(*input.left, parameters, integerParameters)
-	}
-	if input.right != nil {
-		collectRuntimeIntegerParameterUsesValue(*input.right, parameters, integerParameters)
-	}
+	walkValue(input, func(current value) bool {
+		integerOperation := current.kind == "表达式" && (current.operator == "-" || current.operator == "*" || current.operator == "/" || current.operator == "%" || current.operator == "<<" || current.operator == ">>")
+		integerAddition := current.kind == "表达式" && current.operator == "+" && current.left != nil && current.right != nil && (current.left.kind == "整数" || current.right.kind == "整数")
+		integerComparison := current.kind == "比较" && current.left != nil && current.right != nil && (current.left.kind == "整数" || current.right.kind == "整数")
+		integerEquality := current.kind == "调用" && (current.text == "equals" || current.text == "notEquals") && len(current.args) == 2 && (current.args[0].kind == "整数" || current.args[1].kind == "整数")
+		if integerOperation || integerAddition || integerComparison || integerEquality {
+			markRuntimeIntegerParameterReferences(current, parameters, integerParameters)
+		}
+		if current.kind == "调用" && current.text == "textByteAt" && len(current.args) == 2 && current.args[1].kind == "引用" {
+			markRuntimeIntegerParameterReferences(current.args[1], parameters, integerParameters)
+		}
+		return true
+	})
 }
 
 func markRuntimeIntegerParameterReferences(input value, parameters, integerParameters map[string]bool) {
-	if input.kind == "调用" && isRuntimeTextValueOperation(input.text) {
-		return
-	}
-	if input.kind == "引用" && parameters[input.text] {
-		integerParameters[input.text] = true
-	}
-	for _, argument := range input.args {
-		markRuntimeIntegerParameterReferences(argument, parameters, integerParameters)
-	}
-	for _, item := range input.fields {
-		markRuntimeIntegerParameterReferences(item.value, parameters, integerParameters)
-	}
-	if input.left != nil {
-		markRuntimeIntegerParameterReferences(*input.left, parameters, integerParameters)
-	}
-	if input.right != nil {
-		markRuntimeIntegerParameterReferences(*input.right, parameters, integerParameters)
-	}
+	walkValue(input, func(current value) bool {
+		if current.kind == "调用" && isRuntimeTextValueOperation(current.text) {
+			return false
+		}
+		if current.kind == "引用" && parameters[current.text] {
+			integerParameters[current.text] = true
+		}
+		return true
+	})
 }
 
 func collectRuntimeTextParameterUses(items []statement, parameters, textParameters map[string]bool) {
@@ -762,108 +793,75 @@ func collectRuntimeTextReturnParameters(items []statement, parameters, textParam
 }
 
 func visitRuntimeTextParameterUses(items []statement, parameters, textParameters map[string]bool, aliases map[string][]value) {
-	for _, item := range items {
+	walkStatements(items, func(item statement) bool {
 		collectRuntimeTextParameterUsesValue(item.value, parameters, textParameters, aliases)
 		collectRuntimeTextParameterUsesValue(item.condition, parameters, textParameters, aliases)
 		collectRuntimeTextParameterComparisons(item.value, parameters, textParameters, aliases)
 		collectRuntimeTextParameterComparisons(item.condition, parameters, textParameters, aliases)
-		visitRuntimeTextParameterUses(item.body, parameters, textParameters, aliases)
-		visitRuntimeTextParameterUses(item.otherwise, parameters, textParameters, aliases)
-	}
+		return true
+	})
 }
 
 func runtimeTextAliasSources(items []statement) map[string][]value {
 	aliases := map[string][]value{}
-	var visit func([]statement)
-	visit = func(input []statement) {
-		for _, item := range input {
-			if item.kind == "变量" || item.kind == "赋值" {
-				aliases[item.name.text] = append(aliases[item.name.text], item.value)
-			}
-			visit(item.body)
-			visit(item.otherwise)
+	walkStatements(items, func(item statement) bool {
+		if item.kind == "变量" || item.kind == "赋值" {
+			aliases[item.name.text] = append(aliases[item.name.text], item.value)
 		}
-	}
-	visit(items)
+		return true
+	})
 	return aliases
 }
 
 func collectRuntimeTextParameterUsesValue(input value, parameters, textParameters map[string]bool, aliases map[string][]value) {
-	if input.kind == "调用" && input.text == "textLength" && len(input.args) == 1 {
-		markRuntimeTextParameterReferencesResolved(input.args[0], parameters, textParameters, aliases, map[string]bool{})
-	}
-	if input.kind == "调用" && (input.text == "textByteLength" || input.text == "textByteAt") && len(input.args) > 0 && input.args[0].kind == "引用" {
-		markRuntimeTextParameterReferencesResolved(input.args[0], parameters, textParameters, aliases, map[string]bool{})
-	}
-	for _, argument := range input.args {
-		collectRuntimeTextParameterUsesValue(argument, parameters, textParameters, aliases)
-	}
-	for _, item := range input.fields {
-		collectRuntimeTextParameterUsesValue(item.value, parameters, textParameters, aliases)
-	}
-	if input.left != nil {
-		collectRuntimeTextParameterUsesValue(*input.left, parameters, textParameters, aliases)
-	}
-	if input.right != nil {
-		collectRuntimeTextParameterUsesValue(*input.right, parameters, textParameters, aliases)
-	}
+	walkValue(input, func(current value) bool {
+		if current.kind == "调用" && current.text == "textLength" && len(current.args) == 1 {
+			markRuntimeTextParameterReferencesResolved(current.args[0], parameters, textParameters, aliases, map[string]bool{})
+		}
+		if current.kind == "调用" && (current.text == "textByteLength" || current.text == "textByteAt") && len(current.args) > 0 && current.args[0].kind == "引用" {
+			markRuntimeTextParameterReferencesResolved(current.args[0], parameters, textParameters, aliases, map[string]bool{})
+		}
+		return true
+	})
 }
 
 func markRuntimeTextParameterReferencesResolved(input value, parameters, textParameters map[string]bool, aliases map[string][]value, visited map[string]bool) {
-	if input.kind == "引用" && parameters[input.text] {
-		textParameters[input.text] = true
-	}
-	if input.kind == "引用" && !visited[input.text] {
-		if aliasValues, exists := aliases[input.text]; exists {
-			visited[input.text] = true
-			for _, alias := range aliasValues {
-				markRuntimeTextParameterReferencesResolved(alias, parameters, textParameters, aliases, visited)
+	walkValue(input, func(current value) bool {
+		if current.kind == "引用" && parameters[current.text] {
+			textParameters[current.text] = true
+		}
+		if current.kind == "引用" && !visited[current.text] {
+			if aliasValues, exists := aliases[current.text]; exists {
+				visited[current.text] = true
+				for _, alias := range aliasValues {
+					markRuntimeTextParameterReferencesResolved(alias, parameters, textParameters, aliases, visited)
+				}
 			}
 		}
-	}
-	for _, argument := range input.args {
-		markRuntimeTextParameterReferencesResolved(argument, parameters, textParameters, aliases, visited)
-	}
-	for _, item := range input.fields {
-		markRuntimeTextParameterReferencesResolved(item.value, parameters, textParameters, aliases, visited)
-	}
-	if input.left != nil {
-		markRuntimeTextParameterReferencesResolved(*input.left, parameters, textParameters, aliases, visited)
-	}
-	if input.right != nil {
-		markRuntimeTextParameterReferencesResolved(*input.right, parameters, textParameters, aliases, visited)
-	}
+		return true
+	})
 }
 
 func collectRuntimeTextParameterComparisons(input value, parameters, textParameters map[string]bool, aliases map[string][]value) {
-	var left, right *value
-	switch input.kind {
-	case "调用":
-		if (input.text == "equals" || input.text == "notEquals") && len(input.args) == 2 {
-			left, right = &input.args[0], &input.args[1]
+	walkValue(input, func(current value) bool {
+		var left, right *value
+		switch current.kind {
+		case "调用":
+			if (current.text == "equals" || current.text == "notEquals") && len(current.args) == 2 {
+				left, right = &current.args[0], &current.args[1]
+			}
+		case "比较":
+			if isRuntimeTextOrderingOperator(current.operator) {
+				left, right = current.left, current.right
+			}
 		}
-	case "比较":
-		if isRuntimeTextOrderingOperator(input.operator) {
-			left, right = input.left, input.right
+		if left != nil && right != nil &&
+			(runtimeTextComparisonAnchorResolved(*left, parameters, textParameters, aliases, map[string]bool{}) || runtimeTextComparisonAnchorResolved(*right, parameters, textParameters, aliases, map[string]bool{})) {
+			markRuntimeTextParameterReferencesResolved(*left, parameters, textParameters, aliases, map[string]bool{})
+			markRuntimeTextParameterReferencesResolved(*right, parameters, textParameters, aliases, map[string]bool{})
 		}
-	}
-	if left != nil && right != nil &&
-		(runtimeTextComparisonAnchorResolved(*left, parameters, textParameters, aliases, map[string]bool{}) || runtimeTextComparisonAnchorResolved(*right, parameters, textParameters, aliases, map[string]bool{})) {
-		markRuntimeTextParameterReferencesResolved(*left, parameters, textParameters, aliases, map[string]bool{})
-		markRuntimeTextParameterReferencesResolved(*right, parameters, textParameters, aliases, map[string]bool{})
-	}
-	for _, argument := range input.args {
-		collectRuntimeTextParameterComparisons(argument, parameters, textParameters, aliases)
-	}
-	for _, item := range input.fields {
-		collectRuntimeTextParameterComparisons(item.value, parameters, textParameters, aliases)
-	}
-	if input.left != nil {
-		collectRuntimeTextParameterComparisons(*input.left, parameters, textParameters, aliases)
-	}
-	if input.right != nil {
-		collectRuntimeTextParameterComparisons(*input.right, parameters, textParameters, aliases)
-	}
+		return true
+	})
 }
 
 func runtimeTextComparisonAnchorResolved(input value, parameters, textParameters map[string]bool, aliases map[string][]value, visited map[string]bool) bool {
@@ -912,10 +910,31 @@ func runtimeFunctionParameterTypes(function functionDecl) []string {
 	return types
 }
 
+func runtimeResultParameterPayload(function functionDecl, name string) string {
+	if payload := function.parameterResultPayloads[name]; payload != "" {
+		return payload
+	}
+	return "整数"
+}
+
+func runtimeFunctionParameterPayloads(function functionDecl) []string {
+	types := runtimeFunctionParameterTypes(function)
+	payloads := make([]string, len(types))
+	for index, parameterType := range types {
+		if parameterType == "运行时结果" {
+			payloads[index] = runtimeResultParameterPayload(function, function.parameters[index].text)
+		}
+	}
+	return payloads
+}
+
 func runtimeFunctionRegisterCount(function functionDecl) int {
+	payloads := runtimeFunctionParameterPayloads(function)
 	count := 0
-	for _, parameterType := range runtimeFunctionParameterTypes(function) {
-		if parameterType == "运行时字符串" || parameterType == "运行时结果" {
+	for index, parameterType := range runtimeFunctionParameterTypes(function) {
+		if parameterType == "运行时结果" && isTextResultPayload(payloads[index]) {
+			count += 4
+		} else if parameterType == "运行时字符串" || parameterType == "运行时结果" {
 			count += 2
 		} else {
 			count++
@@ -924,23 +943,37 @@ func runtimeFunctionRegisterCount(function functionDecl) int {
 	return count
 }
 
-// result parameters occupy adjacent pointer/length or tag/value slots.
-func runtimeFunctionParameterOffsets(types []string) []uint32 {
+// Text results use four registers; other parameters retain the existing pair or scalar layout.
+func runtimeFunctionParameterOffsets(types, payloads []string) []uint32 {
 	offsets := make([]uint32, len(types))
+	offset := uint32(0)
 	for index := range types {
-		offsets[index] = uint32(index * 16)
+		offsets[index] = offset
+		offset += 16
+		if types[index] == "运行时结果" && index < len(payloads) && isTextResultPayload(payloads[index]) {
+			offset += 16
+		}
 	}
 	return offsets
 }
 
-func runtimeFunctionParameterBytes(types []string) uint32 {
-	return uint32(len(types) * 16)
+func runtimeFunctionParameterBytes(types, payloads []string) uint32 {
+	bytes := uint32(0)
+	for index := range types {
+		bytes += 16
+		if types[index] == "运行时结果" && index < len(payloads) && isTextResultPayload(payloads[index]) {
+			bytes += 16
+		}
+	}
+	return bytes
 }
 
-func registerIndexForParameter(types []string, index int) int {
+func registerIndexForParameter(types, payloads []string, index int) int {
 	register := 0
 	for i := 0; i < index; i++ {
-		if types[i] == "运行时字符串" || types[i] == "运行时结果" {
+		if types[i] == "运行时结果" && i < len(payloads) && isTextResultPayload(payloads[i]) {
+			register += 4
+		} else if types[i] == "运行时字符串" || types[i] == "运行时结果" {
 			register += 2
 		} else {
 			register++
@@ -995,8 +1028,10 @@ func classifyRuntimeFunctionLocalTypes(program *program, payloads map[string]con
 			continue
 		}
 		environment := copyConstantEnvironment(payloads)
+		parameterPayloads := runtimeFunctionParameterPayloads(function)
 		for index, parameter := range function.parameters {
-			environment[parameter.text] = constantValue{kind: runtimeFunctionParameterTypes(function)[index]}
+			kind := runtimeFunctionParameterTypes(function)[index]
+			environment[parameter.text] = constantValue{kind: kind, resultPayload: parameterPayloads[index]}
 		}
 		localTypes := map[string]string{}
 		localResultPayloads := map[string]string{}
@@ -1071,21 +1106,12 @@ func classifyRuntimeFunctionLocalTypes(program *program, payloads map[string]con
 }
 
 func collectRuntimeResultObservations(input value, observations map[string]bool) {
-	if input.kind == "调用" && (input.text == "是否失败" || input.text == "错误码" || input.text == "结果值") && len(input.args) == 1 && input.args[0].kind == "引用" {
-		observations[input.args[0].text] = true
-	}
-	for _, argument := range input.args {
-		collectRuntimeResultObservations(argument, observations)
-	}
-	for _, item := range input.fields {
-		collectRuntimeResultObservations(item.value, observations)
-	}
-	if input.left != nil {
-		collectRuntimeResultObservations(*input.left, observations)
-	}
-	if input.right != nil {
-		collectRuntimeResultObservations(*input.right, observations)
-	}
+	walkValue(input, func(current value) bool {
+		if current.kind == "调用" && (current.text == "是否失败" || current.text == "错误码" || current.text == "结果值") && len(current.args) == 1 && current.args[0].kind == "引用" {
+			observations[current.args[0].text] = true
+		}
+		return true
+	})
 }
 
 func annotateRuntimeTextReturns(program *program) {
@@ -1174,12 +1200,6 @@ func validateRuntimeTextReturnCalls(program *program) *issue {
 	return nil
 }
 
-// allowsRuntimeTextReturnCall keeps owned text returns at the top level while
-// permitting a descriptor to be consumed immediately as a borrowed argument.
-func isTopLevelTextReturnStatement(item statement) bool {
-	return (item.kind == "变量" || item.kind == "赋值") && isTextReturnCall(item.value)
-}
-
 func runtimeTextReturnCallIssue(pos sourcePosition) *issue {
 	return &issue{code: "S-3023", expected: "运行时文本返回函数仅直接作为程序输出", actual: "文本返回调用出现在变量、条件、函数体或嵌套表达式中", suggestion: "先把文本返回函数调用保留为程序根 输出 的完整表达式", pos: pos}
 }
@@ -1211,24 +1231,15 @@ func valuesContainRuntimeTextReturnCall(items []value) bool {
 }
 
 func containsRuntimeTextReturnCall(input value) bool {
-	if input.kind == "调用" && input.runtimeFunction && input.runtimeFunctionText {
-		return true
-	}
-	if valuesContainRuntimeTextReturnCall(input.args) || valuesContainRuntimeTextReturnCall(fieldValues(input.fields)) {
-		return true
-	}
-	if input.left != nil && containsRuntimeTextReturnCall(*input.left) || input.right != nil && containsRuntimeTextReturnCall(*input.right) {
-		return true
-	}
-	return false
-}
-
-func fieldValues(fields []field) []value {
-	values := make([]value, len(fields))
-	for index := range fields {
-		values[index] = fields[index].value
-	}
-	return values
+	found := false
+	walkValue(input, func(current value) bool {
+		if current.kind == "调用" && current.runtimeFunction && current.runtimeFunctionText {
+			found = true
+			return false
+		}
+		return !found
+	})
+	return found
 }
 
 func annotateRuntimeResultPayloads(program *program, constants map[string]constantValue) {
@@ -1343,6 +1354,7 @@ func setRuntimeFunctionPayload(input *value, runtimeFunctions map[string]functio
 			input.runtimeFunctionPayload = function.runtimeResultPayload
 			input.runtimeFunctionText = function.runtimeReturnsText
 			input.runtimeArgumentTypes = runtimeFunctionParameterTypes(function)
+			input.runtimeArgumentPayloads = runtimeFunctionParameterPayloads(function)
 		}
 	}
 	for index := range input.args {
@@ -1521,23 +1533,14 @@ func runtimeResultReturnShape(input value, functions map[string]functionDecl, vi
 }
 
 func collectFunctionCalls(input value, functions map[string]functionDecl, calls map[string]bool) {
-	if input.kind == "调用" {
-		if _, exists := functions[input.text]; exists {
-			calls[input.text] = true
+	walkValue(input, func(current value) bool {
+		if current.kind == "调用" {
+			if _, exists := functions[current.text]; exists {
+				calls[current.text] = true
+			}
 		}
-	}
-	for _, argument := range input.args {
-		collectFunctionCalls(argument, functions, calls)
-	}
-	for _, item := range input.fields {
-		collectFunctionCalls(item.value, functions, calls)
-	}
-	if input.left != nil {
-		collectFunctionCalls(*input.left, functions, calls)
-	}
-	if input.right != nil {
-		collectFunctionCalls(*input.right, functions, calls)
-	}
+		return true
+	})
 }
 
 func callGraphReaches(graph map[string]map[string]bool, start, current string, visited map[string]bool) bool {
@@ -2005,46 +2008,20 @@ func cloneFunctionValue(input value, depth int) (value, *issue) {
 }
 func countFunctionParameter(input value, name string) int {
 	count := 0
-	stack := []value{input}
-	for len(stack) > 0 {
-		last := len(stack) - 1
-		current := stack[last]
-		stack = stack[:last]
+	walkValue(input, func(current value) bool {
 		if current.kind == "引用" && current.text == name {
 			count++
 		}
-		stack = append(stack, current.args...)
-		for _, item := range current.fields {
-			stack = append(stack, item.value)
-		}
-		if current.left != nil {
-			stack = append(stack, *current.left)
-		}
-		if current.right != nil {
-			stack = append(stack, *current.right)
-		}
-	}
+		return true
+	})
 	return count
 }
 func countValueNodes(input value) int {
 	count := 0
-	stack := []value{input}
-	for len(stack) > 0 {
-		last := len(stack) - 1
-		current := stack[last]
-		stack = stack[:last]
+	walkValue(input, func(value) bool {
 		count++
-		stack = append(stack, current.args...)
-		for _, item := range current.fields {
-			stack = append(stack, item.value)
-		}
-		if current.left != nil {
-			stack = append(stack, *current.left)
-		}
-		if current.right != nil {
-			stack = append(stack, *current.right)
-		}
-	}
+		return true
+	})
 	return count
 }
 func isFunctionEffect(name string) bool {
@@ -2073,31 +2050,21 @@ func requiredFunctionEffect(name string) string {
 	return "stdin"
 }
 func containsFunctionEffect(input value, functions map[string]functionDecl) bool {
-	stack := []value{input}
-	for len(stack) > 0 {
-		last := len(stack) - 1
-		current := stack[last]
-		stack = stack[:last]
+	found := false
+	walkValue(input, func(current value) bool {
 		if current.kind == "调用" {
 			if isFunctionEffect(current.text) {
-				return true
+				found = true
+				return false
 			}
 			if function, exists := functions[current.text]; exists && len(function.effects) > 0 {
-				return true
+				found = true
+				return false
 			}
 		}
-		stack = append(stack, current.args...)
-		for _, item := range current.fields {
-			stack = append(stack, item.value)
-		}
-		if current.left != nil {
-			stack = append(stack, *current.left)
-		}
-		if current.right != nil {
-			stack = append(stack, *current.right)
-		}
-	}
-	return false
+		return !found
+	})
+	return found
 }
 func isPureFunctionBuiltin(name string) bool {
 	switch name {
@@ -2106,16 +2073,6 @@ func isPureFunctionBuiltin(name string) bool {
 	}
 	return false
 }
-func functionReturnParameterHasIntegerState(function functionDecl, parameter string) bool {
-	integerParameters := map[string]bool{}
-	parameters := map[string]bool{}
-	for _, item := range function.parameters {
-		parameters[item.text] = true
-	}
-	collectRuntimeIntegerParameterUses(function.statements, parameters, integerParameters)
-	return integerParameters[parameter]
-}
-
 func validateRuntimeTextParameterReturns(program *program) *issue {
 	for _, name := range program.runtimeFunctionNames {
 		function := program.runtimeFunctions[name]
@@ -2254,6 +2211,7 @@ func annotateResultStateCallsInValue(input *value, constants map[string]constant
 			argument.runtimeFunctionPayload = "整数"
 			argument.runtimeFunctionText = false
 			argument.runtimeArgumentTypes = []string{"运行时布尔值", "运行时结果", "运行时结果"}
+			argument.runtimeArgumentPayloads = []string{"", "整数", "整数"}
 			for index := range argument.args {
 				annotateResultStateCallsInValue(&argument.args[index], constants)
 			}
@@ -2389,11 +2347,15 @@ func validateRuntimeFunctions(program *program, constants map[string]constantVal
 		environment := copyConstantEnvironment(constants)
 		registerCount := runtimeFunctionRegisterCount(function)
 		if registerCount > 8 {
-			return &issue{code: "S-3062", expected: "最多 8 个展平运行时参数寄存器", actual: strconv.Itoa(registerCount), suggestion: "减少参数；每个整数参数占一个寄存器，每个文本参数占指针和长度两个寄存器", pos: function.name.pos}
+			return &issue{code: "S-3062", expected: "最多 8 个展平运行时参数寄存器", actual: strconv.Itoa(registerCount), suggestion: "减少参数；整数参数占一个寄存器，文本参数占两个，文本结果参数占四个", pos: function.name.pos}
 		}
 		parameterTypes := runtimeFunctionParameterTypes(function)
+		parameterPayloads := runtimeFunctionParameterPayloads(function)
 		for index, parameter := range function.parameters {
 			environment[parameter.text] = constantValue{kind: parameterTypes[index]}
+			if parameterTypes[index] == "运行时结果" {
+				environment[parameter.text] = constantValue{kind: parameterTypes[index], resultPayload: parameterPayloads[index]}
+			}
 		}
 		if function.body.kind == "" {
 			// Result locals live in two stack slots and are observed by result
@@ -2445,11 +2407,16 @@ func validateRuntimeStatementFunction(function functionDecl, constants map[strin
 	environment := copyConstantEnvironment(constants)
 	writable := map[string]bool{}
 	parameterTypes := runtimeFunctionParameterTypes(function)
+	parameterPayloads := runtimeFunctionParameterPayloads(function)
 	parameterSlotCount := 0
 	for index, parameter := range function.parameters {
 		if parameterTypes[index] == "运行时结果" {
-			environment[parameter.text] = constantValue{kind: "运行时结果", resultPayload: "整数"}
-			parameterSlotCount += 2
+			environment[parameter.text] = constantValue{kind: "运行时结果", resultPayload: parameterPayloads[index]}
+			if isTextResultPayload(parameterPayloads[index]) {
+				parameterSlotCount += 4
+			} else {
+				parameterSlotCount += 2
+			}
 			continue
 		}
 		environment[parameter.text] = constantValue{kind: parameterTypes[index]}
@@ -2973,11 +2940,7 @@ func validateConsoleCapabilities(root value, statements []statement, constants m
 	return nil
 }
 func collectInputCapabilities(input value, required map[string]sourcePosition) *issue {
-	stack := []value{input}
-	for len(stack) > 0 {
-		last := len(stack) - 1
-		current := stack[last]
-		stack = stack[:last]
+	walkValue(input, func(current value) bool {
 		if current.kind == "调用" {
 			capability := ""
 			switch current.text {
@@ -3000,14 +2963,8 @@ func collectInputCapabilities(input value, required map[string]sourcePosition) *
 				}
 			}
 		}
-		stack = append(stack, current.args...)
-		if current.left != nil {
-			stack = append(stack, *current.left)
-		}
-		if current.right != nil {
-			stack = append(stack, *current.right)
-		}
-	}
+		return true
+	})
 	return nil
 }
 func validateConsoleStatements(statements []statement, variables map[string]bool, environment map[string]constantValue, allowDeclarations bool, loopDepth int) (map[string]constantValue, *issue) {
@@ -3565,8 +3522,12 @@ func constantType(input value, constants map[string]constantValue) (string, *iss
 								payload = stored
 							}
 						}
-						if isTextResultPayload(payload) {
+						expectedText := index < len(current.runtimeArgumentPayloads) && isTextResultPayload(current.runtimeArgumentPayloads[index])
+						if isTextResultPayload(payload) && !expectedText {
 							return "", &issue{code: "S-3023", expected: "整数载荷结果参数", actual: "运行时文本载荷结果", suggestion: "先把文本结果载荷复制到文本变量，再传递整数状态", pos: argument.pos}
+						}
+						if expectedText && payload != "" && !isTextResultPayload(payload) {
+							return "", &issue{code: "S-3062", expected: "文本载荷结果参数", actual: payload + "载荷结果", suggestion: "保持该结果形参的成功载荷为文本", pos: argument.pos}
 						}
 					case "运行时布尔值":
 						if argumentType != "布尔值" && argumentType != "运行时布尔值" {

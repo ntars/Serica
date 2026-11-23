@@ -71,4 +71,7 @@ def verify_native_console_artifact(
         expected_imports.add("_read")
     expected_imports.update(required_imports)
     if imports != expected_imports:
-        raise RuntimeError(f"原生控制台产物含不允许的导入符号\n{symbols.stdout}{symbols.stderr}")
+        raise RuntimeError(
+            f"原生控制台产物导入符号不符：期望 {sorted(expected_imports)!r}，"
+            f"实际 {sorted(imports)!r}\n{symbols.stdout}{symbols.stderr}"
+        )

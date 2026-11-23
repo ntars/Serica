@@ -504,6 +504,87 @@ RESULT_FUNCTION_CASES = [
         "",
         9,
     ),
+    (
+        "effectful function forwards a text result parameter",
+        "函数 透传（前，结果，后）能力=array（『stdin』）【\n"
+        "  变量 偏移=前+后。\n"
+        "  变量 本=ifElse（是否失败（结果），失败（错误码（结果）+偏移），结果）。\n"
+        "  返回 本。\n"
+        "】。\n"
+        "变量 源=ifElse（equals（readText（），『失败』），失败（7），成功（『载荷』））。\n"
+        "变量 结果=透传（1，源，2）。\n"
+        "程序=【能力=array（『stdout』，『stdin』），输出=结果值（结果）】。\n",
+        "载荷\n",
+        "载荷\n",
+        0,
+    ),
+    (
+        "effectful text result parameter preserves failure",
+        "函数 透传（前，结果，后）能力=array（『stdin』）【\n"
+        "  变量 偏移=前+后。\n"
+        "  变量 本=ifElse（是否失败（结果），失败（错误码（结果）+偏移），结果）。\n"
+        "  返回 本。\n"
+        "】。\n"
+        "变量 源=ifElse（equals（readText（），『失败』），失败（7），成功（『载荷』））。\n"
+        "变量 结果=透传（1，源，2）。\n"
+        "程序=【能力=array（『stdout』，『stdin』），输出=结果值（结果）】。\n",
+        "失败\n",
+        "",
+        10,
+    ),
+    (
+        "effectful function accepts concatenated runtime text result",
+        "函数 透传（前，结果，后）能力=array（『stdin』）【\n"
+        "  变量 偏移=前+后。\n"
+        "  变量 本=ifElse（是否失败（结果），失败（错误码（结果）+偏移），结果）。\n"
+        "  返回 本。\n"
+        "】。\n"
+        "变量 源=成功（textConcat（readText（），『尾』））。\n"
+        "变量 结果=透传（1，源，2）。\n"
+        "程序=【能力=array（『stdout』，『stdin』），输出=结果值（结果）】。\n",
+        "行简\n",
+        "行简尾\n",
+        0,
+    ),
+    (
+        "effectful function accepts inline text result operand",
+        "函数 透传（结果）能力=array（『stdin』）【\n"
+        "  变量 本=ifElse（是否失败（结果），失败（错误码（结果）），结果）。\n"
+        "  返回 本。\n"
+        "】。\n"
+        "变量 开关=readInteger（）。\n"
+        "变量 结果=透传（ifElse（开关==1，成功（『甲』），失败（7）））。\n"
+        "程序=【能力=array（『stdout』，『stdin』），输出=结果值（结果）】。\n",
+        "1\n",
+        "甲\n",
+        0,
+    ),
+    (
+        "effectful text result parameter preserves empty text",
+        "函数 透传（结果）能力=array（『stdin』）【\n"
+        "  变量 本=ifElse（是否失败（结果），失败（错误码（结果）），结果）。\n"
+        "  返回 本。\n"
+        "】。\n"
+        "变量 源=成功（readText（））。\n"
+        "变量 结果=透传（源）。\n"
+        "程序=【能力=array（『stdout』，『stdin』），输出=结果值（结果）】。\n",
+        "\n",
+        "\n",
+        0,
+    ),
+    (
+        "effectful text result parameter preserves supplementary planes",
+        "函数 透传（结果）能力=array（『stdin』）【\n"
+        "  变量 本=ifElse（是否失败（结果），失败（错误码（结果）），结果）。\n"
+        "  返回 本。\n"
+        "】。\n"
+        "变量 源=成功（readText（））。\n"
+        "变量 结果=透传（源）。\n"
+        "程序=【能力=array（『stdout』，『stdin』），输出=结果值（结果）】。\n",
+        "🟿𠀀\n",
+        "🟿𠀀\n",
+        0,
+    ),
 ]
 BLOCK_FUNCTION_CASES = [
     (
@@ -762,7 +843,7 @@ RUNTIME_FUNCTION_RESULT_RECOVERY_CASES = [
         0,
     ),
     (
-        "result state parameter rejects inline text result payload",
+        "result state parameter forwards inline text result payload",
         "函数 内层（状态）=ifElse（状态==1，成功（『甲』），失败（9））。\n"
         "函数 转发（源）【\n"
         "    若（是否失败（源））【返回 源。】。\n"
@@ -772,11 +853,8 @@ RUNTIME_FUNCTION_RESULT_RECOVERY_CASES = [
         "变量 结果=转发（内层（输入））。\n"
         "程序=【能力=array（『stdout』，『stdin』），输出=错误码（结果）】。\n",
         "1\n",
-        "S-3023",
-        "1\n",
+        "0\n",
         0,
-        "S-3023",
-        "check",
     ),
     (
         "mixed integer and result parameter forwarding success",
@@ -4052,6 +4130,7 @@ def main() -> int:
                         or "成功（readText" in source_text
                         or "成功（textConcat" in source_text
                         or "变量 结果=ifElse" in source_text
+                        or "变量 源=ifElse" in source_text
                         or "选择（）" in source_text
                         or ("变量 副本=" in source_text and "变量 原结果=失败（" not in source_text)
                         else ()
@@ -4064,6 +4143,11 @@ def main() -> int:
                 "effectful function initializes a text result local",
                 "effectful concatenated text result local",
                 "effectful sliced text result local",
+                "effectful function forwards a text result parameter",
+                "effectful function accepts concatenated runtime text result",
+                "effectful function accepts inline text result operand",
+                "effectful text result parameter preserves empty text",
+                "effectful text result parameter preserves supplementary planes",
             }:
                 first_image = artifact.read_bytes()
                 for _ in range(7):
@@ -6310,6 +6394,8 @@ def main() -> int:
             ("nested-function-hidden-root-stdin", "函数 读取（）能力=array（『stdin』）=readInteger（）。\n函数 三倍输入（）能力=array（『stdin』）=读取（）*3。\n程序=【能力=array（『stdout』），输出=三倍输入（）】。\n", "S-4106"),
             ("nested-function-hidden-root-array-write", "函数 追加（数组）能力=array（『array.write』）=arrayPush（数组，42）。\n函数 写入（数组）能力=array（『array.write』）=追加（数组）。\n变量 数组=array（7）。\n赋值 数组=写入（数组）。\n程序=【能力=array（『stdout』），输出=arrayLength（数组）】。\n", "S-4106"),
             ("result-to-text-variable", "变量 文本=readText（）。\n变量 结果=成功（42）。\n赋值 文本=结果。\n程序=【能力=array（『stdout』，『stdin』），输出=文本】。\n", "S-3023"),
+            ("text-result-parameter-payload-conflict", "函数 透传（结果）能力=array（『stdin』）【\n变量 本=ifElse（是否失败（结果），失败（1），结果）。\n返回 本。\n】。\n变量 文本=成功（readText（））。\n变量 数字=成功（1）。\n变量 甲=透传（文本）。\n变量 乙=透传（数字）。\n程序=【能力=array（『stdout』，『stdin』），输出=错误码（乙）】。\n", "S-3062"),
+            ("text-result-to-runtime-integer-parameter", "函数 加一（数值）=数值+1。\n变量 结果=成功（readText（））。\n变量 输出=加一（结果）。\n程序=【能力=array（『stdout』，『stdin』），输出=输出】。\n", "S-3023"),
         ]
         for name, source_text, expected_code in result_type_failures:
             invalid = temp / f"{name}.serica"

@@ -226,16 +226,6 @@ func statementsUseRuntimeTextStorage(statements []statement) bool {
 	return false
 }
 
-// Runtime function bodies emit real calls, so their effects reach the import table.
-func runtimeFunctionsUseInput(runtimeFunctions map[string]functionDecl) bool {
-	for _, function := range runtimeFunctions {
-		if containsRuntimeIntegerInput(function.body) || containsRuntimeTextInput(function.body) || statementsUseRuntimeIntegerInput(function.statements) || statementsUseRuntimeTextInput(function.statements) {
-			return true
-		}
-	}
-	return false
-}
-
 func runtimeFunctionsUseFileRead(runtimeFunctions map[string]functionDecl, moduleOnly bool) bool {
 	for _, function := range runtimeFunctions {
 		if containsRuntimeFileRead(function.body, moduleOnly) || statementsUseRuntimeFileRead(function.statements, moduleOnly) {
@@ -421,8 +411,9 @@ func (c *windowCode) emitRuntimeFunctionBody(function functionDecl, constants ma
 		return c.emitRuntimeStatementFunctionBody(function, constants)
 	}
 	parameterTypes := runtimeFunctionParameterTypes(function)
-	parameterOffsets := runtimeFunctionParameterOffsets(parameterTypes)
-	frameSize := uint32(alignOffset(int(runtimeFunctionParameterBytes(parameterTypes)), 16))
+	parameterPayloads := runtimeFunctionParameterPayloads(function)
+	parameterOffsets := runtimeFunctionParameterOffsets(parameterTypes, parameterPayloads)
+	frameSize := uint32(alignOffset(int(runtimeFunctionParameterBytes(parameterTypes, parameterPayloads)), 16))
 	c.words = append(c.words, subImmediate(31, 31, 32), storeIntegerSlot(29, 31, 0), storeIntegerSlot(30, 31, 8), storeIntegerSlot(19, 31, 16), addImmediate(29, 31, 0))
 	if frameSize != 0 {
 		c.words = append(c.words, subImmediate(31, 31, frameSize))
@@ -435,7 +426,7 @@ func (c *windowCode) emitRuntimeFunctionBody(function functionDecl, constants ma
 	slots := map[string]uint32{}
 	resultSlots := map[string]resultSlot{}
 	for index, parameter := range function.parameters {
-		register := registerIndexForParameter(parameterTypes, index)
+		register := registerIndexForParameter(parameterTypes, runtimeFunctionParameterPayloads(function), index)
 		if register >= 8 {
 			return fmt.Errorf("递归运行时函数参数超过 ARM64 整数寄存器 ABI")
 		}
@@ -445,7 +436,13 @@ func (c *windowCode) emitRuntimeFunctionBody(function functionDecl, constants ma
 		case "运行时结果":
 			resultSlots[parameter.text] = resultSlot{tag: offset, value: offset + 8}
 			environment[parameter.text] = constantValue{kind: "运行时结果", resultPayload: "整数"}
-			c.words = append(c.words, storeIntegerSlot(uint32(register+1), 19, offset+8))
+			if isTextResultPayload(parameterPayloads[index]) {
+				resultSlots[parameter.text] = resultSlot{tag: offset, value: offset + 8, pointer: offset + 16, length: offset + 24, text: true}
+				environment[parameter.text] = constantValue{kind: "运行时结果", resultPayload: "运行时文本"}
+				c.words = append(c.words, storeIntegerSlot(uint32(register+1), 19, offset+8), storeIntegerSlot(uint32(register+2), 19, offset+16), storeIntegerSlot(uint32(register+3), 19, offset+24))
+			} else {
+				c.words = append(c.words, storeIntegerSlot(uint32(register+1), 19, offset+8))
+			}
 		case "运行时字符串":
 			slots[parameter.text] = offset
 			environment[parameter.text] = constantValue{kind: "运行时字符串"}
@@ -477,6 +474,7 @@ func (c *windowCode) emitRuntimeStatementFunctionBody(function functionDecl, con
 	textLengths := map[string]uint32{}
 	textCapacities := map[string]uint32{}
 	parameterTypes := runtimeFunctionParameterTypes(function)
+	parameterPayloads := runtimeFunctionParameterPayloads(function)
 	parameterNames := map[string]bool{}
 	parameterResultSlots := map[string]resultSlot{}
 	hasTextLocals := false
@@ -495,8 +493,14 @@ func (c *windowCode) emitRuntimeStatementFunctionBody(function functionDecl, con
 		if parameterTypes[index] == "运行时结果" {
 			offset := uint32(stateCount * 8)
 			parameterResultSlots[parameter.text] = resultSlot{tag: offset, value: offset + 8}
-			stateCount += 2
-			argumentRegister += 2
+			if isTextResultPayload(parameterPayloads[index]) {
+				parameterResultSlots[parameter.text] = resultSlot{tag: offset, value: offset + 8, pointer: offset + 16, length: offset + 24, text: true}
+				stateCount += 4
+				argumentRegister += 4
+			} else {
+				stateCount += 2
+				argumentRegister += 2
+			}
 			continue
 		}
 		slots[parameter.text] = uint32(stateCount * 8)
@@ -560,7 +564,12 @@ func (c *windowCode) emitRuntimeStatementFunctionBody(function functionDecl, con
 		}
 		if result, exists := parameterResultSlots[parameter.text]; exists {
 			c.words = append(c.words, storeIntegerSlot(uint32(argumentRegister), 19, result.tag), storeIntegerSlot(uint32(argumentRegister+1), 19, result.value))
-			argumentRegister += 2
+			if result.text {
+				c.words = append(c.words, storeIntegerSlot(uint32(argumentRegister+2), 19, result.pointer), storeIntegerSlot(uint32(argumentRegister+3), 19, result.length))
+				argumentRegister += 4
+			} else {
+				argumentRegister += 2
+			}
 			continue
 		}
 		c.words = append(c.words, storeIntegerSlot(uint32(argumentRegister), 19, slots[parameter.text]))
@@ -995,9 +1004,17 @@ func (c *windowCode) emitRuntimeFunctionCall(input value, constants map[string]c
 	if len(argumentTypes) != len(input.args) {
 		return fmt.Errorf("运行时函数调用参数类型数不匹配：%s", input.text)
 	}
+	argumentPayloads := input.runtimeArgumentPayloads
+	if function, exists := c.runtimeFunctions[input.text]; exists {
+		argumentPayloads = runtimeFunctionParameterPayloads(function)
+	} else if len(argumentPayloads) != len(argumentTypes) {
+		argumentPayloads = nil
+	}
 	registerCount := 0
-	for _, argumentType := range argumentTypes {
-		if argumentType == "运行时字符串" {
+	for index, argumentType := range argumentTypes {
+		if argumentType == "运行时结果" && index < len(argumentPayloads) && isTextResultPayload(argumentPayloads[index]) {
+			registerCount += 4
+		} else if argumentType == "运行时字符串" {
 			registerCount += 2
 		} else if argumentType == "运行时结果" {
 			registerCount += 2
@@ -1010,8 +1027,8 @@ func (c *windowCode) emitRuntimeFunctionCall(input value, constants map[string]c
 	if registerCount > 8 {
 		return fmt.Errorf("运行时函数调用超过 ARM64 展平寄存器 ABI")
 	}
-	parameterOffsets := runtimeFunctionParameterOffsets(argumentTypes)
-	argumentBytes := runtimeFunctionParameterBytes(argumentTypes)
+	parameterOffsets := runtimeFunctionParameterOffsets(argumentTypes, argumentPayloads)
+	argumentBytes := runtimeFunctionParameterBytes(argumentTypes, argumentPayloads)
 	if argumentBytes != 0 {
 		c.words = append(c.words, subImmediate(31, 31, argumentBytes))
 	}
@@ -1025,9 +1042,14 @@ func (c *windowCode) emitRuntimeFunctionCall(input value, constants map[string]c
 			continue
 		}
 		if argumentTypes[index] == "运行时结果" {
+			textPayload := index < len(argumentPayloads) && isTextResultPayload(argumentPayloads[index])
 			if result, exists := c.resultSlots[argument.text]; exists {
 				if result.text {
-					return fmt.Errorf("结果参数需要整数载荷结果变量：%s", argument.text)
+					if !textPayload {
+						return fmt.Errorf("结果参数需要整数载荷结果变量：%s", argument.text)
+					}
+					c.words = append(c.words, loadIntegerSlot(0, 19, result.tag), loadIntegerSlot(1, 19, result.value), loadIntegerSlot(8, 19, result.pointer), loadIntegerSlot(9, 19, result.length), storeIntegerSlot(0, 31, offset), storeIntegerSlot(1, 31, offset+8), storeIntegerSlot(8, 31, offset+16), storeIntegerSlot(9, 31, offset+24))
+					continue
 				}
 				c.words = append(c.words, loadIntegerSlot(0, 19, result.tag), loadIntegerSlot(1, 19, result.value), storeIntegerSlot(0, 31, offset), storeIntegerSlot(1, 31, offset+8))
 				continue
@@ -1037,6 +1059,9 @@ func (c *windowCode) emitRuntimeFunctionCall(input value, constants map[string]c
 					return err
 				}
 				c.words = append(c.words, storeIntegerSlot(0, 31, offset), storeIntegerSlot(1, 31, offset+8))
+				if textPayload {
+					c.words = append(c.words, storeIntegerSlot(2, 31, offset+16), storeIntegerSlot(3, 31, offset+24))
+				}
 				continue
 			}
 			return fmt.Errorf("结果参数需要整数载荷结果变量：%s", argument.text)
@@ -1055,8 +1080,13 @@ func (c *windowCode) emitRuntimeFunctionCall(input value, constants map[string]c
 			continue
 		}
 		if argumentType == "运行时结果" {
-			c.words = append(c.words, loadIntegerSlot(uint32(registerIndex), 31, offset), loadIntegerSlot(uint32(registerIndex+1), 31, offset+8))
-			registerIndex += 2
+			if index < len(argumentPayloads) && isTextResultPayload(argumentPayloads[index]) {
+				c.words = append(c.words, loadIntegerSlot(uint32(registerIndex), 31, offset), loadIntegerSlot(uint32(registerIndex+1), 31, offset+8), loadIntegerSlot(uint32(registerIndex+2), 31, offset+16), loadIntegerSlot(uint32(registerIndex+3), 31, offset+24))
+				registerIndex += 4
+			} else {
+				c.words = append(c.words, loadIntegerSlot(uint32(registerIndex), 31, offset), loadIntegerSlot(uint32(registerIndex+1), 31, offset+8))
+				registerIndex += 2
+			}
 			continue
 		}
 		c.words = append(c.words, loadIntegerSlot(uint32(registerIndex), 31, offset))
@@ -2301,19 +2331,6 @@ func (c *windowCode) emitRuntimeOwnedTextReturnOperand(input value, constants ma
 	c.patchConditional(noMapping, len(c.words))
 	c.words = append(c.words, loadIntegerSlot(1, 31, 0), loadIntegerSlot(0, 31, 8), addImmediate(31, 31, 16))
 	return nil
-}
-func (c *windowCode) emitRuntimeOwnedTextReturnRelease(input value, constants map[string]constantValue, slots map[string]uint32, lengthRegister, bufferRegister uint32) {
-	if !isTextReturnCall(input) {
-		return
-	}
-	c.words = append(c.words, compareRegister(lengthRegister, 0))
-	noMapping := c.conditionalPlaceholder(1)
-	c.movRegister(0, bufferRegister)
-	c.movImmediate(1, 0)
-	c.call(c.arrayUnmapIndex)
-	c.words = append(c.words, compareImmediate(0, 0))
-	c.branchToRuntimeFailure(1)
-	c.patchConditional(noMapping, len(c.words))
 }
 func (c *windowCode) emitRuntimeTextOperand(input value, slots map[string]uint32, constants map[string]constantValue, lengthRegister, bufferRegister, scratchBuffer uint32) error {
 	if input.kind == "引用" {
