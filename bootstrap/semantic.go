@@ -1963,6 +1963,48 @@ func isPureFunctionBuiltin(name string) bool {
 	}
 	return false
 }
+func functionReturnParameterHasIntegerState(function functionDecl, parameter string) bool {
+	integerParameters := map[string]bool{}
+	parameters := map[string]bool{}
+	for _, item := range function.parameters {
+		parameters[item.text] = true
+	}
+	collectRuntimeIntegerParameterUses(function.statements, parameters, integerParameters)
+	return integerParameters[parameter]
+}
+
+func validateRuntimeTextParameterReturns(program *program) *issue {
+	for _, name := range program.runtimeFunctionNames {
+		function := program.runtimeFunctions[name]
+		parameterTypes := runtimeFunctionParameterTypes(function)
+		parameters := map[string]string{}
+		for index, parameter := range function.parameters {
+			if index < len(parameterTypes) {
+				parameters[parameter.text] = parameterTypes[index]
+			}
+		}
+		var visit func([]statement) *issue
+		visit = func(items []statement) *issue {
+			for _, item := range items {
+				if item.kind == "返回" && item.value.kind == "引用" && parameters[item.value.text] == "运行时字符串" {
+					return &issue{code: "S-3068", expected: "文本局部的独立副本", actual: "直接返回文本参数 " + item.value.text, suggestion: "先把文本参数复制到顶层文本局部，再返回该局部", pos: item.value.pos}
+				}
+				if problem := visit(item.body); problem != nil {
+					return problem
+				}
+				if problem := visit(item.otherwise); problem != nil {
+					return problem
+				}
+			}
+			return nil
+		}
+		if problem := visit(function.statements); problem != nil {
+			return problem
+		}
+	}
+	return nil
+}
+
 func validateProgram(program *program) *issue {
 	payloads := seedRuntimeResultPayloads(program)
 	if problem := expandProgramFunctions(program, payloads); problem != nil {
@@ -2007,6 +2049,9 @@ func validateProgram(program *program) *issue {
 	}
 	program.constants = constants
 	if problem := classifyRuntimeFunctionParameterTypes(program); problem != nil {
+		return problem
+	}
+	if problem := validateRuntimeTextParameterReturns(program); problem != nil {
 		return problem
 	}
 	if problem := classifyRuntimeFunctionLocalTypes(program, constants); problem != nil {
