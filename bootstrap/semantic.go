@@ -438,7 +438,6 @@ func classifyRuntimeFunctionParameterTypes(program *program) *issue {
 		textParameters := map[string]bool{}
 		if function.body.kind == "" {
 			collectRuntimeTextParameterUses(function.statements, parameters, textParameters)
-			collectRuntimeTextReturnParameters(function.statements, parameters, textParameters)
 		} else {
 			collectRuntimeTextParameterUsesValue(function.body, parameters, textParameters, nil)
 		}
@@ -449,6 +448,13 @@ func classifyRuntimeFunctionParameterTypes(program *program) *issue {
 		explicitTextParameters := make(map[string]bool, len(textParameters))
 		for parameter := range textParameters {
 			explicitTextParameters[parameter] = true
+		}
+		returnTextParameters := map[string]bool{}
+		if function.body.kind == "" {
+			collectRuntimeTextReturnParameters(function.statements, parameters, returnTextParameters)
+		}
+		for parameter := range resultParameters {
+			delete(returnTextParameters, parameter)
 		}
 		integerParameters := map[string]bool{}
 		blockCalls := map[string]bool{}
@@ -468,7 +474,8 @@ func classifyRuntimeFunctionParameterTypes(program *program) *issue {
 				types[index] = "运行时结果"
 				continue
 			}
-			if explicitTextParameters[parameter.text] || textParameters[parameter.text] && !integerParameters[parameter.text] {
+			if explicitTextParameters[parameter.text] ||
+				(textParameters[parameter.text] || returnTextParameters[parameter.text]) && !integerParameters[parameter.text] {
 				types[index] = "运行时字符串"
 			}
 		}
@@ -524,8 +531,11 @@ func inferRuntimeTextParametersFromCalls(program *program, functionName string, 
 func collectRuntimeTextFunctionCallArguments(input value, environment map[string]constantValue, functionName string, parameters []token, textParameters, integerParameters map[string]bool) {
 	if input.kind == "调用" && input.text == functionName {
 		for index, argument := range input.args {
+			// This pass only gathers positive type evidence. A malformed or
+			// runtime-only argument must not surface its inner diagnostic before
+			// the actual runtime-function call boundary reports S-3062.
 			kind, problem := constantType(argument, environment)
-			if problem != nil || index >= len(parameters) {
+			if problem != nil || index >= len(parameters) || kind == "" {
 				continue
 			}
 			parameterName := parameters[index].text
