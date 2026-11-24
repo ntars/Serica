@@ -1830,7 +1830,7 @@ func countValueNodes(input value) int {
 }
 func isFunctionEffect(name string) bool {
 	switch name {
-	case "readInteger", "readText", "readFile", "readModule", "readModuleResult", "fileSize", "exists", "isDirectory", "writeFile", "appendFile", "writeByteArray", "removeFile", "renameFile", "createDirectory", "removeDirectory", "setFileMode", "changeFileMode", "replaceFile", "environmentNames", "arrayPush", "arraySet", "映射置", "argumentCount", "argumentText", "readEnvironment":
+	case "readInteger", "readText", "readFile", "readModule", "readModuleResult", "fileSize", "exists", "isDirectory", "writeFile", "appendFile", "writeByteArray", "removeFile", "renameFile", "createDirectory", "removeDirectory", "setFileMode", "changeFileMode", "replaceFile", "environmentNames", "arrayPush", "arraySet", "映射置", "映射删", "argumentCount", "argumentText", "readEnvironment":
 		return true
 	}
 	return false
@@ -1839,7 +1839,7 @@ func requiredFunctionEffect(name string) string {
 	if name == "arrayPush" || name == "arraySet" {
 		return "array.write"
 	}
-	if name == "映射置" {
+	if name == "映射置" || name == "映射删" {
 		return "map.write"
 	}
 	if name == "argumentCount" || name == "argumentText" || name == "readEnvironment" || name == "environmentNames" {
@@ -1872,7 +1872,7 @@ func containsFunctionEffect(input value, functions map[string]functionDecl) bool
 }
 func isPureFunctionBuiltin(name string) bool {
 	switch name {
-	case "textConcat", "substring", "textLength", "textByteLength", "textByteAt", "equals", "notEquals", "ifElse", "array", "arrayGet", "arrayLength", "bitAnd", "bitOr", "bitXor", "成功", "失败", "是否失败", "结果值", "错误码", "映射", "映射取", "映射有", "映射长":
+	case "textConcat", "substring", "textLength", "textByteLength", "textByteAt", "equals", "notEquals", "ifElse", "array", "arrayGet", "arrayLength", "bitAnd", "bitOr", "bitXor", "成功", "失败", "是否失败", "结果值", "错误码", "映射", "映射取", "映射有", "映射长", "映射删":
 		return true
 	}
 	return false
@@ -2671,6 +2671,9 @@ func validateConsoleCapabilities(root value, statements []statement, constants m
 		if problem := collectInputCapabilities(item.value, required); problem != nil {
 			return problem
 		}
+		if item.kind == "删映射键" {
+			required["map.write"] = item.name.pos
+		}
 	}
 	for _, capability := range []string{"stdout", "stdin", "filesystem.read", "filesystem.write", "array.write", "map.write", "args"} {
 		position, used := required[capability]
@@ -2693,7 +2696,7 @@ func collectInputCapabilities(input value, required map[string]sourcePosition) *
 				capability = "filesystem.write"
 			case "arrayPush", "arraySet":
 				capability = "array.write"
-			case "映射置":
+			case "映射置", "映射删":
 				capability = "map.write"
 			case "argumentCount", "argumentText":
 				capability = "args"
@@ -2736,6 +2739,18 @@ func validateConsoleStatements(statements []statement, variables map[string]bool
 			}
 			if problem := assignConsoleInteger(item, environment, "整数赋值"); problem != nil {
 				return nil, problem
+			}
+		case "删映射键":
+			target := item.value.args[0]
+			if target.kind != "引用" || environment[target.text].kind != "整数映射" {
+				return nil, &issue{code: "S-3015", expected: "整数映射变量", actual: target.text, suggestion: "先用 映射（） 声明目标映射变量", pos: target.pos}
+			}
+			keyType, problem := constantType(item.value.args[1], environment)
+			if problem != nil {
+				return nil, problem
+			}
+			if keyType != "整数" && keyType != "运行时整数" {
+				return nil, &issue{code: "S-3015", expected: "整数映射键", actual: keyType, suggestion: "当前整数映射只接受有符号 64 位键", pos: item.value.args[1].pos}
 			}
 		case "跳出", "继续":
 			if loopDepth == 0 {
@@ -2844,8 +2859,8 @@ func assignConsoleInteger(item statement, environment map[string]constantValue, 
 		return nil
 	}
 	if expected == "整数赋值" && environment[item.name.text].kind == "整数映射" {
-		if item.value.kind != "调用" || item.value.text != "映射置" || len(item.value.args) != 3 || item.value.args[0].kind != "引用" || item.value.args[0].text != item.name.text {
-			return &issue{code: "S-3023", expected: "对目标映射自身的 映射置（映射，整数键，整数值）", actual: item.value.text, suggestion: "声明映射变量，并用 赋值 映射=映射置（映射，键，值）更新", pos: item.value.pos}
+		if item.value.kind != "调用" || len(item.value.args) < 2 || item.value.args[0].kind != "引用" || item.value.args[0].text != item.name.text || item.value.text != "映射置" && item.value.text != "映射删" {
+			return &issue{code: "S-3023", expected: "对目标映射自身的 映射置（映射，键，值）或 映射删（映射，键）", actual: item.value.text, suggestion: "声明映射变量，并用 赋值 映射=映射置（映射，键，值）或 映射删（映射，键）更新", pos: item.value.pos}
 		}
 		return nil
 	}
@@ -3390,6 +3405,25 @@ func constantType(input value, constants map[string]constantValue) (string, *iss
 			case "映射":
 				if len(current.args) != 0 {
 					return "", &issue{code: "S-3011", expected: "0 个参数", actual: strconv.Itoa(len(current.args)) + " 个参数", suggestion: "使用 映射（）初始化空映射", pos: current.pos}
+				}
+				kind = "整数映射"
+			case "映射删":
+				if len(current.args) != 2 || current.args[0].kind != "引用" {
+					return "", &issue{code: "S-3011", expected: "映射变量和整数键", actual: strconv.Itoa(len(current.args)) + " 个参数", suggestion: "使用 赋值 映射=映射删（映射，整数键）删除", pos: current.pos}
+				}
+				mapType, problem := constantType(current.args[0], constants)
+				if problem != nil {
+					return "", problem
+				}
+				if mapType != "整数映射" {
+					return "", &issue{code: "S-3015", expected: "整数映射变量", actual: mapType, suggestion: "先用 映射（）声明映射变量", pos: current.args[0].pos}
+				}
+				keyType, problem := constantType(current.args[1], constants)
+				if problem != nil {
+					return "", problem
+				}
+				if keyType != "整数" && keyType != "运行时整数" {
+					return "", &issue{code: "S-3015", expected: "整数映射键", actual: keyType, suggestion: "当前整数映射只接受有符号 64 位键", pos: current.args[1].pos}
 				}
 				kind = "整数映射"
 			case "映射置":

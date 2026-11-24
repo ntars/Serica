@@ -1431,6 +1431,15 @@
       "check": "本地完整源码门、CI 前置检查、许可检查、make release、make test-release 与 tools/test_install.py 通过；远端 CI 运行因推送凭据被拒仍未证明。P1b 阶段门仍未闭合，不是正式版本、安装器或已公证分发。",
       "status": "settled",
       "source": "docs/decisions/0183-developer-preview-dev16.md"
+    },
+    {
+      "id": "D-0184",
+      "title": "整数映射删除边界",
+      "decision": "新增 删映射键（映射，整数键） 语句并要求 map.write；删除沿桶链断开命中条目，将旧条目标记为墓碑以保持后续查找与插入语义，-1 键和空键不作为用户键参与查找。保留仅整数键的当前边界，不扩张到通用键类型。",
+      "check": "make test-p1b-runtime 通过 209 个 arm64 产物，其中 13 个映射用例覆盖删除存在键、缺失键、删除后复用、碰撞链保持和扩容后删除；make seed-audit、test-p1b-static、test-p1b-modules、test-p1b-module-effect、test-p1b-module-type、test-p1b-native-emit 通过。P1b 阶段门仍未通过。",
+      "status": "settled",
+      "source": "docs/decisions/0184-map-delete.md"
     }
+
   ]
 }

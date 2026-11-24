@@ -241,7 +241,7 @@ func statementsUseRuntimeArray(statements []statement) bool {
 }
 func statementsUseRuntimeMap(statements []statement) bool {
 	for _, item := range statements {
-		if item.kind == "变量" && isRuntimeMapValue(item.value) || item.kind == "赋值" && item.value.kind == "调用" && item.value.text == "映射置" || statementsUseRuntimeMap(item.body) || statementsUseRuntimeMap(item.otherwise) {
+		if item.kind == "变量" && isRuntimeMapValue(item.value) || item.kind == "赋值" && item.value.kind == "调用" && item.value.text == "映射置" || item.kind == "删映射键" || statementsUseRuntimeMap(item.body) || statementsUseRuntimeMap(item.otherwise) {
 			return true
 		}
 	}
@@ -2020,6 +2020,11 @@ func (c *windowCode) emitConsoleStatements(statements []statement, constants map
 				return err
 			}
 			c.words = append(c.words, storeIntegerSlot(0, 19, slots[item.name.text]))
+		case "删映射键":
+			if err := c.emitRuntimeMapDelete(item.value, constants, slots); err != nil {
+				return err
+			}
+			continue
 		case "若":
 			staticCondition := !containsRuntimeArguments(item.condition) && !containsRuntimeIntegerInput(item.condition) && !containsRuntimeTextInput(item.condition) && !containsIntegerSlotReference(item.condition, slots) && !containsRuntimeTextVariableReference(item.condition, c.textBuffers) && !containsTextResultValue(item.condition)
 			if staticCondition {
@@ -4402,8 +4407,11 @@ func (c *windowCode) emitRuntimeMapFind(name string, key value, constants map[st
 	loop := len(c.words)
 	c.words = append(c.words, compareImmediate(3, 0))
 	missingEntry := c.conditionalPlaceholder(0)
-	c.words = append(c.words, loadIntegerSlot(4, 3, 0), loadIntegerSlot(5, 31, 0), compareRegister(4, 5))
+	c.words = append(c.words, loadIntegerSlot(4, 3, 0), compareRegister(4, 2))
+	tombstone := c.conditionalPlaceholder(0)
+	c.words = append(c.words, loadIntegerSlot(5, 31, 0), compareRegister(4, 5))
 	found := c.conditionalPlaceholder(0)
+	c.patchConditional(tombstone, len(c.words))
 	c.words = append(c.words, loadIntegerSlot(3, 3, 16))
 	c.words = append(c.words, branch(loop-len(c.words)))
 	c.patchConditional(missingData, len(c.words))
@@ -4517,6 +4525,50 @@ func (c *windowCode) emitRuntimeMapSet(input value, constants map[string]constan
 	c.patchConditional(found, foundBlock)
 	c.words[foundDone] = branch(len(c.words) - foundDone)
 	c.words = append(c.words, addImmediate(31, 31, 80))
+	return nil
+}
+func (c *windowCode) emitRuntimeMapDelete(input value, constants map[string]constantValue, slots map[string]uint32) error {
+	if len(input.args) != 2 || input.args[0].kind != "引用" {
+		return fmt.Errorf("原生映射删除需要 删映射键（映射，键）")
+	}
+	mapSlot, exists := c.mapSlots[input.args[0].text]
+	if !exists {
+		return fmt.Errorf("原生映射删除无法解析变量：%s", input.args[0].text)
+	}
+	c.words = append(c.words, subImmediate(31, 31, 32))
+	if err := c.emitRuntimeInteger(input.args[1], constants, slots); err != nil {
+		return err
+	}
+	// 与 emitRuntimeMapFind 相同：x0 保存查找键，x4 保存墓碑键 -1。
+	c.words = append(c.words, storeIntegerSlot(0, 31, 0))
+	if err := c.emitRegisterImmediate(2, -7046029254386353131); err != nil {
+		return err
+	}
+	c.words = append(c.words, loadIntegerSlot(1, 19, mapSlot.data), compareImmediate(1, 0))
+	missingData := c.conditionalPlaceholder(0)
+	if err := c.emitRegisterImmediate(4, -7046029254386353131); err != nil {
+		return err
+	}
+	c.words = append(c.words, multiplyRegister(5, 0, 2), loadIntegerSlot(4, 19, mapSlot.capacity), subImmediate(4, 4, 1), andRegister(5, 5, 4))
+	c.words = append(c.words, loadIntegerSlot(3, 19, mapSlot.data), addRegisterShifted(3, 3, 5, 3), loadIntegerSlot(1, 3, 0))
+	probe := len(c.words)
+	c.words = append(c.words, compareImmediate(1, 0))
+	chainEnd := c.conditionalPlaceholder(0)
+	c.words = append(c.words, loadIntegerSlot(6, 1, 0), compareRegister(6, 4))
+	tombstone := c.conditionalPlaceholder(0)
+	c.words = append(c.words, loadIntegerSlot(7, 31, 0), compareRegister(6, 7))
+	keyMismatch := c.conditionalPlaceholder(1)
+	c.words = append(c.words, loadIntegerSlot(6, 1, 16), storeIntegerSlot(6, 3, 16))
+	c.words = append(c.words, storeIntegerSlot(2, 1, 0))
+	c.words = append(c.words, loadIntegerSlot(0, 19, mapSlot.length), subImmediate(0, 0, 1), storeIntegerSlot(0, 19, mapSlot.length))
+	done := c.unconditionalPlaceholder()
+	c.patchConditional(tombstone, len(c.words))
+	c.patchConditional(keyMismatch, len(c.words))
+	c.words = append(c.words, addImmediate(3, 1, 16), loadIntegerSlot(1, 1, 16), branch(probe-len(c.words)))
+	c.patchConditional(chainEnd, len(c.words))
+	c.patchConditional(missingData, len(c.words))
+	c.words[done] = branch(len(c.words) - done)
+	c.words = append(c.words, addImmediate(31, 31, 32))
 	return nil
 }
 func (c *windowCode) emitRuntimeMapGet(input value, constants map[string]constantValue, slots map[string]uint32) error {

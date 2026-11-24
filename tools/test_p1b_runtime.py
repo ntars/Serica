@@ -306,6 +306,11 @@ MAP_CASES = [
     ("integer endpoints and defaults", "变量 表=映射（）。\n赋值 表=映射置（表，-9223372036854775808，42）。\n赋值 表=映射置（表，9223372036854775807，-7）。\n程序=【能力=array（『stdout』，『map.write』），输出=映射取（表，-9223372036854775808，0）*100+映射取（表，9223372036854775807，0）+映射取（表，0，7）】。\n", "", "4200\n"),
     ("membership true", "变量 表=映射（）。\n赋值 表=映射置（表，readInteger（），readInteger（））。\n程序=【能力=array（『stdout』，『stdin』，『map.write』），输出=映射有（表，5）】。\n", "5\n42\n", "1\n"),
     ("membership false", "变量 表=映射（）。\n赋值 表=映射置（表，readInteger（），readInteger（））。\n程序=【能力=array（『stdout』，『stdin』，『map.write』），输出=映射有（表，5）】。\n", "6\n42\n", "0\n"),
+    ("delete existing key", "变量 表=映射（）。\n赋值 表=映射置（表，1，10）。\n赋值 表=映射置（表，2，20）。\n删映射键（表，1）。\n程序=【能力=array（『stdout』，『map.write』），输出=映射长（表）*100000+映射取（表，1，0）*10000+映射取（表，2，0）*1000+映射取（表，1，7）*10+映射取（表，2，0）】。\n", "", "120090\n"),
+    ("delete missing key keeps map", "变量 表=映射（）。\n赋值 表=映射置（表，1，10）。\n删映射键（表，9）。\n程序=【能力=array（『stdout』，『map.write』），输出=映射长（表）*100+映射取（表，9，0）*10+映射取（表，1，0）】。\n", "", "110\n"),
+    ("delete then reuse key", "变量 表=映射（）。\n赋值 表=映射置（表，5，1）。\n删映射键（表，5）。\n赋值 表=映射置（表，5，2）。\n程序=【能力=array（『stdout』，『map.write』），输出=映射长（表）*100+映射取（表，5，0）】。\n", "", "102\n"),
+    ("delete preserves collision chain", "变量 表=映射（）。\n赋值 表=映射置（表，1，11）。\n赋值 表=映射置（表，2，22）。\n赋值 表=映射置（表，65，65）。\n赋值 表=映射置（表，129，129）。\n删映射键（表，65）。\n程序=【能力=array（『stdout』，『map.write』），输出=映射长（表）*1000000+映射取（表，1，0）*10000+映射取（表，65，0）*100+映射取（表，129，0）】。\n", "", "3110129\n"),
+    ("delete after growth", "变量 表=映射（）。\n变量 索引=0。\n凡（索引<40）【赋值 表=映射置（表，索引，索引*2）。赋值 索引=索引+1。】。\n删映射键（表，20）。\n程序=【能力=array（『stdout』，『map.write』），输出=映射长（表）*1000000+映射取（表，20，-1）*10000+映射取（表，39，0）*100+映射取（表，0，0）】。\n", "", "38997800\n"),
 ]
 RESULT_FAILURE_CASES = [
     ("static failed result value", "变量 结果=失败（7）。\n程序=【输出=结果值（结果）】。\n", "", 7),
@@ -7094,6 +7099,11 @@ def main() -> int:
             ("map-constructor-argument", "变量 表=映射（1）。程序=【能力=array（『stdout』），输出=0】。\n", "S-3011"),
             ("map-set-arity", "变量 表=映射（）。赋值 表=映射置（表，1）。程序=【能力=array（『stdout』，『map.write』），输出=0】。\n", "S-3011"),
             ("map-set-other-target", "变量 甲=映射（）。变量 乙=映射（）。赋值 乙=映射置（甲，1，2）。程序=【能力=array（『stdout』，『map.write』），输出=0】。\n", "S-3023"),
+            ("map-delete-arity", "变量 表=映射（）。删映射键（表）。程序=【能力=array（『stdout』，『map.write』），输出=0】。\n", "S-2001"),
+            ("map-delete-non-map", "变量 数值=1。删映射键（数值，1）。程序=【能力=array（『stdout』，『map.write』），输出=0】。\n", "S-3015"),
+            ("map-delete-wrong-key", "变量 表=映射（）。删映射键（表，『键』）。程序=【能力=array（『stdout』，『map.write』），输出=0】。\n", "S-3015"),
+            ("map-delete-undeclared", "删映射键（表，1）。程序=【能力=array（『stdout』，『map.write』），输出=0】。\n", "S-3015"),
+            ("map-delete-missing-capability", "变量 表=映射（）。删映射键（表，1）。程序=【能力=array（『stdout』），输出=0】。\n", "S-4102"),
             ("map-get-arity", "变量 表=映射（）。程序=【能力=array（『stdout』），输出=映射取（表，1）】。\n", "S-3011"),
             ("map-get-non-map", "变量 数值=1。程序=【能力=array（『stdout』），输出=映射取（数值，1，0）】。\n", "S-3015"),
             ("map-get-wrong-default", "变量 表=映射（）。程序=【能力=array（『stdout』），输出=映射取（表，1，『默认』）】。\n", "S-3015"),

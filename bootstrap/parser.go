@@ -412,7 +412,7 @@ func startsWithHan(text string) bool {
 
 func isRuntimeStatementKeyword(keyword string) bool {
 	switch keyword {
-	case "变量", "赋值", "若", "凡", "跳出", "继续":
+	case "变量", "赋值", "若", "凡", "跳出", "继续", "删映射键":
 		return true
 	}
 	return false
@@ -464,6 +464,30 @@ func (p *parser) parseRuntimeStatement(depth int, allowDeclaration bool) (statem
 			return statement{}, p.problem
 		}
 		return statement{kind: start.text, name: start}, nil
+	}
+	if start.text == "删映射键" {
+		p.index++
+		if _, ok := p.expectSymbol("（", "全角左括号 （"); !ok {
+			return statement{}, p.problem
+		}
+		target, problem := p.parseValue()
+		if problem != nil {
+			return statement{}, problem
+		}
+		if _, ok := p.expectSymbol("，", "全角逗号 ，"); !ok {
+			return statement{}, p.problem
+		}
+		key, problem := p.parseValue()
+		if problem != nil {
+			return statement{}, problem
+		}
+		if _, ok := p.expectSymbol("）", "全角右括号 ）"); !ok {
+			return statement{}, p.problem
+		}
+		if _, ok := p.expectSymbol("。", "删映射键语句的句末符号 。"); !ok {
+			return statement{}, p.problem
+		}
+		return statement{kind: "删映射键", name: start, value: value{kind: "调用", text: "映射删", args: []value{target, key}, pos: start.pos}}, nil
 	}
 	if start.text == "变量" && !allowDeclaration {
 		return statement{}, p.atToken(start, "S-3037", "已声明变量上的赋值语句", "控制块内的变量声明", "在控制块前声明变量，并在块内使用赋值")
