@@ -1215,6 +1215,134 @@
       "check": "make release 生成 serica-v0.1.0-dev.2-macos-arm64 目录、tar.gz 与 SHA256SUMS.archives；tools/test_release.py 验证逐文件摘要、SBOM、arm64 Mach-O、签名、示例构建/运行和隔离安装/卸载。归档 SHA-256 以 dist/SHA256SUMS.archives 为准；解压归档后 make verify 通过。P1b 阶段门仍未通过。",
       "status": "settled",
       "source": "docs/decisions/0156-developer-preview-dev2.md"
+    },
+    {
+      "id": "D-0157",
+      "title": "直接结果观察与成功文本释放",
+      "decision": "是否失败、错误码和结果值直接接受运行时结果调用、ifElse 结果表达式、成功/失败构造和模块读取结果；单层观察只求值一次，成功运行时文本映射由观察路径释放，失败路径无 stdout 并保留错误码。修复文本结果返回描述符覆盖参数、直接是否失败条件码反向和结果观察临时帧栈不平衡。",
+      "check": "make test-p1b-runtime 实际执行直接文本结果成功/失败、文本长度、整数结果状态/错误码及静态结果；无参数或非结果操作数继续返回 S-3013。运行时门覆盖 202 个整数形态产物、43 个运行时文本结果产物、27 个函数结果边界产物、315 个编译诊断和 118 个运行时拒绝样例。",
+      "status": "settled",
+      "source": "docs/decisions/0157-direct-result-observation.md"
+    },
+    {
+      "id": "D-0158",
+      "title": "检查工具迁出 Go 种子额度",
+      "decision": "将标点扫描和源码独立性检查从 bootstrap/tools/*.go 迁至 Python 标准库工具；tools/doctor 和 tools/check-independence 保持原命令与输出，Python 版权归属纳入独立性检查。该迁移不改变语言语义、不进入编译产物，也不代表 P4b 工具链完成。",
+      "check": "make doctor、./tools/check-independence source 与 make seed-audit 通过；活动 Go 种子为 10 个文件、11996/12000 行、归因完整，C-1 为 4850/11615（41.8%）。",
+      "status": "settled",
+      "source": "docs/decisions/0158-checker-tool-migration.md"
+    },
+    {
+      "id": "D-0159",
+      "title": "开发者预览 v0.1.0-dev.3 发布复验",
+      "decision": "将开发者预览版本从 v0.1.0-dev.2 递增到 v0.1.0-dev.3，重新生成发布目录、压缩包、逐文件 SHA-256、SBOM 和归档 SHA-256，并复跑解压后自动验收与隔离 prefix 安装/卸载。包格式和平台边界沿用 D-0141/D-0142。",
+      "check": "全量源码门与 make test-p1b-runtime 通过；运行时门为 202 个 arm64 整数形态产物、43 个运行时文本结果产物、27 个函数结果边界产物、315 个编译诊断和 118 个运行时拒绝样例。make release 生成 serica-v0.1.0-dev.3-macos-arm64 目录、tar.gz 与 SHA256SUMS.archives；tools/test_release.py 和解压后 make verify 通过。P1b 阶段门仍未通过。",
+      "status": "settled",
+      "source": "docs/decisions/0159-developer-preview-dev3.md"
+    },
+    {
+      "id": "D-0160",
+      "title": "追加文件写入边界",
+      "decision": "新增 appendFile（路径，文本）：目标不存在时创建，已存在时保留原内容并追加 UTF-8 文本，返回实际写入字节数。路径接受静态文本或 argumentText，调用要求 filesystem.write，参数路径另要求 args。macOS 后端按调用区分 _creat 覆盖写入与 _open 追加写入；_open 使用 O_WRONLY|O_CREAT|O_APPEND 和 0644，并按平台可变参数 ABI 把权限模式放在调用栈。",
+      "check": "make test-p1b-runtime 在 macOS arm64 实测保留已有内容追加、缺失文件创建、参数文本动态路径追加及缺根能力 S-4102；覆盖写入继续只导入 _creat，追加产物导入 _open。完整源码门通过；运行时门为 202 个整数形态产物、43 个运行时文本结果产物、27 个函数结果边界产物、317 个编译诊断和 118 个运行时拒绝样例。活动种子 11999/12000 行、C-1 4850/11618（41.7%）。P1b 阶段门仍未通过。",
+      "status": "settled",
+      "source": "docs/decisions/0160-append-file-boundary.md"
+    },
+    {
+      "id": "D-0161",
+      "title": "开发者预览 v0.1.0-dev.4 发布复验",
+      "decision": "将开发者预览版本从 v0.1.0-dev.3 递增到 v0.1.0-dev.4，重新生成发布目录、压缩包、逐文件 SHA-256、SBOM 和归档 SHA-256，并复跑解压后自动验收与隔离 prefix 安装/卸载。包格式和平台边界沿用 D-0141/D-0142。",
+      "check": "全量源码门与 make test-p1b-runtime 通过；运行时门为 202 个 arm64 整数形态产物、43 个运行时文本结果产物、27 个函数结果边界产物、317 个编译诊断和 118 个运行时拒绝样例。make release 生成 serica-v0.1.0-dev.4-macos-arm64 目录、tar.gz 与 SHA256SUMS.archives；tools/test_release.py 和解压后 make verify 通过。P1b 阶段门仍未通过。",
+      "status": "settled",
+      "source": "docs/decisions/0161-developer-preview-dev4.md"
+    },
+    {
+      "id": "D-0162",
+      "title": "文件删除、重命名与自编前端登记",
+      "decision": "新增 removeFile（路径）与 renameFile（源路径，目标路径），成功返回 0，失败无输出退出 1；路径接受静态文本或 argumentText，调用要求 filesystem.write，参数路径另要求 args。行简绑定编号登记 appendFile=38、removeFile=39、renameFile=40，效果表统一映射 filesystem.write，类型表补齐元数、路径检查和整数结果。macOS arm64 后端分别导入 _unlink 与 _rename。",
+      "check": "make test-p1b-runtime 实测动态路径删除、重命名、缺失目标失败和 _unlink/_rename 导入；make test-p1b-module-effect 验证 append/remove/rename 效果、缺根能力与隐藏效果；make test-p1b-module-type 验证元数、路径类型、整数结果和 S-3075/S-3076 位置诊断。完整源码门通过；运行时门为 203 个整数形态产物、43 个运行时文本结果产物、27 个函数结果边界产物、327 个编译诊断和 120 个运行时拒绝样例。活动种子 11946/12000 行、C-1 4861/11703（41.5%）。P1b 阶段门仍未通过。",
+      "status": "settled",
+      "source": "docs/decisions/0162-file-mutation-and-frontend-parity.md"
+    },
+    {
+      "id": "D-0163",
+      "title": "开发者预览 v0.1.0-dev.5 发布复验",
+      "decision": "将开发者预览版本从 v0.1.0-dev.4 递增到 v0.1.0-dev.5，重新生成发布目录、压缩包、逐文件 SHA-256、SBOM 和归档 SHA-256，并复跑解压后自动验收与隔离 prefix 安装/卸载。包格式和平台边界沿用 D-0141/D-0142。",
+      "check": "全量源码门、运行时门、模块效果/类型门、行简原生发射、doctor、许可、种子审计和独立性检查通过；运行时门为 203 个 arm64 整数形态产物、43 个运行时文本结果产物、27 个函数结果边界产物、327 个编译诊断和 120 个运行时拒绝样例。make release 生成 serica-v0.1.0-dev.5-macos-arm64 目录、tar.gz 与 SHA256SUMS.archives；tools/test_release.py 和解压后 make verify 通过。P1b 阶段门仍未通过。",
+      "status": "settled",
+      "source": "docs/decisions/0163-developer-preview-dev5.md"
+    },
+    {
+      "id": "D-0164",
+      "title": "目录创建与删除边界",
+      "decision": "新增 createDirectory（路径）与 removeDirectory（路径），成功返回 0，失败无 stdout 并以 1 退出；路径接受静态文本或 argumentText，要求 filesystem.write，参数路径另要求 args。macOS arm64 后端分别导入 _mkdir 与 _rmdir；行简前端登记编号 41/42 并同步效果与类型表。",
+      "check": "模块效果门为 7 种能力、4 个正例图、18 个位置诊断、编译器自检；模块类型门为 29 个类型查询、25 个位置诊断、3 个原生参照产物、编译器自检；runtime 门为 203 个 arm64 整数形态产物、43 个运行时文本结果产物、27 个函数结果边界产物、335 个编译诊断和 122 个运行时拒绝样例。种子 11991/12000 行、C-1 4871/11748（41.5%）。P1b 阶段门仍未通过。",
+      "status": "settled",
+      "source": "docs/decisions/0164-directory-boundary.md"
+    },
+    {
+      "id": "D-0165",
+      "title": "文件权限边界",
+      "decision": "新增 setFileMode（路径，权限）与 changeFileMode（路径，权限），权限整数限定 0..511；静态和 argumentText 路径均要求 filesystem.write，参数路径另要求 args。macOS arm64 后端分别导入 _chmod 和 _open/_fchmod/_close；行简前端登记 43/44 并同步效果与类型表。",
+      "check": "make test-p1b-runtime 实测 chmod/fchmod 权限分别变为 0o640/0o740、缺失路径无输出退出和 512 越界 S-3079；模块效果门新增缺根与隐藏效果诊断，为 7 种能力、4 个正例图、20 个位置诊断；模块类型门覆盖 43/44 元数与类型诊断，为 29 个类型查询、25 个位置诊断。种子 11984/12000 行、C-1 4907/11826（41.5%）。P1b 阶段门仍未通过。",
+      "status": "settled",
+      "source": "docs/decisions/0165-file-mode-boundary.md"
+    },
+    {
+      "id": "D-0166",
+      "title": "文件大小元数据边界",
+      "decision": "新增 fileSize（路径），返回已有文件字节数；路径为静态文本或 argumentText，要求 filesystem.read，参数路径另要求 args，诊断码 S-3080。macOS arm64 后端导入 _open/_fstat/_close，行简前端登记 45 并同步效果与类型表。",
+      "check": "运行时门为 204 个 arm64 整数形态产物、43 个运行时文本结果产物、27 个函数结果边界产物、335 个编译诊断和 123 个运行时拒绝样例；模块效果门 22 个位置诊断、模块类型门 27 个位置诊断；种子 11965/12000 行、C-1 4915/11807（41.6%）。P1b 阶段门仍未通过。",
+      "status": "settled",
+      "source": "docs/decisions/0166-file-size-boundary.md"
+    },
+    {
+      "id": "D-0167",
+      "title": "路径存在性查询边界",
+      "decision": "新增 exists（路径），静态文本或 argumentText 路径返回存在 1、缺失 0；要求 filesystem.read，参数路径另要求 args，诊断码 S-3081。macOS arm64 后端使用 _open/_fstat/_close，只把缺失当作正常否定结果，其他系统错误无 stdout 退出 1；行简前端登记 46。",
+      "check": "运行时门新增文件/目录/缺失三种场景，产物导入限定 _open/_fstat/_close，当前为 204 个 arm64 整数形态产物、43 个运行时文本结果产物、27 个函数结果边界产物、335 个编译诊断和 123 个运行时拒绝样例；模块效果门 24 个位置诊断、模块类型门 28 个位置诊断；种子 11997/12000 行、C-1 4923/11839（41.6%）。P1b 阶段门仍未通过。",
+      "status": "settled",
+      "source": "docs/decisions/0167-path-exists-boundary.md"
+    },
+    {
+      "id": "D-0168",
+      "title": "开发者预览 v0.1.0-dev.8 发布复验",
+      "decision": "将开发者预览版本从 v0.1.0-dev.7 递增到 v0.1.0-dev.8，同步修正开发手册与路线图的当前基线计数，重新生成发布目录、压缩包、逐文件 SHA-256、SBOM 和归档 SHA-256，并复跑解压后自动验收与隔离 prefix 安装/卸载。包格式和平台边界沿用 D-0141/D-0142。",
+      "check": "全量源码门、运行时门、模块效果/类型门、行简原生发射、doctor、许可、种子审计和独立性检查通过；运行时门为 204 个 arm64 整数形态产物、43 个运行时文本结果产物、27 个函数结果边界产物、335 个编译诊断和 123 个运行时拒绝样例。make release 生成 serica-v0.1.0-dev.8-macos-arm64 目录、tar.gz 与 SHA256SUMS.archives；tools/test_release.py 和解压后 make verify 通过。P1b 阶段门仍未通过。",
+      "status": "settled",
+      "source": "docs/decisions/0168-developer-preview-dev8.md"
+    },
+    {
+      "id": "D-0169",
+      "title": "原子文件替换边界",
+      "decision": "新增 replaceFile（源路径，目标路径），静态或 argumentText 路径均须 filesystem.write，参数路径另须 args；macOS arm64 复用 _rename 实现同卷原子覆盖，成功返回 0，失败无 stdout 退出非零，诊断码 S-3082。行简前端登记 47 并同步效果与类型表。",
+      "check": "运行时门新增参数文本路径替换产物，源文件消失、目标取得源内容、stdout 为 0，产物导入限定 _rename，源缺失时无 stdout 非零退出；模块效果门 26 个位置诊断，模块类型门 28 个位置诊断。全量源码门通过，活动种子 12000/12000 行、C-1 4927/11842（41.6%）。P1b 阶段门仍未通过。",
+      "status": "settled",
+      "source": "docs/decisions/0169-atomic-file-replacement.md"
+    },
+    {
+      "id": "D-0170",
+      "title": "开发者预览 v0.1.0-dev.9 发布复验",
+      "decision": "开发者预览版本从 v0.1.0-dev.8 递增到 v0.1.0-dev.9，重新生成发布目录、压缩包、逐文件 SHA-256、SBOM 和归档 SHA-256，并复跑解压后自动验收与隔离 prefix 安装/卸载；包格式和平台边界沿用 D-0141/D-0142。",
+      "check": "全量源码门、运行时门、模块效果/类型门、doctor、许可、种子审计和独立性检查通过；活动种子 12000/12000 行、C-1 4927/11842（41.6%）。版本递增不改变 P1b 未通过、未公证、未多机验证和未法务复核的事实。",
+      "status": "settled",
+      "source": "docs/decisions/0170-developer-preview-dev9.md"
+    },
+    {
+      "id": "D-0171",
+      "title": "环境变量读取边界",
+      "decision": "新增 readEnvironment（静态文本名称），仅限编译期非空且不含 NUL/等号的固定名称，借用当前进程的只读 UTF-8 值；要求 args 能力，非法名称 S-3083，缺能力 S-4102，隐藏效果 S-4106。macOS arm64 导入 _getenv，缺失/空值返回空文本，精确长度输出避免读取借用指针末尾。",
+      "check": "运行时门新增直接输出、textLength、中文 UTF-8、缺失/空值及三类诊断反例，限定产物只导入 _exit/_getenv/_write；模块效果与类型门通过。全量门通过，活动种子 11798/12000 行、C-1 4786/11641（41.1%）。P1b 阶段门仍未通过。",
+      "status": "settled",
+      "source": "docs/decisions/0171-environment-read-boundary.md"
+    },
+    {
+      "id": "D-0172",
+      "title": "目录类型元数据查询边界",
+      "decision": "新增 isDirectory（静态文本或 argumentText 路径），目录返回 1，文件或缺失返回 0；要求 filesystem.read，参数路径另须 args；非法参数 S-3081，缺能力 S-4102，隐藏效果 S-4106；macOS arm64 使用 _open/_fstat/_close 检测 Darwin st_mode 的 S_IFDIR 位。",
+      "check": "运行时门新增目录/文件/缺失、静态路径、导入白名单和三类诊断反例；模块效果门覆盖共享 filesystem.read 能力图，模块类型门新增 S-3081 位置诊断。全量门通过，活动种子 11860/12000 行、C-1 4794/11702（41.0%）。P1b 阶段门仍未通过。",
+      "status": "settled",
+      "source": "docs/decisions/0172-directory-type-metadata.md"
     }
   ]
 }

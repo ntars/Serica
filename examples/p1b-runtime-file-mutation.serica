@@ -1,0 +1,3 @@
+变量 删除=removeFile（argumentText（1））。
+变量 改名=renameFile（argumentText（2），argumentText（3））。
+程序=【能力=array（『stdout』，『args』，『filesystem.write』），输出=改名】。

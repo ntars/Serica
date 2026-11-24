@@ -2,7 +2,9 @@
 # Copyright (c) 2026 行简（Serica）贡献者
 """Check capability declarations and provenance in the bound native module graph."""
 
+import os
 import re
+import stat
 from pathlib import Path
 from subprocess import run
 from tempfile import TemporaryDirectory
@@ -62,24 +64,47 @@ def verify_chain(parser, project, artifact):
 def verify_builtins(parser, work):
     path = work / "all.serica"
     fixture, destination = work / "fixture.txt", work / "written.txt"
+    appended = work / "appended.txt"
+    removed, rename_from, rename_to = work / "removed.txt", work / "from.txt", work / "to.txt"
+    replace_from, replace_to = work / "replace-source.txt", work / "replace-target.txt"
+    created_directory, removed_directory = work / "created-directory", work / "removed-directory"
     fixture.write_text("测试", encoding="utf-8")
+    removed.write_text("删", encoding="utf-8")
+    rename_from.write_text("移", encoding="utf-8")
+    replace_from.write_text("替", encoding="utf-8")
+    removed_directory.mkdir()
     program = (
         "变量 文=argumentText（1）。\n"
+        "变量 环境=readEnvironment（『SERICA_MODULE_EFFECT_PROBE』）。\n"
+        "变量 目录=isDirectory（『/』）。\n"
         f"变量 源=readFile（『{fixture}』）。\n"
         "变量 表=array（0）。\n赋值 表=arrayPush（表，1）。\n"
         "变量 对=映射（）。\n赋值 对=映射置（对，1，5）。\n"
+        f"变量 追=appendFile（『{appended}』，文）。\n"
+        f"变量 删=removeFile（『{removed}』）。\n"
+        f"变量 改=renameFile（『{rename_from}』，『{rename_to}』）。\n"
+        f"变量 换=replaceFile（『{replace_from}』，『{replace_to}』）。\n"
+        f"变量 建目录=createDirectory（『{created_directory}』）。\n"
+        f"变量 删目录=removeDirectory（『{removed_directory}』）。\n"
         "程序=【能力=array（『stdout』，『stdin』，『filesystem.read』，『filesystem.write』"
         "，『array.write』，『map.write』，『args』），"
         f"输出=writeFile（『{destination}』，文）+textByteLength（源）+arrayGet（表，1）"
-        "+映射取（对，1，0）+readInteger（）】。\n"
+        "+映射取（对，1，0）+追+删+改+换+readInteger（）+建目录+删目录"
+        "+textByteLength（环境）+目录】。\n"
     )
     path.write_text(program, encoding="utf-8")
     read = read_graph(parser, work, path.name, "module-effect")
     assert masks(read) == (127, 127)
     artifact = work / "all"
     compile_source(path, artifact)
-    expect_run(artifact, b"18\n", stdin=b"3\n", args=("字",))
+    env = dict(os.environ)
+    env["SERICA_MODULE_EFFECT_PROBE"] = "环境变量"
+    expect_run(artifact, b"34\n", stdin=b"3\n", args=("字",), env=env)
     assert destination.read_text(encoding="utf-8") == "字"
+    assert appended.read_text(encoding="utf-8") == "字"
+    assert not removed.exists() and rename_to.read_text(encoding="utf-8") == "移"
+    assert not replace_from.exists() and replace_to.read_text(encoding="utf-8") == "替"
+    assert created_directory.is_dir() and not removed_directory.exists()
 
 
 def verify_pure_cycle(parser, project):
@@ -90,6 +115,92 @@ def verify_pure_cycle(parser, project):
     write(project, files)
     read = read_graph(parser, project, mode="module-effect")
     assert masks(read) == (1, 1) and masks(read, function_names(read)["递"]) == (0, 0)
+
+
+def verify_append_diagnostics(parser, project):
+    cases = (
+        (
+            "append-file-missing-root",
+            "变量 字节=appendFile（『x』，『y』）。\n程序=【能力=array（『stdout』），输出=字节】。\n",
+            4102,
+        ),
+        (
+            "function-hidden-append",
+            "函数 写（）=appendFile（『x』，『y』）。\n"
+            "程序=【能力=array（『stdout』，『filesystem.write』），输出=写（）】。\n",
+            4106,
+        ),
+        (
+            "function-append-missing-propagation",
+            "函数 写（）能力=array（『filesystem.write』）=appendFile（『x』，『y』）。\n"
+            "函数 包（）=写（）。\n"
+            "程序=【能力=array（『stdout』，『filesystem.write』），输出=包（）】。\n",
+            4106,
+        ),
+        (
+            "directory-mutation-missing-root",
+            "变量 结果=createDirectory（『目录』）。\n程序=【能力=array（『stdout』），输出=结果】。\n",
+            4102,
+        ),
+        (
+            "function-hidden-directory-mutation",
+            "函数 建目录（）=removeDirectory（『目录』）。\n"
+            "程序=【能力=array（『stdout』，『filesystem.write』），输出=建目录（）】。\n",
+            4106,
+        ),
+        (
+            "file-mode-missing-root",
+            "变量 结果=changeFileMode（『文件』，420）。\n程序=【能力=array（『stdout』），输出=结果】。\n",
+            4102,
+        ),
+        (
+            "function-hidden-file-mode",
+            "函数 设权限（）=setFileMode（『文件』，420）。\n"
+            "程序=【能力=array（『stdout』，『filesystem.write』），输出=设权限（）】。\n",
+            4106,
+        ),
+        (
+            "file-size-missing-root",
+            "变量 结果=fileSize（『文件』）。\n程序=【能力=array（『stdout』），输出=结果】。\n",
+            4102,
+        ),
+        (
+            "function-hidden-file-size",
+            "函数 大小（）=fileSize（『文件』）。\n"
+            "程序=【能力=array（『stdout』，『filesystem.write』），输出=大小（）】。\n",
+            4106,
+        ),
+        (
+            "replace-file-missing-root",
+            "变量 结果=replaceFile（『源』，『目标』）。\n程序=【能力=array（『stdout』），输出=结果】。\n",
+            4102,
+        ),
+        (
+            "function-hidden-replace-file",
+            "函数 替换（）=replaceFile（『源』，『目标』）。\n"
+            "程序=【能力=array（『stdout』，『filesystem.write』），输出=替换（）】。\n",
+            4106,
+        ),
+        (
+            "path-exists-missing-root",
+            "变量 存在=exists（『文件』）。\n程序=【能力=array（『stdout』），输出=存在】。\n",
+            4102,
+        ),
+        (
+            "function-hidden-path-exists",
+            "函数 存在（）=exists（『文件』）。\n"
+            "程序=【能力=array（『stdout』，『filesystem.write』），输出=存在（）】。\n",
+            4106,
+        ),
+    )
+    for name, source, expected in cases:
+        (project / name).mkdir(parents=True, exist_ok=True)
+        source_path = project / name / "main.serica"
+        source_path.write_text(source, encoding="utf-8")
+        read = read_graph(parser, source_path.parent, source_path.name, "module-effect")
+        actual = (-read(-1)) & 8191
+        assert actual == expected, (name, actual, expected)
+    return len(cases)
 
 
 def verify_diagnostics(parser, project):
@@ -153,6 +264,7 @@ def main():
         write(work, {"window.serica": "窗口=【标题=『窗口』，文本=『你好』】。\n"})
         assert masks(read_graph(parser, work, "window.serica", "module-effect")) == (0, 0)
         diagnostics = verify_diagnostics(parser, work / "diagnostics")
+        diagnostics += verify_append_diagnostics(parser, work / "append-diagnostics")
         own = read_graph(parser, ROOT / "compiler", "parse-expression.serica", "module-effect")
         assert own(-1) == 11 and masks(own) == (127, 95)
         print(f"P1b 模块效果通过：7 种能力、4 个正例图、{diagnostics} 个位置诊断、编译器自检")

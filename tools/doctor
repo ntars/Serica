@@ -16,7 +16,8 @@ test -f "/System/Library/Fonts/Hiragino Sans GB.ttc" || { echo "缺少系统 CJK
 bad_dirs=$(find . -path './.git' -prune -o -type d \( -name vendor -o -name node_modules -o -name .toolchain -o -name toolchains -o -name sdk -o -name third_party -o -name .venv \) -print)
 test -z "$bad_dirs" || { printf '仓库内存在依赖副本目录：\n%s\n' "$bad_dirs" >&2; exit 1; }
 mkdir -p build
-GO111MODULE=off GOPROXY=off CGO_ENABLED=0 "$GO" build -o build/punct-scan bootstrap/tools/punct_scan.go
+cp tools/punct_scan.py build/punct-scan
+chmod +x build/punct-scan
 build/punct-scan bootstrap/archive/prototype-3.8/lexical.serica examples/p0b-window.serica
 "$GO" env GOMODCACHE GOCACHE GOBIN | python3 -c 'import os,sys; root=os.path.realpath("."); vals=[x.strip() for x in sys.stdin]; vals += [os.environ.get("PIP_CACHE_DIR") or os.path.expanduser("~/Library/Caches/pip")]; bad=[v for v in vals if v and os.path.commonpath((root,os.path.realpath(v))) == root]; print("依赖缓存路径：", "失败" if bad else "通过"); [print("仓库内路径：", v) for v in bad]; raise SystemExit(bool(bad))'
 echo "环境自检：通过"

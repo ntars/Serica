@@ -4,7 +4,4 @@
 set -eu
 root=$(CDPATH= cd -- "$(dirname -- "$0")/.." && pwd)
 cd "$root"
-GO=${GO:-go}
-go_bin="${HOME:-}/.local/go1.27.4/bin"
-if [ -x "$go_bin/go" ]; then PATH="$go_bin:$PATH"; export PATH; fi
-GO111MODULE=off GOPROXY=off "$GO" run bootstrap/tools/check_independence.go "$@"
+exec python3 tools/check_independence.py "$@"

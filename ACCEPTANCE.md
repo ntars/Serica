@@ -43,12 +43,16 @@ make verify
 判定：重新构建并运行控制台示例，输出恰为 `行简`，且逐文件校验和仍然匹配。源码级全量门在源码仓库中执行：
 
 ```bash
-env GO=/path/to/go1.27.4/bin/go make -j1 doctor license seed-audit test-p0b-scope \
-  test-p1b-static test-p1b-modules test-p1b-runtime test-p1b-native-emit
+env GO=/path/to/go1.27.4/bin/go make -j1 stage0 test-p0b-scope \
+  test-p1b-static test-p1b-modules test-p1b-runtime test-p1b-scan test-p1b-lex \
+  test-p1b-parse test-p1b-program test-p1b-bind test-p1b-import-paths \
+  test-p1b-module-read test-p1b-module-graph test-p1b-module-bind \
+  test-p1b-module-effect test-p1b-module-type test-p1b-module-const \
+  test-p1b-module-abi test-p1b-native-emit doctor license seed-audit
 ./tools/check-independence source
 ```
 
-判定：全部退出码为 0。
+判定：全部退出码为 0。当前开发者预览 `v0.1.0-dev.9` 的运行时门应报告 204 个 arm64 整数形态产物、43 个运行时文本结果产物、27 个函数结果边界产物、339 个编译诊断和 123 个运行时拒绝样例；文件写入覆盖覆盖/追加/删除/重命名/原子替换、已有与缺失目标和参数路径；文件大小边界实测 `fileSize` 输出已有文件字节数并拒绝缺失路径，路径存在性边界实测 `exists` 对文件/目录输出 `1`、缺失路径输出 `0`；文件权限边界实测 `chmod` 与 `fchmod` 两个产物，权限设置只覆盖已有文件；种子门应报告 10 个活动源码文件、12000/12000 行且归因完整。
 
 ## E. 本地安装与卸载
 

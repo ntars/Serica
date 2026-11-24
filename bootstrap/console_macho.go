@@ -1,50 +1,30 @@
 // SPDX-License-Identifier: Apache-2.0
 // Copyright (c) 2026 行简（Serica）贡献者
-package main
-
-import (
-	"fmt"
-	"os"
-	"os/exec"
-	"path/filepath"
-	"runtime"
-	"strconv"
-	"strings"
-)
-
-const (
-	runtimeTextConcatBaseScratch   uint32 = 512
-	runtimeTextConcatScratchStride uint32 = 512
-)
-
+package main; import ("fmt"; "os"; "os/exec"; "path/filepath"; "runtime"; "strconv"; "strings")
+const (runtimeTextConcatBaseScratch   uint32 = 512; runtimeTextConcatScratchStride uint32 = 512); const syscallInstruction uint32 = 0xd4001001
 type conditionalPatch struct {
-	position  int
-	condition uint32
+	position  int; condition uint32
 }
 type conditionFalsePatch struct {
-	position      int
-	condition     uint32
+	position      int; condition     uint32
 	unconditional bool
 }
-
-func isRuntimeIntegerInput(expression value) bool {
-	return expression.kind == "调用" && expression.text == "readInteger" && len(expression.args) == 0
-}
-func isRuntimeTextInput(expression value) bool {
-	return expression.kind == "调用" && expression.text == "readText" && len(expression.args) == 0
-}
-func isRuntimeArgumentCount(expression value) bool {
-	return expression.kind == "调用" && expression.text == "argumentCount" && len(expression.args) == 0
-}
-func isRuntimeArgumentText(expression value) bool {
-	return expression.kind == "调用" && expression.text == "argumentText" && len(expression.args) == 1
-}
-func isRuntimeFileRead(expression value) bool {
-	return expression.kind == "调用" && (expression.text == "readFile" && len(expression.args) == 1 || expression.text == "readModule" && isModuleRead(expression))
-}
-func isRuntimeFileWrite(expression value) bool {
-	return expression.kind == "调用" && (expression.text == "writeFile" || expression.text == "writeByteArray") && len(expression.args) == 2
-}
+func isRuntimeIntegerInput(expression value) bool { return expression.kind == "调用" && expression.text == "readInteger" && len(expression.args) == 0 }
+func isRuntimeTextInput(expression value) bool { return expression.kind == "调用" && expression.text == "readText" && len(expression.args) == 0 }
+func isRuntimeArgumentCount(expression value) bool { return expression.kind == "调用" && expression.text == "argumentCount" && len(expression.args) == 0 }
+func isRuntimeArgumentText(expression value) bool { return expression.kind == "调用" && expression.text == "argumentText" && len(expression.args) == 1 }
+func isRuntimeEnvironmentRead(expression value) bool { return expression.kind == "调用" && expression.text == "readEnvironment" && len(expression.args) == 1 }
+func isRuntimeEnvironmentNames(expression value) bool { return expression.kind == "调用" && expression.text == "environmentNames" && len(expression.args) == 0 }
+func isRuntimeFileRead(expression value) bool { return expression.kind == "调用" && (expression.text == "readFile" && len(expression.args) == 1 || expression.text == "readModule" && isModuleRead(expression)) }
+func isRuntimeFileWrite(expression value) bool { return expression.kind == "调用" && (expression.text == "writeFile" || expression.text == "appendFile" || expression.text == "writeByteArray") && len(expression.args) == 2 }
+func isRuntimeFileSize(expression value) bool { return expression.kind == "调用" && expression.text == "fileSize" && len(expression.args) == 1 }
+func isRuntimePathExists(expression value) bool { return expression.kind == "调用" && expression.text == "exists" && len(expression.args) == 1 }
+func isRuntimeDirectoryCheck(expression value) bool { return expression.kind == "调用" && expression.text == "isDirectory" && len(expression.args) == 1 }
+func isRuntimeFileRemove(expression value) bool { return expression.kind == "调用" && expression.text == "removeFile" && len(expression.args) == 1 }
+func isRuntimeFileRename(expression value) bool { return expression.kind == "调用" && expression.text == "renameFile" && len(expression.args) == 2 }
+func isRuntimeFileReplace(expression value) bool { return expression.kind == "调用" && expression.text == "replaceFile" && len(expression.args) == 2 }
+func isRuntimeDirectoryMutation(expression value) bool { return expression.kind == "调用" && (expression.text == "createDirectory" || expression.text == "removeDirectory") && len(expression.args) == 1 }
+func isRuntimeFileMode(expression value) bool { return expression.kind == "调用" && (expression.text == "setFileMode" || expression.text == "changeFileMode") && len(expression.args) == 2 }
 func containsRuntimeFileRead(expression value, moduleOnly bool) bool {
 	if isModuleRead(expression) || !moduleOnly && isRuntimeFileRead(expression) {
 		return true
@@ -67,28 +47,36 @@ func statementsUseRuntimeFileRead(statements []statement, moduleOnly bool) bool 
 	}
 	return false
 }
-func containsRuntimeFileWrite(expression value) bool {
-	if isRuntimeFileWrite(expression) {
+func containsRuntimeFileNamed(expression value, name string) bool {
+	matches := isRuntimeFileWrite(expression) && (name == "write" || name == "!" && expression.text != "appendFile" || name != "write" && name != "!" && expression.text == name) ||
+		(isRuntimeFileRemove(expression) || isRuntimeFileRename(expression) || isRuntimeFileReplace(expression) || isRuntimeDirectoryMutation(expression) || isRuntimeFileMode(expression) || isRuntimeFileSize(expression) || isRuntimePathExists(expression) || isRuntimeDirectoryCheck(expression)) && expression.text == name
+	if matches {
 		return true
 	}
-	if expression.left != nil && containsRuntimeFileWrite(*expression.left) || expression.right != nil && containsRuntimeFileWrite(*expression.right) {
+	if expression.left != nil && containsRuntimeFileNamed(*expression.left, name) || expression.right != nil && containsRuntimeFileNamed(*expression.right, name) {
 		return true
 	}
 	for _, argument := range expression.args {
-		if containsRuntimeFileWrite(argument) {
+		if containsRuntimeFileNamed(argument, name) {
 			return true
 		}
 	}
 	return false
 }
-func statementsUseRuntimeFileWrite(statements []statement) bool {
+func containsRuntimeFileAppend(v value) bool { return containsRuntimeFileNamed(v, "appendFile") }
+func containsRuntimeFileCreate(v value) bool { return containsRuntimeFileNamed(v, "!") }
+func containsRuntimeFileRemove(v value) bool { return containsRuntimeFileNamed(v, "removeFile") }
+func containsRuntimeFileRename(v value) bool { return containsRuntimeFileNamed(v, "renameFile") }
+func statementsUseRuntimeFileNamed(statements []statement, name string) bool {
 	for _, item := range statements {
-		if containsRuntimeFileWrite(item.value) || containsRuntimeFileWrite(item.condition) || statementsUseRuntimeFileWrite(item.body) || statementsUseRuntimeFileWrite(item.otherwise) {
+		if containsRuntimeFileNamed(item.value, name) || containsRuntimeFileNamed(item.condition, name) || statementsUseRuntimeFileNamed(item.body, name) || statementsUseRuntimeFileNamed(item.otherwise, name) {
 			return true
 		}
 	}
 	return false
 }
+func statementsUseAppend(s []statement) bool            { return statementsUseRuntimeFileNamed(s, "appendFile") }
+func statementsUseRuntimeFileCreate(s []statement) bool { return statementsUseRuntimeFileNamed(s, "!") }
 func containsRuntimeArguments(expression value) bool {
 	if isRuntimeArgumentCount(expression) || isRuntimeArgumentText(expression) {
 		return true
@@ -111,12 +99,62 @@ func statementsUseRuntimeArguments(statements []statement) bool {
 	}
 	return false
 }
-func isRuntimeTextValue(expression value) bool {
-	return isRuntimeTextInput(expression) || expression.kind == "调用" && (expression.text == "textConcat" || expression.text == "substring" || expression.text == "arrayGet" || isTextReturnCall(expression))
+func containsRuntimeEnvironmentRead(expression value) bool {
+	if isRuntimeEnvironmentRead(expression) || expression.left != nil && containsRuntimeEnvironmentRead(*expression.left) || expression.right != nil && containsRuntimeEnvironmentRead(*expression.right) {
+		return true
+	}
+	for _, argument := range expression.args {
+		if containsRuntimeEnvironmentRead(argument) {
+			return true
+		}
+	}
+	return false
 }
-func isStoredTextReturnCall(expression value) bool {
-	return isTextReturnCall(expression)
+func statementsUseRuntimeEnvironmentRead(statements []statement) bool {
+	for _, item := range statements {
+		if containsRuntimeEnvironmentRead(item.value) || containsRuntimeEnvironmentRead(item.condition) || statementsUseRuntimeEnvironmentRead(item.body) || statementsUseRuntimeEnvironmentRead(item.otherwise) {
+			return true
+		}
+	}
+	return false
 }
+func containsRuntimeEnvironmentNames(expression value) bool {
+	if isRuntimeEnvironmentNames(expression) || expression.left != nil && containsRuntimeEnvironmentNames(*expression.left) || expression.right != nil && containsRuntimeEnvironmentNames(*expression.right) {
+		return true
+	}
+	for _, argument := range expression.args {
+		if containsRuntimeEnvironmentNames(argument) {
+			return true
+		}
+	}
+	return false
+}
+func statementsUseRuntimeEnvironmentNames(statements []statement) bool {
+	for _, item := range statements {
+		if containsRuntimeEnvironmentNames(item.value) || containsRuntimeEnvironmentNames(item.condition) || statementsUseRuntimeEnvironmentNames(item.body) || statementsUseRuntimeEnvironmentNames(item.otherwise) {
+			return true
+		}
+	}
+	return false
+}
+func runtimeFunctionsUseEnvironmentNames(runtimeFunctions map[string]functionDecl) bool {
+	for _, function := range runtimeFunctions {
+		if containsRuntimeEnvironmentNames(function.body) || statementsUseRuntimeEnvironmentNames(function.statements) {
+			return true
+		}
+	}
+	return false
+}
+func runtimeFunctionsUseEnvironmentRead(runtimeFunctions map[string]functionDecl) bool {
+	for _, function := range runtimeFunctions {
+		if containsRuntimeEnvironmentRead(function.body) || statementsUseRuntimeEnvironmentRead(function.statements) {
+			return true
+		}
+	}
+	return false
+}
+func isRuntimeTextValue(expression value) bool { return isRuntimeTextInput(expression) || isRuntimeEnvironmentRead(expression) || isRuntimeEnvironmentNames(expression) || expression.kind == "调用" && (expression.text == "textConcat" || expression.text == "substring" || expression.text == "arrayGet" || isTextReturnCall(expression)) }
+func isStoredTextReturnCall(expression value) bool { return isTextReturnCall(expression) }
 func containsRuntimeIntegerInput(expression value) bool {
 	if isRuntimeIntegerInput(expression) {
 		return true
@@ -159,9 +197,6 @@ func containsTextResultValue(expression value) bool {
 	}
 	return false
 }
-
-// isRuntimeResultScalar reports a result value whose payload is a machine
-// integer or a compile-time literal, neither of which needs an mmap buffer.
 func isRuntimeResultScalar(expression value) bool {
 	if expression.kind != "调用" {
 		return false
@@ -180,7 +215,6 @@ func isRuntimeResultScalar(expression value) bool {
 	}
 	return expression.text == "失败"
 }
-
 func containsResultStateCall(expression value) bool {
 	if expression.kind == "调用" && (expression.text == "是否失败" || expression.text == "错误码" || expression.text == "结果值") && len(expression.args) == 1 {
 		return true
@@ -213,8 +247,20 @@ func statementsUseRuntimeMap(statements []statement) bool {
 	}
 	return false
 }
-func isTextResultExtraction(expression value) bool {
-	return expression.kind == "调用" && expression.text == "结果值" && len(expression.args) == 1 && expression.args[0].kind == "引用"
+func isTextResultExtraction(expression value) bool { return expression.kind == "调用" && expression.text == "结果值" && len(expression.args) == 1 && expression.args[0].kind == "引用" }
+func isDirectTextResultExtraction(expression value) bool {
+	return expression.kind == "调用" && expression.text == "结果值" && len(expression.args) == 1 &&
+		expression.args[0].kind != "引用" && isResultOperand(expression.args[0])
+}
+func containsDirectRuntimeTextResultExtraction(expression value, constants map[string]constantValue) bool {
+	found := false
+	walkValue(expression, func(current value) bool {
+		if isDirectTextResultExtraction(current) && runtimeResultPayload(current.args[0], constants) == "运行时文本" {
+			found = true
+		}
+		return !found
+	})
+	return found
 }
 func statementsUseRuntimeTextStorage(statements []statement) bool {
 	for _, item := range statements {
@@ -225,7 +271,19 @@ func statementsUseRuntimeTextStorage(statements []statement) bool {
 	}
 	return false
 }
-
+func statementsUseOnlyBorrowedEnvironmentText(statements []statement) bool {
+	used := false
+	for _, item := range statements {
+		if (item.kind == "变量" || item.kind == "赋值") && isRuntimeEnvironmentRead(item.value) {
+			used = true
+			continue
+		}
+		if statementsUseRuntimeTextStorage([]statement{item}) {
+			return false
+		}
+	}
+	return used
+}
 func runtimeFunctionsUseFileRead(runtimeFunctions map[string]functionDecl, moduleOnly bool) bool {
 	for _, function := range runtimeFunctions {
 		if containsRuntimeFileRead(function.body, moduleOnly) || statementsUseRuntimeFileRead(function.statements, moduleOnly) {
@@ -234,16 +292,19 @@ func runtimeFunctionsUseFileRead(runtimeFunctions map[string]functionDecl, modul
 	}
 	return false
 }
-
-func runtimeFunctionsUseFileWrite(runtimeFunctions map[string]functionDecl) bool {
+func runtimeFunctionsUseFileNamed(runtimeFunctions map[string]functionDecl, name string) bool {
 	for _, function := range runtimeFunctions {
-		if containsRuntimeFileWrite(function.body) || statementsUseRuntimeFileWrite(function.statements) {
+		if containsRuntimeFileNamed(function.body, name) || statementsUseRuntimeFileNamed(function.statements, name) {
 			return true
 		}
 	}
 	return false
 }
-
+func runtimeAppend(f map[string]functionDecl) bool { return runtimeFunctionsUseFileNamed(f, "appendFile") }
+func runtimeFileCreate(f map[string]functionDecl) bool { return runtimeFunctionsUseFileNamed(f, "!") }
+func runtimeFileRemove(f map[string]functionDecl) bool { return runtimeFunctionsUseFileNamed(f, "removeFile") }
+func runtimeFileRename(f map[string]functionDecl) bool { return runtimeFunctionsUseFileNamed(f, "renameFile") }
+func runtimeFileReplace(f map[string]functionDecl) bool { return runtimeFunctionsUseFileNamed(f, "replaceFile") }
 func runtimeFunctionsUseArguments(runtimeFunctions map[string]functionDecl) bool {
 	for _, function := range runtimeFunctions {
 		if containsRuntimeArguments(function.body) || statementsUseRuntimeArguments(function.statements) {
@@ -252,7 +313,6 @@ func runtimeFunctionsUseArguments(runtimeFunctions map[string]functionDecl) bool
 	}
 	return false
 }
-
 func runtimeFunctionsUseMappedMemory(runtimeFunctions map[string]functionDecl) bool {
 	if runtimeFunctionsUseTextLocals(runtimeFunctions) {
 		return true
@@ -264,9 +324,6 @@ func runtimeFunctionsUseMappedMemory(runtimeFunctions map[string]functionDecl) b
 	}
 	return false
 }
-
-// Function bodies are emitted with ad hoc frame state, but only the standard
-// runtime helpers that are actually called may be imported.
 func runtimeFunctionsUseSyscall(runtimeFunctions map[string]functionDecl, name string) bool {
 	for _, function := range runtimeFunctions {
 		values := []value{function.body}
@@ -276,8 +333,7 @@ func runtimeFunctionsUseSyscall(runtimeFunctions map[string]functionDecl, name s
 		for _, input := range values {
 			stack := []value{input}
 			for len(stack) > 0 {
-				current := stack[len(stack)-1]
-				stack = stack[:len(stack)-1]
+				current := stack[len(stack)-1]; stack = stack[:len(stack)-1]
 				if current.kind == "调用" && current.text == name {
 					return true
 				}
@@ -296,7 +352,6 @@ func runtimeFunctionsUseSyscall(runtimeFunctions map[string]functionDecl, name s
 	}
 	return false
 }
-
 func runtimeFunctionsUseTextLocals(runtimeFunctions map[string]functionDecl) bool {
 	for _, function := range runtimeFunctions {
 		for _, kind := range function.localTypes {
@@ -307,7 +362,6 @@ func runtimeFunctionsUseTextLocals(runtimeFunctions map[string]functionDecl) boo
 	}
 	return false
 }
-
 func runtimeTextResultExpression(input value) bool {
 	if input.kind != "调用" {
 		return false
@@ -369,8 +423,7 @@ func containsIntegerSlotReference(expression value, slots map[string]uint32) boo
 	return false
 }
 func (c *windowCode) conditionalPlaceholder(condition uint32) conditionalPatch {
-	patch := conditionalPatch{position: len(c.words), condition: condition}
-	c.words = append(c.words, 0)
+	patch := conditionalPatch{position: len(c.words), condition: condition}; c.words = append(c.words, 0)
 	return patch
 }
 func (c *windowCode) patchConditional(patch conditionalPatch, target int) {
@@ -386,74 +439,71 @@ func (c *windowCode) patchConditionFalse(patches []conditionFalsePatch, target i
 	}
 }
 func (c *windowCode) unconditionalPlaceholder() int {
-	position := len(c.words)
-	c.words = append(c.words, 0)
+	position := len(c.words); c.words = append(c.words, 0)
 	return position
 }
 func (c *windowCode) finishLoop() {
-	last := len(c.loopTargets) - 1
-	target := c.loopTargets[last]
+	last := len(c.loopTargets) - 1; target := c.loopTargets[last]
 	for _, position := range target.breaks {
 		c.words[position] = branch(len(c.words) - position)
 	}
 	c.loopTargets = c.loopTargets[:last]
 }
-
 func (c *windowCode) emitRuntimeFunctionBody(function functionDecl, constants map[string]constantValue) error {
 	if runtimeFunctionRegisterCount(function) > 8 {
 		return fmt.Errorf("运行时函数需要不超过 8 个展平参数寄存器")
 	}
-	// Failure patches belong to the frame being emitted. Isolate them so a
-	// later root/body cannot patch branches into an earlier function.
-	previousFailurePatches := c.failurePatches
-	c.failurePatches = nil
+	previousFailurePatches := c.failurePatches; c.failurePatches = nil
 	if function.body.kind == "" {
 		return c.emitRuntimeStatementFunctionBody(function, constants)
 	}
-	parameterTypes := runtimeFunctionParameterTypes(function)
-	parameterPayloads := runtimeFunctionParameterPayloads(function)
-	parameterOffsets := runtimeFunctionParameterOffsets(parameterTypes, parameterPayloads)
-	frameSize := uint32(alignOffset(int(runtimeFunctionParameterBytes(parameterTypes, parameterPayloads)), 16))
+	parameterTypes := runtimeFunctionParameterTypes(function); parameterPayloads := runtimeFunctionParameterPayloads(function)
+	parameterOffsets := runtimeFunctionParameterOffsets(parameterTypes, parameterPayloads); frameSize := uint32(alignOffset(int(runtimeFunctionParameterBytes(parameterTypes, parameterPayloads)), 16))
+	returnsRuntimeText := function.runtimeReturnsResult && isTextResultPayload(function.runtimeResultPayload); textResult := resultSlot{}
+	if returnsRuntimeText {
+		base := frameSize; textResult = resultSlot{tag: base, value: base + 8, pointer: base + 16, length: base + 24, text: true, runtimeText: true}
+		c.temporaryBufferOffset = base + 32; frameSize = uint32(alignOffset(int(base)+32+360, 16))
+	}
 	c.words = append(c.words, subImmediate(31, 31, 32), storeIntegerSlot(29, 31, 0), storeIntegerSlot(30, 31, 8), storeIntegerSlot(19, 31, 16), addImmediate(29, 31, 0))
 	if frameSize != 0 {
 		c.words = append(c.words, subImmediate(31, 31, frameSize))
 	}
-	c.words = append(c.words, addImmediate(19, 31, 0))
-	c.textBuffers = map[string]uint32{}
-	c.textLengths = map[string]uint32{}
-	c.textCapacities = map[string]uint32{}
-	environment := copyConstantEnvironment(constants)
-	slots := map[string]uint32{}
+	c.words = append(c.words, addImmediate(19, 31, 0)); c.textBuffers = map[string]uint32{}
+	c.textLengths = map[string]uint32{}; c.textCapacities = map[string]uint32{}
+	environment := copyConstantEnvironment(constants); slots := map[string]uint32{}
 	resultSlots := map[string]resultSlot{}
 	for index, parameter := range function.parameters {
 		register := registerIndexForParameter(parameterTypes, runtimeFunctionParameterPayloads(function), index)
 		if register >= 8 {
 			return fmt.Errorf("递归运行时函数参数超过 ARM64 整数寄存器 ABI")
 		}
-		offset := parameterOffsets[index]
-		c.words = append(c.words, storeIntegerSlot(uint32(register), 19, offset))
+		offset := parameterOffsets[index]; c.words = append(c.words, storeIntegerSlot(uint32(register), 19, offset))
 		switch parameterTypes[index] {
 		case "运行时结果":
-			resultSlots[parameter.text] = resultSlot{tag: offset, value: offset + 8}
-			environment[parameter.text] = constantValue{kind: "运行时结果", resultPayload: "整数"}
+			resultSlots[parameter.text] = resultSlot{tag: offset, value: offset + 8}; environment[parameter.text] = constantValue{kind: "运行时结果", resultPayload: "整数"}
 			if isTextResultPayload(parameterPayloads[index]) {
-				resultSlots[parameter.text] = resultSlot{tag: offset, value: offset + 8, pointer: offset + 16, length: offset + 24, text: true}
-				environment[parameter.text] = constantValue{kind: "运行时结果", resultPayload: "运行时文本"}
+				resultSlots[parameter.text] = resultSlot{tag: offset, value: offset + 8, pointer: offset + 16, length: offset + 24, text: true}; environment[parameter.text] = constantValue{kind: "运行时结果", resultPayload: "运行时文本"}
 				c.words = append(c.words, storeIntegerSlot(uint32(register+1), 19, offset+8), storeIntegerSlot(uint32(register+2), 19, offset+16), storeIntegerSlot(uint32(register+3), 19, offset+24))
 			} else {
 				c.words = append(c.words, storeIntegerSlot(uint32(register+1), 19, offset+8))
 			}
 		case "运行时字符串":
-			slots[parameter.text] = offset
-			environment[parameter.text] = constantValue{kind: "运行时字符串"}
+			slots[parameter.text] = offset; environment[parameter.text] = constantValue{kind: "运行时字符串"}
 			c.words = append(c.words, storeIntegerSlot(uint32(register+1), 19, offset+8))
 		default:
-			slots[parameter.text] = offset
-			environment[parameter.text] = constantValue{kind: "运行时整数"}
+			slots[parameter.text] = offset; environment[parameter.text] = constantValue{kind: "运行时整数"}
 		}
 	}
+	if returnsRuntimeText {
+		c.words = append(c.words, movz(0, 0), storeIntegerSlot(0, 19, textResult.tag), storeIntegerSlot(0, 19, textResult.value), storeIntegerSlot(0, 19, textResult.pointer), storeIntegerSlot(0, 19, textResult.length))
+	}
 	c.resultSlots = resultSlots
-	if function.runtimeReturnsResult {
+	if returnsRuntimeText {
+		c.resultSlots["__runtime_text_return"] = textResult
+		if err := c.emitRuntimeResultValue("__runtime_text_return", function.body, environment, slots, textResult); err != nil {
+			return err
+		}
+	} else if function.runtimeReturnsResult {
 		if err := c.emitRuntimeResultRegisters(function.body, environment, slots); err != nil {
 			return err
 		}
@@ -462,44 +512,32 @@ func (c *windowCode) emitRuntimeFunctionBody(function functionDecl, constants ma
 			return err
 		}
 	}
-	c.words = append(c.words, addImmediate(31, 29, 0), loadIntegerSlot(19, 31, 16), loadIntegerSlot(30, 31, 8), loadIntegerSlot(29, 31, 0), addImmediate(31, 31, 32), 0xd65f03c0)
-	c.emitRuntimeFailureBlock(c.exitIndex)
+	c.words = append(c.words, addImmediate(31, 29, 0), loadIntegerSlot(19, 31, 16), loadIntegerSlot(30, 31, 8), loadIntegerSlot(29, 31, 0), addImmediate(31, 31, 32), 0xd65f03c0); c.emitRuntimeFailureBlock(c.exitIndex)
 	c.failurePatches = previousFailurePatches
 	return nil
 }
-
 func (c *windowCode) emitRuntimeStatementFunctionBody(function functionDecl, constants map[string]constantValue) error {
-	slots := map[string]uint32{}
-	textBuffers := map[string]uint32{}
-	textLengths := map[string]uint32{}
-	textCapacities := map[string]uint32{}
-	parameterTypes := runtimeFunctionParameterTypes(function)
-	parameterPayloads := runtimeFunctionParameterPayloads(function)
-	parameterNames := map[string]bool{}
-	parameterResultSlots := map[string]resultSlot{}
-	hasTextLocals := false
-	stateCount := 0
+	slots := map[string]uint32{}; textBuffers := map[string]uint32{}
+	textLengths := map[string]uint32{}; textCapacities := map[string]uint32{}
+	parameterTypes := runtimeFunctionParameterTypes(function); parameterPayloads := runtimeFunctionParameterPayloads(function)
+	parameterNames := map[string]bool{}; parameterResultSlots := map[string]resultSlot{}
+	hasTextLocals := false; stateCount := 0
 	argumentRegister := 0
 	for index, parameter := range function.parameters {
 		parameterNames[parameter.text] = true
 		if parameterTypes[index] == "运行时字符串" {
-			offset := uint32(stateCount * 8)
-			textBuffers[parameter.text] = offset
-			textLengths[parameter.text] = offset + 8
-			stateCount += 2
+			offset := uint32(stateCount * 8); textBuffers[parameter.text] = offset
+			textLengths[parameter.text] = offset + 8; stateCount += 2
 			argumentRegister += 2
 			continue
 		}
 		if parameterTypes[index] == "运行时结果" {
-			offset := uint32(stateCount * 8)
-			parameterResultSlots[parameter.text] = resultSlot{tag: offset, value: offset + 8}
+			offset := uint32(stateCount * 8); parameterResultSlots[parameter.text] = resultSlot{tag: offset, value: offset + 8}
 			if isTextResultPayload(parameterPayloads[index]) {
-				parameterResultSlots[parameter.text] = resultSlot{tag: offset, value: offset + 8, pointer: offset + 16, length: offset + 24, text: true}
-				stateCount += 4
+				parameterResultSlots[parameter.text] = resultSlot{tag: offset, value: offset + 8, pointer: offset + 16, length: offset + 24, text: true}; stateCount += 4
 				argumentRegister += 4
 			} else {
-				stateCount += 2
-				argumentRegister += 2
+				stateCount += 2; argumentRegister += 2
 			}
 			continue
 		}
@@ -507,28 +545,22 @@ func (c *windowCode) emitRuntimeStatementFunctionBody(function functionDecl, con
 		stateCount++
 		argumentRegister++
 	}
-	localNames := functionLocalNames(function.statements)
-	localResultSlots := map[string]resultSlot{}
+	localNames := functionLocalNames(function.statements); localResultSlots := map[string]resultSlot{}
 	for _, name := range localNames {
 		if parameterNames[name] {
 			return fmt.Errorf("运行时函数局部变量与参数重名：%s", name)
 		}
 		if runtimeStatementLocalType(function, name) == "运行时字符串" {
-			hasTextLocals = true
-			offset := uint32(stateCount * 8)
-			textBuffers[name] = offset
-			textLengths[name] = offset + 8
-			textCapacities[name] = offset + 16
-			stateCount += 3
+			hasTextLocals = true; offset := uint32(stateCount * 8)
+			textBuffers[name] = offset; textLengths[name] = offset + 8
+			textCapacities[name] = offset + 16; stateCount += 3
 			continue
 		}
 		if runtimeStatementLocalType(function, name) == "运行时结果" {
-			offset := uint32(stateCount * 8)
-			payload := function.localResultPayloads[name]
+			offset := uint32(stateCount * 8); payload := function.localResultPayloads[name]
 			result := resultSlot{tag: offset, value: offset + 8, text: isTextResultPayload(payload), runtimeText: payload == "运行时文本"}
 			if result.text {
-				result.pointer = offset + 16
-				result.length = offset + 24
+				result.pointer = offset + 16; result.length = offset + 24
 				stateCount += 4
 			} else {
 				stateCount += 2
@@ -549,24 +581,20 @@ func (c *windowCode) emitRuntimeStatementFunctionBody(function functionDecl, con
 	if level := statementsNeedRuntimeTextConcatScratch(function.statements); level > 0 {
 		temporarySize = runtimeTextConcatBaseScratch + runtimeTextConcatScratchStride*level
 	}
-	frameSize := uint32(alignOffset(stateCount*8+int(temporarySize), 16))
-	c.words = append(c.words, subImmediate(31, 31, 32), storeIntegerSlot(29, 31, 0), storeIntegerSlot(30, 31, 8), storeIntegerSlot(19, 31, 16), addImmediate(29, 31, 0))
+	frameSize := uint32(alignOffset(stateCount*8+int(temporarySize), 16)); c.words = append(c.words, subImmediate(31, 31, 32), storeIntegerSlot(29, 31, 0), storeIntegerSlot(30, 31, 8), storeIntegerSlot(19, 31, 16), addImmediate(29, 31, 0))
 	if frameSize != 0 {
 		c.words = append(c.words, subImmediate(31, 31, frameSize))
 	}
-	c.words = append(c.words, addImmediate(19, 31, 0))
-	argumentRegister = 0
+	c.words = append(c.words, addImmediate(19, 31, 0)); argumentRegister = 0
 	for index, parameter := range function.parameters {
 		if parameterTypes[index] == "运行时字符串" {
-			c.words = append(c.words, storeIntegerSlot(uint32(argumentRegister), 19, textBuffers[parameter.text]), storeIntegerSlot(uint32(argumentRegister+1), 19, textLengths[parameter.text]))
-			argumentRegister += 2
+			c.words = append(c.words, storeIntegerSlot(uint32(argumentRegister), 19, textBuffers[parameter.text]), storeIntegerSlot(uint32(argumentRegister+1), 19, textLengths[parameter.text])); argumentRegister += 2
 			continue
 		}
 		if result, exists := parameterResultSlots[parameter.text]; exists {
 			c.words = append(c.words, storeIntegerSlot(uint32(argumentRegister), 19, result.tag), storeIntegerSlot(uint32(argumentRegister+1), 19, result.value))
 			if result.text {
-				c.words = append(c.words, storeIntegerSlot(uint32(argumentRegister+2), 19, result.pointer), storeIntegerSlot(uint32(argumentRegister+3), 19, result.length))
-				argumentRegister += 4
+				c.words = append(c.words, storeIntegerSlot(uint32(argumentRegister+2), 19, result.pointer), storeIntegerSlot(uint32(argumentRegister+3), 19, result.length)); argumentRegister += 4
 			} else {
 				argumentRegister += 2
 			}
@@ -578,15 +606,10 @@ func (c *windowCode) emitRuntimeStatementFunctionBody(function functionDecl, con
 	if argumentRegister > 8 {
 		return fmt.Errorf("运行时函数参数超过 ARM64 展平寄存器 ABI")
 	}
-	previousResultSlots := c.resultSlots
-	previousTextBuffers := c.textBuffers
-	previousTextLengths := c.textLengths
-	previousTextCapacities := c.textCapacities
-	previousTemporaryBufferOffset := c.temporaryBufferOffset
-	previousFailurePatches := c.failurePatches
-	c.failurePatches = nil
-	c.temporaryBufferOffset = uint32(stateCount * 8)
-	// Result slots are frame-local; inherited same-named slots would resolve here.
+	previousResultSlots := c.resultSlots; previousTextBuffers := c.textBuffers
+	previousTextLengths := c.textLengths; previousTextCapacities := c.textCapacities
+	previousTemporaryBufferOffset := c.temporaryBufferOffset; previousFailurePatches := c.failurePatches
+	c.failurePatches = nil; c.temporaryBufferOffset = uint32(stateCount * 8)
 	c.resultSlots = map[string]resultSlot{}
 	for name, result := range parameterResultSlots {
 		c.resultSlots[name] = result
@@ -594,8 +617,7 @@ func (c *windowCode) emitRuntimeStatementFunctionBody(function functionDecl, con
 	for name, result := range localResultSlots {
 		c.resultSlots[name] = result
 	}
-	c.textBuffers = textBuffers
-	c.textLengths = textLengths
+	c.textBuffers = textBuffers; c.textLengths = textLengths
 	c.textCapacities = textCapacities
 	if hasTextLocals {
 		c.words = append(c.words, movz(0, 0))
@@ -618,10 +640,8 @@ func (c *windowCode) emitRuntimeStatementFunctionBody(function functionDecl, con
 			}
 		}
 	}
-	returns := []int{}
-	statements := function.statements
+	returns := []int{}; statements := function.statements
 	if function.runtimeReturnsText {
-		// The only return is the final statement and its local owns the mapping.
 		statements = statements[:len(statements)-1]
 	}
 	if err := c.emitRuntimeFunctionStatements(function, statements, constants, slots, &returns); err != nil {
@@ -637,20 +657,14 @@ func (c *windowCode) emitRuntimeStatementFunctionBody(function functionDecl, con
 		return err
 	}
 	if function.runtimeReturnsText {
-		name := function.runtimeReturnLocal
-		c.words = append(c.words, loadIntegerSlot(1, 19, textBuffers[name]), loadIntegerSlot(2, 19, textLengths[name]), loadIntegerSlot(3, 19, textCapacities[name]), movz(0, 0))
+		name := function.runtimeReturnLocal; c.words = append(c.words, loadIntegerSlot(1, 19, textBuffers[name]), loadIntegerSlot(2, 19, textLengths[name]), loadIntegerSlot(3, 19, textCapacities[name]), movz(0, 0))
 	}
-	c.words = append(c.words, addImmediate(31, 29, 0), loadIntegerSlot(19, 31, 16), loadIntegerSlot(30, 31, 8), loadIntegerSlot(29, 31, 0), addImmediate(31, 31, 32), 0xd65f03c0)
-	c.emitRuntimeFailureBlock(c.exitIndex)
-	c.failurePatches = previousFailurePatches
-	c.resultSlots = previousResultSlots
-	c.textBuffers = previousTextBuffers
-	c.textLengths = previousTextLengths
-	c.textCapacities = previousTextCapacities
-	c.temporaryBufferOffset = previousTemporaryBufferOffset
+	c.words = append(c.words, addImmediate(31, 29, 0), loadIntegerSlot(19, 31, 16), loadIntegerSlot(30, 31, 8), loadIntegerSlot(29, 31, 0), addImmediate(31, 31, 32), 0xd65f03c0); c.emitRuntimeFailureBlock(c.exitIndex)
+	c.failurePatches = previousFailurePatches; c.resultSlots = previousResultSlots
+	c.textBuffers = previousTextBuffers; c.textLengths = previousTextLengths
+	c.textCapacities = previousTextCapacities; c.temporaryBufferOffset = previousTemporaryBufferOffset
 	return nil
 }
-
 func (c *windowCode) emitRuntimeTextLocalCleanup(function functionDecl) error {
 	names := []string{}
 	for _, name := range functionLocalNames(function.statements) {
@@ -663,23 +677,18 @@ func (c *windowCode) emitRuntimeTextLocalCleanup(function functionDecl) error {
 	}
 	c.words = append(c.words, subImmediate(31, 31, 16), storeIntegerSlot(0, 31, 0))
 	for _, name := range names {
-		pointer, pointerExists := c.textBuffers[name]
-		capacity, capacityExists := c.textCapacities[name]
+		pointer, pointerExists := c.textBuffers[name]; capacity, capacityExists := c.textCapacities[name]
 		if !pointerExists || !capacityExists {
 			return fmt.Errorf("无法清理运行时文本局部变量：%s", name)
 		}
-		c.words = append(c.words, loadIntegerSlot(1, 19, pointer), compareImmediate(1, 0))
-		uninitialized := c.conditionalPlaceholder(0)
-		c.words = append(c.words, loadIntegerSlot(0, 19, pointer), loadIntegerSlot(1, 19, capacity))
-		c.call(c.arrayUnmapIndex)
-		c.words = append(c.words, compareImmediate(0, 0))
-		c.branchToRuntimeFailure(1)
+		c.words = append(c.words, loadIntegerSlot(1, 19, pointer), compareImmediate(1, 0)); uninitialized := c.conditionalPlaceholder(0)
+		c.words = append(c.words, loadIntegerSlot(0, 19, pointer), loadIntegerSlot(1, 19, capacity)); c.call(c.arrayUnmapIndex)
+		c.words = append(c.words, compareImmediate(0, 0)); c.branchToRuntimeFailure(1)
 		c.patchConditional(uninitialized, len(c.words))
 	}
 	c.words = append(c.words, loadIntegerSlot(0, 31, 0), addImmediate(31, 31, 16))
 	return nil
 }
-
 func (c *windowCode) emitResultValueRegisters(input value, constants map[string]constantValue, slots map[string]uint32) error {
 	if input.kind == "引用" {
 		if result, exists := c.resultSlots[input.text]; exists {
@@ -692,6 +701,17 @@ func (c *windowCode) emitResultValueRegisters(input value, constants map[string]
 			return nil
 		}
 	}
+	if runtimeResultPayload(input, constants) == "运行时文本" && runtimeResultOperandShape(input) {
+		base := c.temporaryBufferOffset; result := resultSlot{tag: base, value: base + 8, pointer: base + 16, length: base + 24, text: true, runtimeText: true}
+		c.words = append(c.words, movz(0, 0), storeIntegerSlot(0, 19, result.tag), storeIntegerSlot(0, 19, result.value), storeIntegerSlot(0, 19, result.pointer), storeIntegerSlot(0, 19, result.length)); previousTemporary := c.temporaryBufferOffset
+		c.temporaryBufferOffset = base + 32; err := c.emitRuntimeResultValue("__direct_text_result", input, constants, slots, result)
+		c.temporaryBufferOffset = previousTemporary
+		if err != nil {
+			return err
+		}
+		c.words = append(c.words, storeIntegerSlot(0, 19, result.tag), storeIntegerSlot(1, 19, result.value), storeIntegerSlot(2, 19, result.pointer), storeIntegerSlot(3, 19, result.length)); c.words = append(c.words, loadIntegerSlot(0, 19, result.tag), loadIntegerSlot(1, 19, result.value), loadIntegerSlot(2, 19, result.pointer), loadIntegerSlot(3, 19, result.length))
+		return nil
+	}
 	if runtimeResultOperandShape(input) {
 		if err := c.emitRuntimeResultRegisters(input, constants, slots); err != nil {
 			return err
@@ -703,7 +723,32 @@ func (c *windowCode) emitResultValueRegisters(input value, constants map[string]
 	}
 	return fmt.Errorf("运行时结果函数返回必须是结果局部或成功/失败调用")
 }
-
+func (c *windowCode) emitResultFailureFlag(releaseText bool) {
+	c.words = append(c.words, subImmediate(31, 31, 32), storeIntegerSlot(0, 31, 0), storeIntegerSlot(1, 31, 8), storeIntegerSlot(2, 31, 16))
+	if releaseText {
+		c.words = append(c.words, compareImmediate(0, 1)); keep := c.conditionalPlaceholder(1)
+		c.words = append(c.words, loadIntegerSlot(0, 31, 16), loadIntegerSlot(1, 31, 8)); c.call(c.arrayUnmapIndex)
+		c.words = append(c.words, compareImmediate(0, 0)); c.branchToRuntimeFailure(1)
+		c.patchConditional(keep, len(c.words))
+	}
+	c.words = append(c.words, loadIntegerSlot(0, 31, 0), compareImmediate(0, 1)); failed := c.conditionalPlaceholder(0)
+	c.movImmediate(0, 0); done := c.unconditionalPlaceholder()
+	c.patchConditional(failed, len(c.words)); c.movImmediate(0, 1)
+	c.words[done] = branch(len(c.words) - done); c.words = append(c.words, addImmediate(31, 31, 32))
+}
+func (c *windowCode) emitResultErrorCode(releaseText bool) {
+	c.words = append(c.words, subImmediate(31, 31, 32), storeIntegerSlot(0, 31, 0), storeIntegerSlot(1, 31, 8), storeIntegerSlot(2, 31, 16))
+	if releaseText {
+		c.words = append(c.words, compareImmediate(0, 1)); keep := c.conditionalPlaceholder(1)
+		c.words = append(c.words, loadIntegerSlot(0, 31, 16), loadIntegerSlot(1, 31, 8)); c.call(c.arrayUnmapIndex)
+		c.words = append(c.words, compareImmediate(0, 0)); c.branchToRuntimeFailure(1)
+		c.patchConditional(keep, len(c.words))
+	}
+	c.words = append(c.words, loadIntegerSlot(0, 31, 0), loadIntegerSlot(1, 31, 8), compareImmediate(0, 0)); success := c.conditionalPlaceholder(0)
+	c.movRegister(0, 1); done := c.unconditionalPlaceholder()
+	c.patchConditional(success, len(c.words)); c.movImmediate(0, 0)
+	c.words[done] = branch(len(c.words) - done); c.words = append(c.words, addImmediate(31, 31, 32))
+}
 func (c *windowCode) emitRuntimeFunctionStatements(function functionDecl, statements []statement, constants map[string]constantValue, slots map[string]uint32, returns *[]int) error {
 	for _, item := range statements {
 		switch item.kind {
@@ -740,15 +785,13 @@ func (c *windowCode) emitRuntimeFunctionStatements(function functionDecl, statem
 				c.patchConditionFalse(falsePatches, len(c.words))
 				continue
 			}
-			end := c.unconditionalPlaceholder()
-			c.patchConditionFalse(falsePatches, len(c.words))
+			end := c.unconditionalPlaceholder(); c.patchConditionFalse(falsePatches, len(c.words))
 			if err := c.emitRuntimeFunctionStatements(function, item.otherwise, constants, slots, returns); err != nil {
 				return err
 			}
 			c.words[end] = branch(len(c.words) - end)
 		case "凡":
-			loopStart := len(c.words)
-			c.loopTargets = append(c.loopTargets, loopTarget{continueAt: loopStart})
+			loopStart := len(c.words); c.loopTargets = append(c.loopTargets, loopTarget{continueAt: loopStart})
 			falsePatches, err := c.emitConditionFalseBranches(item.condition, constants, slots)
 			if err != nil {
 				return err
@@ -756,8 +799,7 @@ func (c *windowCode) emitRuntimeFunctionStatements(function functionDecl, statem
 			if err := c.emitRuntimeLoopStatements(function, item.body, constants, slots, returns); err != nil {
 				return err
 			}
-			c.words = append(c.words, branch(loopStart-len(c.words)))
-			c.patchConditionFalse(falsePatches, len(c.words))
+			c.words = append(c.words, branch(loopStart-len(c.words))); c.patchConditionFalse(falsePatches, len(c.words))
 			c.finishLoop()
 		case "返回":
 			if function.runtimeReturnsResult {
@@ -773,15 +815,13 @@ func (c *windowCode) emitRuntimeFunctionStatements(function functionDecl, statem
 			} else if err := c.emitRuntimeInteger(item.value, constants, slots); err != nil {
 				return err
 			}
-			position := c.unconditionalPlaceholder()
-			*returns = append(*returns, position)
+			position := c.unconditionalPlaceholder(); *returns = append(*returns, position)
 		default:
 			return fmt.Errorf("不支持的运行时函数语句：%s", item.kind)
 		}
 	}
 	return nil
 }
-
 func (c *windowCode) emitRuntimeLoopStatements(function functionDecl, statements []statement, constants map[string]constantValue, slots map[string]uint32, returns *[]int) error {
 	for _, item := range statements {
 		switch item.kind {
@@ -794,21 +834,18 @@ func (c *windowCode) emitRuntimeLoopStatements(function functionDecl, statements
 			if len(c.loopTargets) == 0 {
 				return fmt.Errorf("运行时跳出语句没有所在循环")
 			}
-			position := c.unconditionalPlaceholder()
-			last := len(c.loopTargets) - 1
+			position := c.unconditionalPlaceholder(); last := len(c.loopTargets) - 1
 			c.loopTargets[last].breaks = append(c.loopTargets[last].breaks, position)
 		case "继续":
 			if len(c.loopTargets) == 0 {
 				return fmt.Errorf("运行时继续语句没有所在循环")
 			}
-			target := c.loopTargets[len(c.loopTargets)-1].continueAt
-			c.words = append(c.words, branch(target-len(c.words)))
+			target := c.loopTargets[len(c.loopTargets)-1].continueAt; c.words = append(c.words, branch(target-len(c.words)))
 		case "返回":
 			if err := c.emitRuntimeInteger(item.value, constants, slots); err != nil {
 				return err
 			}
-			position := c.unconditionalPlaceholder()
-			*returns = append(*returns, position)
+			position := c.unconditionalPlaceholder(); *returns = append(*returns, position)
 		case "若":
 			falsePatches, err := c.emitConditionFalseBranches(item.condition, constants, slots)
 			if err != nil {
@@ -821,15 +858,13 @@ func (c *windowCode) emitRuntimeLoopStatements(function functionDecl, statements
 				c.patchConditionFalse(falsePatches, len(c.words))
 				continue
 			}
-			end := c.unconditionalPlaceholder()
-			c.patchConditionFalse(falsePatches, len(c.words))
+			end := c.unconditionalPlaceholder(); c.patchConditionFalse(falsePatches, len(c.words))
 			if err := c.emitRuntimeLoopStatements(function, item.otherwise, constants, slots, returns); err != nil {
 				return err
 			}
 			c.words[end] = branch(len(c.words) - end)
 		case "凡":
-			loopStart := len(c.words)
-			c.loopTargets = append(c.loopTargets, loopTarget{continueAt: loopStart})
+			loopStart := len(c.words); c.loopTargets = append(c.loopTargets, loopTarget{continueAt: loopStart})
 			falsePatches, err := c.emitConditionFalseBranches(item.condition, constants, slots)
 			if err != nil {
 				return err
@@ -837,8 +872,7 @@ func (c *windowCode) emitRuntimeLoopStatements(function functionDecl, statements
 			if err := c.emitRuntimeLoopStatements(function, item.body, constants, slots, returns); err != nil {
 				return err
 			}
-			c.words = append(c.words, branch(loopStart-len(c.words)))
-			c.patchConditionFalse(falsePatches, len(c.words))
+			c.words = append(c.words, branch(loopStart-len(c.words))); c.patchConditionFalse(falsePatches, len(c.words))
 			c.finishLoop()
 		default:
 			return fmt.Errorf("不支持的运行时循环体语句：%s", item.kind)
@@ -846,13 +880,9 @@ func (c *windowCode) emitRuntimeLoopStatements(function functionDecl, statements
 	}
 	return nil
 }
-
 func (c *windowCode) emitRuntimeResultRegisters(input value, constants map[string]constantValue, slots map[string]uint32) error {
 	if input.kind == "引用" {
 		if result, exists := c.resultSlots[input.text]; exists && !result.text {
-			// A result pair returns as x0=tag and x1=payload, matching 成功/失败.
-			// x2/x3 carry text-return descriptors and must be zero for integer
-			// result state forwarded through an ARM64 call frame.
 			c.words = append(c.words, loadIntegerSlot(0, 19, result.tag), loadIntegerSlot(1, 19, result.value), movz(2, 0), movz(3, 0))
 			return nil
 		}
@@ -872,8 +902,7 @@ func (c *windowCode) emitRuntimeResultRegisters(input value, constants map[strin
 			if err := c.emitRuntimeResultRegisters(input.args[1], constants, slots); err != nil {
 				return err
 			}
-			end := c.unconditionalPlaceholder()
-			c.patchConditionFalse(falsePatches, len(c.words))
+			end := c.unconditionalPlaceholder(); c.patchConditionFalse(falsePatches, len(c.words))
 			if err := c.emitRuntimeResultRegisters(input.args[2], constants, slots); err != nil {
 				return err
 			}
@@ -892,10 +921,8 @@ func (c *windowCode) emitRuntimeResultRegisters(input value, constants map[strin
 			} else {
 				c.words = append(c.words, compareImmediate(0, 1))
 			}
-			success := c.conditionalPlaceholder(1)
-			c.movImmediate(0, 1)
-			c.patchConditional(success, len(c.words))
-			c.words = append(c.words, movz(1, 0), movz(2, 0), movz(3, 0))
+			success := c.conditionalPlaceholder(1); c.movImmediate(0, 1)
+			c.patchConditional(success, len(c.words)); c.words = append(c.words, movz(1, 0), movz(2, 0), movz(3, 0))
 			return nil
 		}
 		if input.text == "错误码" && len(input.args) == 1 && (input.args[0].kind == "引用" || runtimeResultOperandShape(input.args[0])) {
@@ -910,10 +937,8 @@ func (c *windowCode) emitRuntimeResultRegisters(input value, constants map[strin
 			} else {
 				c.words = append(c.words, movz(1, 0), compareImmediate(1, 0))
 			}
-			success := c.conditionalPlaceholder(1)
-			c.movImmediate(0, 1)
-			c.patchConditional(success, len(c.words))
-			c.words = append(c.words, movz(1, 0), movz(2, 0), movz(3, 0))
+			success := c.conditionalPlaceholder(1); c.movImmediate(0, 1)
+			c.patchConditional(success, len(c.words)); c.words = append(c.words, movz(1, 0), movz(2, 0), movz(3, 0))
 			return nil
 		}
 		if input.text == "成功" && len(input.args) == 1 {
@@ -923,12 +948,9 @@ func (c *windowCode) emitRuntimeResultRegisters(input value, constants map[strin
 					if result.text {
 						return fmt.Errorf("递归运行时函数暂只支持整数载荷结果转发")
 					}
-					// Re-wrapping an existing integer result preserves its tag/payload
-					// pair instead of treating the reference as an integer payload.
 					c.words = append(c.words, loadIntegerSlot(0, 19, result.tag), loadIntegerSlot(1, 19, result.value), movz(2, 0), movz(3, 0))
 					return nil
 				}
-				// A plain reference is an integer payload, not a result pair.
 				if err := c.emitRuntimeInteger(argument, constants, slots); err != nil {
 					return err
 				}
@@ -967,13 +989,11 @@ func (c *windowCode) emitRuntimeResultRegisters(input value, constants map[strin
 				if problem != nil {
 					return fmt.Errorf("无法计算递归运行时函数的文本结果载荷：%w", problem)
 				}
-				label := fmt.Sprintf("runtimeFunctionResultText%d", len(c.dataLabels))
-				c.addData(label, append([]byte(text), '\n'), 1)
+				label := fmt.Sprintf("runtimeFunctionResultText%d", len(c.dataLabels)); c.addData(label, append([]byte(text), '\n'), 1)
 				if err := c.emitRegisterImmediate(3, int64(len(text))); err != nil {
 					return err
 				}
-				c.address(label, 2)
-				c.words = append(c.words, movz(0, 0), movz(1, 0))
+				c.address(label, 2); c.words = append(c.words, movz(0, 0), movz(1, 0))
 				return nil
 			}
 			return fmt.Errorf("递归运行时函数暂只支持整数或编译期文本成功载荷")
@@ -982,18 +1002,14 @@ func (c *windowCode) emitRuntimeResultRegisters(input value, constants map[strin
 			if err := c.emitRuntimeInteger(input.args[0], constants, slots); err != nil {
 				return err
 			}
-			// Validate the exit code, then return result(tag=1, value=payload).
-			c.words = append(c.words, compareImmediate(0, 1))
-			c.branchToRuntimeFailure(11)
-			c.words = append(c.words, compareImmediate(0, 255))
-			c.branchToRuntimeFailure(8)
+			c.words = append(c.words, compareImmediate(0, 1)); c.branchToRuntimeFailure(11)
+			c.words = append(c.words, compareImmediate(0, 255)); c.branchToRuntimeFailure(8)
 			c.words = append(c.words, 0xaa0003e1, movz(0, 1), movz(2, 0), movz(3, 0))
 			return nil
 		}
 	}
 	return fmt.Errorf("递归运行时结果函数需要成功、失败、ifElse 或运行时函数调用表达式")
 }
-
 func (c *windowCode) emitRuntimeFunctionCall(input value, constants map[string]constantValue, slots map[string]uint32) error {
 	argumentTypes := input.runtimeArgumentTypes
 	if len(argumentTypes) == 0 {
@@ -1027,8 +1043,7 @@ func (c *windowCode) emitRuntimeFunctionCall(input value, constants map[string]c
 	if registerCount > 8 {
 		return fmt.Errorf("运行时函数调用超过 ARM64 展平寄存器 ABI")
 	}
-	parameterOffsets := runtimeFunctionParameterOffsets(argumentTypes, argumentPayloads)
-	argumentBytes := runtimeFunctionParameterBytes(argumentTypes, argumentPayloads)
+	parameterOffsets := runtimeFunctionParameterOffsets(argumentTypes, argumentPayloads); argumentBytes := runtimeFunctionParameterBytes(argumentTypes, argumentPayloads)
 	if argumentBytes != 0 {
 		c.words = append(c.words, subImmediate(31, 31, argumentBytes))
 	}
@@ -1075,17 +1090,14 @@ func (c *windowCode) emitRuntimeFunctionCall(input value, constants map[string]c
 	for index, argumentType := range argumentTypes {
 		offset := parameterOffsets[index]
 		if argumentType == "运行时字符串" {
-			c.words = append(c.words, loadIntegerSlot(uint32(registerIndex), 31, offset), loadIntegerSlot(uint32(registerIndex+1), 31, offset+8))
-			registerIndex += 2
+			c.words = append(c.words, loadIntegerSlot(uint32(registerIndex), 31, offset), loadIntegerSlot(uint32(registerIndex+1), 31, offset+8)); registerIndex += 2
 			continue
 		}
 		if argumentType == "运行时结果" {
 			if index < len(argumentPayloads) && isTextResultPayload(argumentPayloads[index]) {
-				c.words = append(c.words, loadIntegerSlot(uint32(registerIndex), 31, offset), loadIntegerSlot(uint32(registerIndex+1), 31, offset+8), loadIntegerSlot(uint32(registerIndex+2), 31, offset+16), loadIntegerSlot(uint32(registerIndex+3), 31, offset+24))
-				registerIndex += 4
+				c.words = append(c.words, loadIntegerSlot(uint32(registerIndex), 31, offset), loadIntegerSlot(uint32(registerIndex+1), 31, offset+8), loadIntegerSlot(uint32(registerIndex+2), 31, offset+16), loadIntegerSlot(uint32(registerIndex+3), 31, offset+24)); registerIndex += 4
 			} else {
-				c.words = append(c.words, loadIntegerSlot(uint32(registerIndex), 31, offset), loadIntegerSlot(uint32(registerIndex+1), 31, offset+8))
-				registerIndex += 2
+				c.words = append(c.words, loadIntegerSlot(uint32(registerIndex), 31, offset), loadIntegerSlot(uint32(registerIndex+1), 31, offset+8)); registerIndex += 2
 			}
 			continue
 		}
@@ -1095,12 +1107,10 @@ func (c *windowCode) emitRuntimeFunctionCall(input value, constants map[string]c
 	if argumentBytes != 0 {
 		c.words = append(c.words, addImmediate(31, 31, argumentBytes))
 	}
-	position := len(c.words)
-	c.words = append(c.words, 0)
+	position := len(c.words); c.words = append(c.words, 0)
 	c.runtimeCallPatches = append(c.runtimeCallPatches, runtimeCallPatch{position: position, name: input.text})
 	return nil
 }
-
 func (c *windowCode) patchRuntimeCalls() error {
 	for _, patch := range c.runtimeCallPatches {
 		target, exists := c.runtimeFunctionAt[patch.name]
@@ -1111,9 +1121,6 @@ func (c *windowCode) patchRuntimeCalls() error {
 	}
 	return nil
 }
-
-// writeConsoleMachO emits integer state and expressions as arm64 instructions.
-// The generated executable formats and writes the result through libSystem.
 func writeConsoleMachO(path string, expression value, constants map[string]constantValue, statements []statement, runtimeFunctions map[string]functionDecl, runtimeFunctionNames []string) error {
 	if runtime.GOOS != "darwin" || runtime.GOARCH != "arm64" {
 		return fmt.Errorf("当前后端只支持 macOS arm64")
@@ -1138,14 +1145,11 @@ func writeConsoleMachO(path string, expression value, constants map[string]const
 	return nil
 }
 func makeConsoleMachO(expression value, constants map[string]constantValue, statements []statement, runtimeFunctions map[string]functionDecl, runtimeFunctionNames []string) ([]byte, error) {
-	imports := []importedSymbol{{"_write", 1}, {"_exit", 1}}
-	usesRootInput := containsRuntimeIntegerInput(expression) || containsRuntimeTextInput(expression) || statementsUseRuntimeIntegerInput(statements) || statementsUseRuntimeTextInput(statements)
-	usesInput := usesRootInput || runtimeFunctionsUseSyscall(runtimeFunctions, "readInteger") || runtimeFunctionsUseSyscall(runtimeFunctions, "readText")
-	usesFileRead := containsRuntimeFileRead(expression, false) || statementsUseRuntimeFileRead(statements, false) || runtimeFunctionsUseFileRead(runtimeFunctions, false)
-	usesModuleRead := containsRuntimeFileRead(expression, true) || statementsUseRuntimeFileRead(statements, true) || runtimeFunctionsUseFileRead(runtimeFunctions, true)
-	usesFileWrite := containsRuntimeFileWrite(expression) || statementsUseRuntimeFileWrite(statements) || runtimeFunctionsUseFileWrite(runtimeFunctions)
-	usesArguments := containsRuntimeArguments(expression) || statementsUseRuntimeArguments(statements) || runtimeFunctionsUseArguments(runtimeFunctions)
-	usesMappedMemory := statementsUseRuntimeArray(statements) || statementsUseRuntimeMap(statements) || statementsUseRuntimeTextStorage(statements) || runtimeFunctionsUseMappedMemory(runtimeFunctions) || runtimeFunctionsUseSyscall(runtimeFunctions, "readFile") || runtimeFunctionsUseSyscall(runtimeFunctions, "readModule") || runtimeFunctionsUseSyscall(runtimeFunctions, "readModuleResult")
+	imports := []importedSymbol{{"_write", 1}, {"_exit", 1}}; usesRootInput := containsRuntimeIntegerInput(expression) || containsRuntimeTextInput(expression) || statementsUseRuntimeIntegerInput(statements) || statementsUseRuntimeTextInput(statements)
+	usesInput := usesRootInput || runtimeFunctionsUseSyscall(runtimeFunctions, "readInteger") || runtimeFunctionsUseSyscall(runtimeFunctions, "readText"); usesFileRead := containsRuntimeFileRead(expression, false) || statementsUseRuntimeFileRead(statements, false) || runtimeFunctionsUseFileRead(runtimeFunctions, false)
+	usesModuleRead := containsRuntimeFileRead(expression, true) || statementsUseRuntimeFileRead(statements, true) || runtimeFunctionsUseFileRead(runtimeFunctions, true); usesFileWrite := containsRuntimeFileNamed(expression, "write") || containsRuntimeFileNamed(expression, "writeFile") || statementsUseRuntimeFileNamed(statements, "write") || runtimeFunctionsUseFileNamed(runtimeFunctions, "write")
+	usesArguments := containsRuntimeArguments(expression) || statementsUseRuntimeArguments(statements) || runtimeFunctionsUseArguments(runtimeFunctions); usesEnvironment := containsRuntimeEnvironmentRead(expression) || statementsUseRuntimeEnvironmentRead(statements) || runtimeFunctionsUseEnvironmentRead(runtimeFunctions); usesEnvironmentNames := containsRuntimeEnvironmentNames(expression) || statementsUseRuntimeEnvironmentNames(statements) || runtimeFunctionsUseEnvironmentNames(runtimeFunctions)
+	usesMappedMemory := containsDirectRuntimeTextResultExtraction(expression, constants) || statementsUseRuntimeArray(statements) || statementsUseRuntimeMap(statements) || statementsUseRuntimeTextStorage(statements) && !statementsUseOnlyBorrowedEnvironmentText(statements) || runtimeFunctionsUseMappedMemory(runtimeFunctions) || runtimeFunctionsUseSyscall(runtimeFunctions, "readFile") || runtimeFunctionsUseSyscall(runtimeFunctions, "readModule") || runtimeFunctionsUseSyscall(runtimeFunctions, "readModuleResult")
 	if usesInput || usesFileRead {
 		imports = append([]importedSymbol{{"_read", 1}}, imports...)
 	}
@@ -1155,23 +1159,56 @@ func makeConsoleMachO(expression value, constants map[string]constantValue, stat
 	if usesModuleRead {
 		imports = append(imports, importedSymbol{"_openat", 1}, importedSymbol{"_fcntl", 1}, importedSymbol{"_fstat", 1}, importedSymbol{"___error", 1})
 	}
-	if usesFileWrite {
+	if containsRuntimeFileNamed(expression, "fileSize") || statementsUseRuntimeFileNamed(statements, "fileSize") || runtimeFunctionsUseFileNamed(runtimeFunctions, "fileSize") {
+		imports = append(imports, importedSymbol{"_open", 1}, importedSymbol{"_fstat", 1}, importedSymbol{"_close", 1})
+	}
+	if containsRuntimeFileNamed(expression, "exists") || statementsUseRuntimeFileNamed(statements, "exists") || runtimeFunctionsUseFileNamed(runtimeFunctions, "exists") {
+		imports = append(imports, importedSymbol{"_open", 1}, importedSymbol{"_fstat", 1}, importedSymbol{"_close", 1})
+	}
+	if containsRuntimeFileNamed(expression, "isDirectory") || statementsUseRuntimeFileNamed(statements, "isDirectory") || runtimeFunctionsUseFileNamed(runtimeFunctions, "isDirectory") {
+		imports = append(imports, importedSymbol{"_open", 1}, importedSymbol{"_fstat", 1}, importedSymbol{"_close", 1})
+	}
+	if containsRuntimeFileCreate(expression) || statementsUseRuntimeFileCreate(statements) || runtimeFileCreate(runtimeFunctions) {
 		imports = append(imports, importedSymbol{"_creat", 1})
 	}
-	if usesFileRead || usesFileWrite {
+	if !usesFileRead && (containsRuntimeFileAppend(expression) || statementsUseAppend(statements) || runtimeAppend(runtimeFunctions)) {
+		imports = append(imports, importedSymbol{"_open", 1})
+	}
+	if containsRuntimeFileRemove(expression) || statementsUseRuntimeFileNamed(statements, "removeFile") || runtimeFileRemove(runtimeFunctions) {
+		imports = append(imports, importedSymbol{"_unlink", 1})
+	}
+	if containsRuntimeFileRename(expression) || containsRuntimeFileNamed(expression, "replaceFile") || statementsUseRuntimeFileNamed(statements, "renameFile") || statementsUseRuntimeFileNamed(statements, "replaceFile") || runtimeFileRename(runtimeFunctions) || runtimeFileReplace(runtimeFunctions) {
+		imports = append(imports, importedSymbol{"_rename", 1})
+	}
+	if containsRuntimeFileNamed(expression, "createDirectory") || statementsUseRuntimeFileNamed(statements, "createDirectory") || runtimeFunctionsUseFileNamed(runtimeFunctions, "createDirectory") {
+		imports = append(imports, importedSymbol{"_mkdir", 1})
+	}
+	if containsRuntimeFileNamed(expression, "removeDirectory") || statementsUseRuntimeFileNamed(statements, "removeDirectory") || runtimeFunctionsUseFileNamed(runtimeFunctions, "removeDirectory") {
+		imports = append(imports, importedSymbol{"_rmdir", 1})
+	}
+	if containsRuntimeFileNamed(expression, "setFileMode") || statementsUseRuntimeFileNamed(statements, "setFileMode") || runtimeFunctionsUseFileNamed(runtimeFunctions, "setFileMode") {
+		imports = append(imports, importedSymbol{"_chmod", 1})
+	}
+	if containsRuntimeFileNamed(expression, "changeFileMode") || statementsUseRuntimeFileNamed(statements, "changeFileMode") || runtimeFunctionsUseFileNamed(runtimeFunctions, "changeFileMode") {
+		imports = append(imports, importedSymbol{"_open", 1}, importedSymbol{"_fchmod", 1}, importedSymbol{"_close", 1})
+	} else if usesFileRead || usesFileWrite {
 		imports = append(imports, importedSymbol{"_close", 1})
 	}
 	if usesMappedMemory || usesFileRead {
 		imports = append(imports, importedSymbol{"_mmap", 1}, importedSymbol{"_munmap", 1})
 	}
-	c := windowCode{dataLabels: map[string]int{}, codeLabels: map[string]int{}}
-	c.usesArguments = usesArguments
-	c.runtimeFunctions = runtimeFunctions
-	c.runtimeFunctionOrder = runtimeFunctionNames
-	c.runtimeFunctionAt = map[string]int{}
-	c.writeIndex, c.exitIndex = -1, -1
-	c.fileReadIndex, c.fileOpenIndex, c.fileCreateIndex, c.fileCloseIndex = -1, -1, -1, -1
-	c.arrayMapIndex, c.arrayUnmapIndex = -1, -1
+	if usesEnvironment {
+		imports = append(imports, importedSymbol{"_getenv", 1})
+	}
+	if containsRuntimeEnvironmentNames(expression) || statementsUseRuntimeEnvironmentNames(statements) || runtimeFunctionsUseEnvironmentNames(runtimeFunctions) {
+		imports = append(imports, importedSymbol{"_environ", 1})
+	}
+	c := windowCode{dataLabels: map[string]int{}, codeLabels: map[string]int{}}; c.usesArguments = usesArguments
+	c.usesEnvironment = usesEnvironment || usesEnvironmentNames; c.borrowedEnvironmentText = map[string]bool{}
+	c.runtimeFunctions = runtimeFunctions; c.runtimeFunctionOrder = runtimeFunctionNames
+	c.runtimeFunctionAt = map[string]int{}; c.writeIndex, c.exitIndex = -1, -1
+	c.fileReadIndex, c.fileOpenIndex, c.fileCreateIndex, c.fileCloseIndex, c.fileRemoveIndex, c.fileRenameIndex, c.fileMkdirIndex, c.fileRmdirIndex, c.fileChmodIndex, c.fileFchmodIndex, c.moduleStatIndex, c.moduleErrorIndex = -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1; c.arrayMapIndex, c.arrayUnmapIndex = -1, -1
+	c.environmentIndex = -1; c.getenvIndex = -1
 	for index, item := range imports {
 		switch item.name {
 		case "_write":
@@ -1194,10 +1231,26 @@ func makeConsoleMachO(expression value, constants map[string]constantValue, stat
 			c.fileCreateIndex = index
 		case "_close":
 			c.fileCloseIndex = index
+		case "_unlink":
+			c.fileRemoveIndex = index
+		case "_rename":
+			c.fileRenameIndex = index
+		case "_mkdir":
+			c.fileMkdirIndex = index
+		case "_rmdir":
+			c.fileRmdirIndex = index
+		case "_chmod":
+			c.fileChmodIndex = index
+		case "_fchmod":
+			c.fileFchmodIndex = index
 		case "_mmap":
 			c.arrayMapIndex = index
 		case "_munmap":
 			c.arrayUnmapIndex = index
+		case "_getenv":
+			c.getenvIndex = index
+		case "_environ":
+			c.environmentIndex = index
 		}
 	}
 	if err := c.emitConsoleProgram(expression, constants, statements); err != nil {
@@ -1206,65 +1259,41 @@ func makeConsoleMachO(expression value, constants map[string]constantValue, stat
 	if err := c.patchRuntimeCalls(); err != nil {
 		return nil, err
 	}
-	constOffset := alignOffset(codeFileOff+len(c.words)*4, 8)
-	// Keep both ADR references and signed 19-bit conditional branches in reach.
-	textEnd := constOffset + len(c.constants)
+	constOffset := alignOffset(codeFileOff+len(c.words)*4, 8); textEnd := constOffset + len(c.constants)
 	if textEnd > 1<<20 {
 		return nil, fmt.Errorf("控制台 Mach-O 文本段超过 1 MiB")
 	}
-	consoleDataOffset := alignOffset(textEnd, int(pageSize))
-	consoleLinkOffset := consoleDataOffset + int(pageSize)
+	consoleDataOffset := alignOffset(textEnd, int(pageSize)); consoleLinkOffset := consoleDataOffset + int(pageSize)
 	if err := c.resolve(uint64(constOffset), uint64(consoleDataOffset)); err != nil {
 		return nil, err
 	}
-	bind := makeWindowBinds(imports)
-	symbolOffset := alignOffset(consoleLinkOffset+len(bind), 8)
-	stringTable := []byte{0}
-	stringIndices := []uint32{}
+	bind := makeWindowBinds(imports); symbolOffset := alignOffset(consoleLinkOffset+len(bind), 8)
+	stringTable := []byte{0}; stringIndices := []uint32{}
 	for _, item := range imports {
-		stringIndices = append(stringIndices, uint32(len(stringTable)))
-		stringTable = append(stringTable, []byte(item.name+"\x00")...)
+		stringIndices = append(stringIndices, uint32(len(stringTable))); stringTable = append(stringTable, []byte(item.name+"\x00")...)
 	}
-	stringOffset := symbolOffset + 16*len(imports)
-	fileEnd := stringOffset + len(stringTable)
-	image := make([]byte, fileEnd)
-	commandAt, commandCount := 32, 0
-	writeSegment(image, commandAt, "__PAGEZERO", 72, 0, 0x100000000, 0, 0, 0, 0, 0)
-	commandAt += 72
-	textCommand := commandAt
-	writeSegment(image, textCommand, "__TEXT", 232, imageBase, uint64(consoleDataOffset), 0, uint64(consoleDataOffset), 5, 5, 2)
-	writeSection(image, textCommand+72, "__text", "__TEXT", imageBase+uint64(codeFileOff), uint64(len(c.words)*4), uint32(codeFileOff), 2, 0x80000400)
-	writeSection(image, textCommand+152, "__const", "__TEXT", imageBase+uint64(constOffset), uint64(len(c.constants)), uint32(constOffset), 3, 0)
-	commandAt += 232
-	dataCommand := commandAt
-	writeSegment(image, dataCommand, "__DATA", 152, imageBase+uint64(consoleDataOffset), pageSize, uint64(consoleDataOffset), pageSize, 3, 3, 1)
-	writeSection(image, dataCommand+72, "__got", "__DATA", imageBase+uint64(consoleDataOffset), uint64(len(imports)*8), uint32(consoleDataOffset), 3, 6)
-	commandAt += 152
-	writeSegment(image, commandAt, "__LINKEDIT", 72, imageBase+uint64(consoleLinkOffset), uint64(alignOffset(fileEnd-consoleLinkOffset, int(pageSize))), uint64(consoleLinkOffset), uint64(fileEnd-consoleLinkOffset), 1, 1, 0)
-	commandAt += 72
-	writeDyldInfo(image, commandAt, consoleLinkOffset, len(bind))
-	commandAt += 48
-	writeDylinker(image, commandAt)
-	commandAt += 32
-	commandAt += writeDylibPath(image, commandAt, "/usr/lib/libSystem.B.dylib")
-	writeBuildVersion(image, commandAt)
-	commandAt += 24
-	writeMain(image, commandAt, uint64(codeFileOff))
-	commandAt += 24
-	writeUUID(image, commandAt, wordsBytes(c.words))
-	commandAt += 24
-	writeSymbolTable(image, commandAt, symbolOffset, stringOffset, len(imports), len(stringTable))
-	commandAt += 24
-	writeDynamicSymbolTable(image, commandAt, len(imports))
-	commandAt += 80
+	stringOffset := symbolOffset + 16*len(imports); fileEnd := stringOffset + len(stringTable)
+	image := make([]byte, fileEnd); commandAt, commandCount := 32, 0
+	writeSegment(image, commandAt, "__PAGEZERO", 72, 0, 0x100000000, 0, 0, 0, 0, 0); commandAt += 72
+	textCommand := commandAt; writeSegment(image, textCommand, "__TEXT", 232, imageBase, uint64(consoleDataOffset), 0, uint64(consoleDataOffset), 5, 5, 2)
+	writeSection(image, textCommand+72, "__text", "__TEXT", imageBase+uint64(codeFileOff), uint64(len(c.words)*4), uint32(codeFileOff), 2, 0x80000400); writeSection(image, textCommand+152, "__const", "__TEXT", imageBase+uint64(constOffset), uint64(len(c.constants)), uint32(constOffset), 3, 0)
+	commandAt += 232; dataCommand := commandAt
+	writeSegment(image, dataCommand, "__DATA", 152, imageBase+uint64(consoleDataOffset), pageSize, uint64(consoleDataOffset), pageSize, 3, 3, 1); writeSection(image, dataCommand+72, "__got", "__DATA", imageBase+uint64(consoleDataOffset), uint64(len(imports)*8), uint32(consoleDataOffset), 3, 6)
+	commandAt += 152; writeSegment(image, commandAt, "__LINKEDIT", 72, imageBase+uint64(consoleLinkOffset), uint64(alignOffset(fileEnd-consoleLinkOffset, int(pageSize))), uint64(consoleLinkOffset), uint64(fileEnd-consoleLinkOffset), 1, 1, 0)
+	commandAt += 72; writeDyldInfo(image, commandAt, consoleLinkOffset, len(bind))
+	commandAt += 48; writeDylinker(image, commandAt)
+	commandAt += 32; commandAt += writeDylibPath(image, commandAt, "/usr/lib/libSystem.B.dylib")
+	writeBuildVersion(image, commandAt); commandAt += 24
+	writeMain(image, commandAt, uint64(codeFileOff)); commandAt += 24
+	writeUUID(image, commandAt, wordsBytes(c.words)); commandAt += 24
+	writeSymbolTable(image, commandAt, symbolOffset, stringOffset, len(imports), len(stringTable)); commandAt += 24
+	writeDynamicSymbolTable(image, commandAt, len(imports)); commandAt += 80
 	commandCount = 12
 	if commandAt > codeFileOff {
 		return nil, fmt.Errorf("Mach-O 加载命令区超出代码起始偏移")
 	}
-	writeDynamicHeader(image, commandCount, commandAt-32)
-	copy(image[codeFileOff:], wordsBytes(c.words))
-	copy(image[constOffset:], c.constants)
-	copy(image[consoleLinkOffset:], bind)
+	writeDynamicHeader(image, commandCount, commandAt-32); copy(image[codeFileOff:], wordsBytes(c.words))
+	copy(image[constOffset:], c.constants); copy(image[consoleLinkOffset:], bind)
 	for index, stringIndex := range stringIndices {
 		writeNlist(image, symbolOffset+16*index, stringIndex)
 	}
@@ -1272,57 +1301,46 @@ func makeConsoleMachO(expression value, constants map[string]constantValue, stat
 	return image, nil
 }
 func (c *windowCode) emitConsoleProgram(expression value, constants map[string]constantValue, statements []statement) error {
-	slots := map[string]uint32{}
-	environment := consoleCodegenEnvironment(statements, constants, c.runtimeFunctions)
-	c.arraySlots = map[string]arraySlot{}
-	c.mapSlots = map[string]mapSlot{}
-	c.resultSlots = map[string]resultSlot{}
+	slots := map[string]uint32{}; setRuntimeFunctionPayload(&expression, c.runtimeFunctions)
+	environment := consoleCodegenEnvironment(statements, constants, c.runtimeFunctions); c.arraySlots = map[string]arraySlot{}
+	c.mapSlots = map[string]mapSlot{}; c.resultSlots = map[string]resultSlot{}
 	c.slotCount = 0
 	if len(c.runtimeFunctionOrder) > 0 {
 		entryJump := c.unconditionalPlaceholder()
 		for _, name := range c.runtimeFunctionOrder {
-			previousResultSlots := c.resultSlots
-			previousTextBuffers := c.textBuffers
-			previousTextLengths := c.textLengths
-			previousTextCapacities := c.textCapacities
-			c.resultSlots = map[string]resultSlot{}
-			c.textBuffers = map[string]uint32{}
-			c.textLengths = map[string]uint32{}
-			c.textCapacities = map[string]uint32{}
+			previousResultSlots := c.resultSlots; previousTextBuffers := c.textBuffers
+			previousTextLengths := c.textLengths; previousTextCapacities := c.textCapacities
+			c.resultSlots = map[string]resultSlot{}; c.textBuffers = map[string]uint32{}
+			c.textLengths = map[string]uint32{}; c.textCapacities = map[string]uint32{}
 			c.runtimeFunctionAt[name] = len(c.words)
 			if err := c.emitRuntimeFunctionBody(c.runtimeFunctions[name], constants); err != nil {
 				return err
 			}
-			c.resultSlots = previousResultSlots
-			c.textBuffers = previousTextBuffers
-			c.textLengths = previousTextLengths
-			c.textCapacities = previousTextCapacities
+			c.resultSlots = previousResultSlots; c.textBuffers = previousTextBuffers
+			c.textLengths = previousTextLengths; c.textCapacities = previousTextCapacities
 		}
 		c.words[entryJump] = branch(len(c.words) - entryJump)
 	}
-	c.textBuffers = map[string]uint32{}
-	c.textLengths = map[string]uint32{}
-	c.textCapacities = map[string]uint32{}
-	textVariables := []string{}
+	c.textBuffers = map[string]uint32{}; c.textLengths = map[string]uint32{}
+	c.textCapacities = map[string]uint32{}; textVariables := []string{}
+	borrowedTextVariables := map[string]bool{}
 	for _, item := range statements {
 		if item.kind == "变量" {
 			if isRuntimeTextValue(item.value) || isRuntimeFileRead(item.value) || isRuntimeArgumentText(item.value) || isTextResultExtraction(item.value) || isStoredTextReturnCall(item.value) {
-				textVariables = append(textVariables, item.name.text)
+				textVariables = append(textVariables, item.name.text); borrowedTextVariables[item.name.text] = isRuntimeEnvironmentRead(item.value)
+				c.borrowedEnvironmentText[item.name.text] = isRuntimeEnvironmentRead(item.value)
 				continue
 			}
 			slots[item.name.text] = c.slotCount * 8
 			if isRuntimeMapValue(item.value) {
-				base := slots[item.name.text]
-				c.mapSlots[item.name.text] = mapSlot{data: base, length: base + 8, capacity: base + 16}
+				base := slots[item.name.text]; c.mapSlots[item.name.text] = mapSlot{data: base, length: base + 8, capacity: base + 16}
 				c.slotCount += 3
 				continue
 			}
 			if resultType, _ := constantType(item.value, environment); resultType == "运行时结果" {
-				payload := environment[item.name.text].resultPayload
-				result := resultSlot{tag: slots[item.name.text], value: slots[item.name.text] + 8, text: isTextResultPayload(payload), runtimeText: payload == "运行时文本"}
+				payload := environment[item.name.text].resultPayload; result := resultSlot{tag: slots[item.name.text], value: slots[item.name.text] + 8, text: isTextResultPayload(payload), runtimeText: payload == "运行时文本"}
 				if result.text {
-					result.pointer = slots[item.name.text] + 16
-					result.length = slots[item.name.text] + 24
+					result.pointer = slots[item.name.text] + 16; result.length = slots[item.name.text] + 24
 					c.slotCount += 4
 				} else {
 					c.slotCount += 2
@@ -1331,23 +1349,27 @@ func (c *windowCode) emitConsoleProgram(expression value, constants map[string]c
 				continue
 			}
 			if item.value.kind == "调用" && item.value.text == "array" {
-				base := c.slotCount * 8
-				arrayType, _ := constantType(item.value, environment)
-				c.arraySlots[item.name.text] = arraySlot{data: base, length: base + 8, capacity: base + 16, text: arrayType == "字符串数组" || arrayType == "运行时字符串数组"}
-				c.slotCount += 3
+				base := c.slotCount * 8; arrayType, _ := constantType(item.value, environment)
+				c.arraySlots[item.name.text] = arraySlot{data: base, length: base + 8, capacity: base + 16, text: arrayType == "字符串数组" || arrayType == "运行时字符串数组"}; c.slotCount += 3
 				continue
 			}
 			c.slotCount++
 		}
 	}
 	for index, name := range textVariables {
-		base := c.slotCount*8 + uint32(index)*24
-		c.textBuffers[name] = base
-		c.textLengths[name] = base + 8
-		c.textCapacities[name] = base + 16
+		base := c.slotCount*8 + uint32(index)*24; c.textBuffers[name] = base
+		c.textLengths[name] = base + 8; c.textCapacities[name] = base + 16
+		if borrowedTextVariables[name] {
+			c.textCapacities[name] = 0
+		}
 	}
-	c.temporaryBufferOffset = c.slotCount*8 + uint32(len(textVariables))*24
-	temporarySize := uint32(64)
+	c.temporaryBufferOffset = c.slotCount*8 + uint32(len(textVariables))*24; temporarySize := uint32(64)
+	if containsDirectRuntimeTextResultExtraction(expression, environment) {
+		temporarySize = 392 // result descriptor plus staged text operations
+	}
+	if containsRuntimeEnvironmentNames(expression) || statementsUseRuntimeEnvironmentNames(statements) {
+		temporarySize = 256*8 + 424 // pointer array, count/index, and insertion-sort state slots
+	}
 	if runtimeTextSubstringNeedsScratch(expression) || statementsNeedRuntimeTextSubstringScratch(statements) {
 		temporarySize = 360 // 256-byte slice destination, concat scratch, byte length, and integer output
 	}
@@ -1372,8 +1394,7 @@ func (c *windowCode) emitConsoleProgram(expression value, constants map[string]c
 		temporarySize += 8 // retain the byte length when a concatenation is the root output
 	}
 	if c.usesArguments {
-		c.argumentCountOffset = c.temporaryBufferOffset + temporarySize
-		c.argumentVectorOffset = c.argumentCountOffset + 8
+		c.argumentCountOffset = c.temporaryBufferOffset + temporarySize; c.argumentVectorOffset = c.argumentCountOffset + 8
 		temporarySize += 16
 	}
 	frameSize := uint32(alignOffset(int(c.temporaryBufferOffset+temporarySize), 16))
@@ -1388,10 +1409,8 @@ func (c *windowCode) emitConsoleProgram(expression value, constants map[string]c
 	if frameSize >= 4096 {
 		c.words = append(c.words, subImmediate(31, 31, frameSize>>12)|1<<22)
 	}
-	c.words = append(c.words, subImmediate(31, 31, frameSize&4095), addImmediate(19, 31, 0))
-	c.emitConsoleStackAddress(20, frameSize)
+	c.words = append(c.words, subImmediate(31, 31, frameSize&4095), addImmediate(19, 31, 0)); c.emitConsoleStackAddress(20, frameSize)
 	if c.usesArguments {
-		// Cache the LC_MAIN argc/argv pair outside registers reused by codegen.
 		c.words = append(c.words, storeIntegerSlot(0, 19, c.argumentCountOffset), storeIntegerSlot(1, 19, c.argumentVectorOffset))
 	}
 	if err := c.emitConsoleStatements(statements, constants, slots); err != nil {
@@ -1404,35 +1423,35 @@ func (c *windowCode) emitConsoleProgram(expression value, constants map[string]c
 				return fmt.Errorf("无法解析结果变量：%s", expression.args[0].text)
 			}
 			if !result.text {
-				c.words = append(c.words, loadIntegerSlot(0, 19, result.tag), compareImmediate(0, 1))
-				failed := c.conditionalPlaceholder(1)
-				c.words = append(c.words, loadIntegerSlot(0, 19, result.value))
-				success := c.unconditionalPlaceholder()
-				c.patchConditional(failed, len(c.words))
-				c.call(exitIndex)
+				c.words = append(c.words, loadIntegerSlot(0, 19, result.tag), compareImmediate(0, 1)); failed := c.conditionalPlaceholder(1)
+				c.words = append(c.words, loadIntegerSlot(0, 19, result.value)); success := c.unconditionalPlaceholder()
+				c.patchConditional(failed, len(c.words)); c.call(exitIndex)
 				c.words[success] = branch(len(c.words) - success)
 				return nil
 			}
-			c.words = append(c.words, loadIntegerSlot(2, 19, result.tag), compareImmediate(2, 1))
-			success := c.conditionalPlaceholder(1)
-			c.words = append(c.words, loadIntegerSlot(0, 19, result.value))
+			c.words = append(c.words, loadIntegerSlot(2, 19, result.tag), compareImmediate(2, 1)); success := c.conditionalPlaceholder(1)
+			c.words = append(c.words, loadIntegerSlot(0, 19, result.value)); c.call(exitIndex)
+			c.patchConditional(success, len(c.words)); c.words = append(c.words, loadIntegerSlot(1, 19, result.pointer), loadIntegerSlot(2, 19, result.length))
+			c.words = append(c.words, addImmediate(2, 2, 1)); c.movImmediate(0, 1)
+			c.call(writeIndex); c.movImmediate(0, 0)
 			c.call(exitIndex)
-			c.patchConditional(success, len(c.words))
-			c.words = append(c.words, loadIntegerSlot(1, 19, result.pointer), loadIntegerSlot(2, 19, result.length))
-			c.words = append(c.words, addImmediate(2, 2, 1))
-			c.movImmediate(0, 1)
-			c.call(writeIndex)
-			c.movImmediate(0, 0)
-			c.call(exitIndex)
+		} else if isDirectTextResultExtraction(expression) {
+			if err := c.emitRuntimeResultTextOutput(expression, constants, slots, writeIndex, exitIndex); err != nil {
+				return err
+			}
 		} else if isRuntimeTextInput(expression) {
 			if err := c.emitReadText(c.temporaryBufferOffset, nil, false, 0, writeIndex, exitIndex); err != nil {
 				return err
 			}
 		} else if expression.kind == "引用" {
-			buffer, bufferExists := c.textBuffers[expression.text]
-			length, lengthExists := c.textLengths[expression.text]
+			buffer, bufferExists := c.textBuffers[expression.text]; length, lengthExists := c.textLengths[expression.text]
 			if !bufferExists || !lengthExists {
 				return fmt.Errorf("无法解析运行时文本变量：%s", expression.text)
+			}
+			if borrowed, exists := c.borrowedEnvironmentText[expression.text]; exists && borrowed {
+				c.words = append(c.words, loadIntegerSlot(1, 19, buffer), loadIntegerSlot(2, 19, length)); c.emitRuntimeEnvironmentTextOutputRegisters(1, 2, writeIndex, exitIndex)
+				c.emitRuntimeFailureBlock(exitIndex)
+				return nil
 			}
 			c.emitRuntimeTextOutputPointer(buffer, length, writeIndex, exitIndex)
 		} else if isRuntimeArgumentText(expression) {
@@ -1467,6 +1486,18 @@ func (c *windowCode) emitConsoleProgram(expression value, constants map[string]c
 				return err
 			}
 			c.emitRuntimeTextOutputRegisters(21, 22, writeIndex, exitIndex)
+		} else if isRuntimeEnvironmentNames(expression) {
+			if err := c.emitRuntimeEnvironmentNamesTextOutput(expression, constants, slots, writeIndex, exitIndex); err != nil {
+				return err
+			}
+			c.emitRuntimeFailureBlock(exitIndex)
+			return nil
+		} else if isRuntimeEnvironmentRead(expression) {
+			buffer, length, err := c.emitRuntimeEnvironmentRead(expression, constants, slots)
+			if err != nil {
+				return err
+			}
+			c.emitRuntimeEnvironmentTextOutputRegisters(buffer, length, writeIndex, exitIndex)
 		} else {
 			return fmt.Errorf("原生运行时文本只支持 readText（）、有界文本变量、substring 或 textConcat")
 		}
@@ -1485,47 +1516,34 @@ func (c *windowCode) emitConsoleProgram(expression value, constants map[string]c
 		return nil
 	}
 	if kind == "布尔值" || kind == "运行时布尔值" {
-		expression = value{kind: "调用", text: "ifElse", args: []value{expression, {kind: "整数", text: "1"}, {kind: "整数", text: "0"}}}
-		kind = "运行时整数"
+		expression = value{kind: "调用", text: "ifElse", args: []value{expression, {kind: "整数", text: "1"}, {kind: "整数", text: "0"}}}; kind = "运行时整数"
 	} else if kind != "整数" && kind != "运行时整数" {
 		return fmt.Errorf("不支持的控制台输出类型：%s", kind)
 	}
-	c.movImmediate(25, '\n')
-	c.words = append(c.words, subImmediate(20, 20, 1), 0x39000299)
+	c.movImmediate(25, '\n'); c.words = append(c.words, subImmediate(20, 20, 1), 0x39000299)
 	if err := c.emitRuntimeInteger(expression, constants, slots); err != nil {
 		return err
 	}
 	c.words = append(c.words, 0xf100001f) // cmp x0, #0
-	signBranch := len(c.words)
-	c.words = append(c.words, 0)
+	signBranch := len(c.words); c.words = append(c.words, 0)
 	c.movImmediate(22, 1) // remember a negative input until after its digits
-	c.words = append(c.words, 0xcb0003f5)
-	positiveBranch := len(c.words)
-	c.words = append(c.words, 0)
-	positiveIndex := len(c.words)
+	c.words = append(c.words, 0xcb0003f5); positiveBranch := len(c.words)
+	c.words = append(c.words, 0); positiveIndex := len(c.words)
 	c.words = append(c.words, 0xaa0003f5) // mov x21, x0
-	c.movImmediate(22, 0)
-	conversionIndex := len(c.words)
+	c.movImmediate(22, 0); conversionIndex := len(c.words)
 	c.words[signBranch] = branchCondition(positiveIndex-signBranch, 10) // b.ge
-	c.words[positiveBranch] = branch(conversionIndex - positiveBranch)
-	c.movImmediate(23, 10)
-	digitLoop := len(c.words)
-	c.words = append(c.words, 0x9ad70ab8, 0x9b17d719, addWordImmediate(25, 25, 48))
-	c.words = append(c.words, subImmediate(20, 20, 1), 0x39000299, 0xaa1803f5)
-	c.words = append(c.words, 0xf10002bf)
+	c.words[positiveBranch] = branch(conversionIndex - positiveBranch); c.movImmediate(23, 10)
+	digitLoop := len(c.words); c.words = append(c.words, 0x9ad70ab8, 0x9b17d719, addWordImmediate(25, 25, 48))
+	c.words = append(c.words, subImmediate(20, 20, 1), 0x39000299, 0xaa1803f5); c.words = append(c.words, 0xf10002bf)
 	loopBranch := len(c.words)
 	c.words = append(c.words, branchCondition(digitLoop-loopBranch, 1)) // b.ne
 	c.words = append(c.words, 0xf10002df)                               // cmp x22, #0
-	minusBranch := len(c.words)
-	c.words = append(c.words, 0)
-	c.words = append(c.words, subImmediate(20, 20, 1))
-	c.movImmediate(25, '-')
-	c.words = append(c.words, 0x39000299)
-	noMinusIndex := len(c.words)
+	minusBranch := len(c.words); c.words = append(c.words, 0)
+	c.words = append(c.words, subImmediate(20, 20, 1)); c.movImmediate(25, '-')
+	c.words = append(c.words, 0x39000299); noMinusIndex := len(c.words)
 	c.words[minusBranch] = branchCondition(noMinusIndex-minusBranch, 0) // b.eq
 	c.movImmediate(0, 1)                                                // stdout
-	c.movRegister(1, 20)
-	c.emitConsoleStackAddress(2, frameSize)
+	c.movRegister(1, 20); c.emitConsoleStackAddress(2, frameSize)
 	c.words = append(c.words, 0xcb140042)
 	c.call(writeIndex) // write(stdout, buffer, length)
 	c.movImmediate(0, 0)
@@ -1570,8 +1588,7 @@ func consoleCodegenEnvironment(statements []statement, constants map[string]cons
 			if item.value.kind == "调用" && item.value.text == "array" {
 				arrayType, problem := constantType(item.value, environment)
 				if problem == nil && (arrayType == "字符串数组" || arrayType == "运行时字符串数组") {
-					items, _ := runtimeTextArrayItems(item.value, environment)
-					environment[item.name.text] = constantValue{kind: "运行时字符串数组", array: items}
+					items, _ := runtimeTextArrayItems(item.value, environment); environment[item.name.text] = constantValue{kind: "运行时字符串数组", array: items}
 				} else {
 					environment[item.name.text] = constantValue{kind: "运行时" + strings.TrimPrefix(strings.TrimSuffix(arrayType, "数组"), "运行时") + "数组", array: make([]constantValue, len(item.value.args))}
 				}
@@ -1603,8 +1620,7 @@ func consoleCodegenEnvironment(statements []statement, constants map[string]cons
 			}
 			environment[item.name.text] = consoleCodegenValue(item.value, environment)
 		case "若", "凡":
-			markConsoleVariablesRuntime(assignedConsoleVariables(item.body), environment)
-			markConsoleVariablesRuntime(assignedConsoleVariables(item.otherwise), environment)
+			markConsoleVariablesRuntime(assignedConsoleVariables(item.body), environment); markConsoleVariablesRuntime(assignedConsoleVariables(item.otherwise), environment)
 		}
 	}
 	return environment
@@ -1637,24 +1653,18 @@ func (c *windowCode) emitRuntimeResultValue(name string, input value, constants 
 				return fmt.Errorf("无法把整数结果复制到文本结果变量")
 			}
 			if source.runtimeText {
-				c.words = append(c.words, loadIntegerSlot(2, 19, result.pointer), compareImmediate(2, 0))
-				bufferReady := c.conditionalPlaceholder(1)
+				c.words = append(c.words, loadIntegerSlot(2, 19, result.pointer), compareImmediate(2, 0)); bufferReady := c.conditionalPlaceholder(1)
 				if err := c.emitRegisterImmediate(0, 16*1024*1024); err != nil {
 					return err
 				}
 				if err := c.emitArrayMapCall(0); err != nil {
 					return err
 				}
-				c.words = append(c.words, storeIntegerSlot(0, 19, result.pointer), movz(0, 0), storeIntegerSlot(0, 19, result.length))
-				c.patchConditional(bufferReady, len(c.words))
-				c.words = append(c.words, loadIntegerSlot(3, 19, source.length), loadIntegerSlot(5, 19, source.pointer), loadIntegerSlot(2, 19, result.pointer), movz(6, 0))
-				copyLoop := len(c.words)
-				c.words = append(c.words, compareRegister(6, 3))
-				copyDone := c.conditionalPlaceholder(10)
-				c.words = append(c.words, addRegister(7, 5, 6), loadByte(4, 7), addRegister(7, 2, 6), storeByte(4, 7), addImmediate(6, 6, 1))
-				c.words = append(c.words, branch(copyLoop-len(c.words)))
-				c.patchConditional(copyDone, len(c.words))
-				c.words = append(c.words, loadIntegerSlot(2, 19, result.pointer), addRegister(7, 2, 3), movz(4, 10), storeByte(4, 7))
+				c.words = append(c.words, storeIntegerSlot(0, 19, result.pointer), movz(0, 0), storeIntegerSlot(0, 19, result.length)); c.patchConditional(bufferReady, len(c.words))
+				c.words = append(c.words, loadIntegerSlot(3, 19, source.length), loadIntegerSlot(5, 19, source.pointer), loadIntegerSlot(2, 19, result.pointer), movz(6, 0)); copyLoop := len(c.words)
+				c.words = append(c.words, compareRegister(6, 3)); copyDone := c.conditionalPlaceholder(10)
+				c.words = append(c.words, addRegister(7, 5, 6), loadByte(4, 7), addRegister(7, 2, 6), storeByte(4, 7), addImmediate(6, 6, 1)); c.words = append(c.words, branch(copyLoop-len(c.words)))
+				c.patchConditional(copyDone, len(c.words)); c.words = append(c.words, loadIntegerSlot(2, 19, result.pointer), addRegister(7, 2, 3), movz(4, 10), storeByte(4, 7))
 				c.words = append(c.words, loadIntegerSlot(0, 19, source.tag), loadIntegerSlot(1, 19, source.value), loadIntegerSlot(2, 19, result.pointer), loadIntegerSlot(3, 19, source.length))
 				return nil
 			}
@@ -1665,8 +1675,7 @@ func (c *windowCode) emitRuntimeResultValue(name string, input value, constants 
 		} else if source.text {
 			return fmt.Errorf("无法把文本结果复制到整数结果变量")
 		} else {
-			c.movImmediate(2, 0)
-			c.movImmediate(3, 0)
+			c.movImmediate(2, 0); c.movImmediate(3, 0)
 		}
 		return nil
 	}
@@ -1694,8 +1703,7 @@ func (c *windowCode) emitRuntimeResultValue(name string, input value, constants 
 		if err := c.emitRuntimeResultValue(name, input.args[1], constants, slots, result); err != nil {
 			return err
 		}
-		end := c.unconditionalPlaceholder()
-		c.patchConditionFalse(falsePatches, len(c.words))
+		end := c.unconditionalPlaceholder(); c.patchConditionFalse(falsePatches, len(c.words))
 		if err := c.emitRuntimeResultValue(name, input.args[2], constants, slots, result); err != nil {
 			return err
 		}
@@ -1747,10 +1755,8 @@ func (c *windowCode) emitRuntimeResultValue(name string, input value, constants 
 		if problem != nil {
 			return fmt.Errorf("无法计算文本结果载荷：%w", problem)
 		}
-		label := fmt.Sprintf("runtimeResultText%d", len(c.dataLabels))
-		data := append([]byte(text), '\n')
-		c.addData(label, data, 1)
-		c.movImmediate(0, 0)
+		label := fmt.Sprintf("runtimeResultText%d", len(c.dataLabels)); data := append([]byte(text), '\n')
+		c.addData(label, data, 1); c.movImmediate(0, 0)
 		c.movImmediate(1, 0)
 		if err := c.emitRegisterImmediate(3, int64(len(text))); err != nil {
 			return err
@@ -1764,20 +1770,16 @@ func (c *windowCode) emitRuntimeResultValue(name string, input value, constants 
 	if err := c.emitRuntimeInteger(input.args[0], constants, slots); err != nil {
 		return err
 	}
-	c.movRegister(1, 0)
-	c.movImmediate(0, 0)
+	c.movRegister(1, 0); c.movImmediate(0, 0)
 	if input.text == "失败" {
-		c.words = append(c.words, compareImmediate(1, 1))
-		c.branchToRuntimeFailure(11)
-		c.words = append(c.words, compareImmediate(1, 255))
-		c.branchToRuntimeFailure(8)
+		c.words = append(c.words, compareImmediate(1, 1)); c.branchToRuntimeFailure(11)
+		c.words = append(c.words, compareImmediate(1, 255)); c.branchToRuntimeFailure(8)
 		c.movImmediate(0, 1)
 	}
 	if result.runtimeText {
 		c.words = append(c.words, loadIntegerSlot(2, 19, result.pointer), movz(3, 0))
 	} else {
-		c.movImmediate(2, 0)
-		c.movImmediate(3, 0)
+		c.movImmediate(2, 0); c.movImmediate(3, 0)
 	}
 	return nil
 }
@@ -1790,10 +1792,7 @@ func (c *windowCode) emitRuntimeResultTextBuffer(result resultSlot) error {
 	if err := c.emitArrayMapCall(0); err != nil {
 		return err
 	}
-	c.words = append(c.words, storeIntegerSlot(0, 19, result.pointer), movz(0, 0), storeIntegerSlot(0, 19, result.length))
-	c.patchConditional(bufferReady, len(c.words))
-	// The fixed mapping is the content maximum; a failed result may overwrite
-	// the value slot with an error code, so every success restores this value.
+	c.words = append(c.words, storeIntegerSlot(0, 19, result.pointer), movz(0, 0), storeIntegerSlot(0, 19, result.length)); c.patchConditional(bufferReady, len(c.words))
 	if err := c.emitRegisterImmediate(1, 16*1024*1024); err != nil {
 		return err
 	}
@@ -1801,8 +1800,6 @@ func (c *windowCode) emitRuntimeResultTextBuffer(result resultSlot) error {
 	return nil
 }
 func (c *windowCode) emitRuntimeResultTextConcat(input value, result resultSlot, slots map[string]uint32, constants map[string]constantValue) error {
-	// Build into a fresh mapping so a result can safely concatenate itself or
-	// another operand into its own storage without partial-write aliasing.
 	staged := c.temporaryBufferOffset
 	if err := c.emitRuntimeTextInit(staged, staged+8, staged+16); err != nil {
 		return err
@@ -1810,65 +1807,49 @@ func (c *windowCode) emitRuntimeResultTextConcat(input value, result resultSlot,
 	if _, err := c.emitRuntimeDynamicTextConcat(input, staged, staged+8, slots, constants); err != nil {
 		return err
 	}
-	c.words = append(c.words, loadIntegerSlot(3, 19, staged+8), loadIntegerSlot(5, 19, staged), loadIntegerSlot(2, 19, result.pointer), movz(6, 0))
-	copyLoop := len(c.words)
+	c.words = append(c.words, loadIntegerSlot(3, 19, staged+8), loadIntegerSlot(5, 19, staged), loadIntegerSlot(2, 19, result.pointer), movz(6, 0)); copyLoop := len(c.words)
 	c.words = append(c.words, compareRegister(6, 3))
 	copyDone := c.conditionalPlaceholder(10) // b.ge
-	c.words = append(c.words, addRegister(7, 5, 6), loadByte(4, 7), addRegister(7, 2, 6), storeByte(4, 7), addImmediate(6, 6, 1))
-	c.words = append(c.words, branch(copyLoop-len(c.words)))
-	c.patchConditional(copyDone, len(c.words))
-	c.words = append(c.words, loadIntegerSlot(2, 19, result.pointer), addRegister(7, 2, 3), movz(4, 10), storeByte(4, 7), storeIntegerSlot(3, 19, result.length))
-	c.words = append(c.words, loadIntegerSlot(0, 19, staged), loadIntegerSlot(1, 19, staged+16))
-	c.call(c.arrayUnmapIndex)
+	c.words = append(c.words, addRegister(7, 5, 6), loadByte(4, 7), addRegister(7, 2, 6), storeByte(4, 7), addImmediate(6, 6, 1)); c.words = append(c.words, branch(copyLoop-len(c.words)))
+	c.patchConditional(copyDone, len(c.words)); c.words = append(c.words, loadIntegerSlot(2, 19, result.pointer), addRegister(7, 2, 3), movz(4, 10), storeByte(4, 7), storeIntegerSlot(3, 19, result.length))
+	c.words = append(c.words, loadIntegerSlot(0, 19, staged), loadIntegerSlot(1, 19, staged+16)); c.call(c.arrayUnmapIndex)
 	c.words = append(c.words, compareImmediate(0, 0))
 	c.branchToRuntimeFailure(1) // b.ne
 	return nil
 }
 func (c *windowCode) emitRuntimeResultTextSubstring(input value, result resultSlot, slots map[string]uint32, constants map[string]constantValue) error {
-	staged := c.temporaryBufferOffset
-	length, err := c.emitRuntimeTextSubstring(input, staged, constants, slots, false)
+	staged := c.temporaryBufferOffset; length, err := c.emitRuntimeTextSubstring(input, staged, constants, slots, false)
 	if err != nil {
 		return err
 	}
-	c.movRegister(3, length)
-	c.emitConsoleStackAddress(5, staged)
-	c.words = append(c.words, loadIntegerSlot(2, 19, result.pointer), movz(6, 0))
-	copyLoop := len(c.words)
+	c.movRegister(3, length); c.emitConsoleStackAddress(5, staged)
+	c.words = append(c.words, loadIntegerSlot(2, 19, result.pointer), movz(6, 0)); copyLoop := len(c.words)
 	c.words = append(c.words, compareRegister(6, 3))
 	copyDone := c.conditionalPlaceholder(10) // b.ge
-	c.words = append(c.words, addRegister(7, 5, 6), loadByte(4, 7), addRegister(7, 2, 6), storeByte(4, 7), addImmediate(6, 6, 1))
-	c.words = append(c.words, branch(copyLoop-len(c.words)))
-	c.patchConditional(copyDone, len(c.words))
-	c.words = append(c.words, addRegister(7, 2, 3), movz(4, 10), storeByte(4, 7), storeIntegerSlot(3, 19, result.length))
+	c.words = append(c.words, addRegister(7, 5, 6), loadByte(4, 7), addRegister(7, 2, 6), storeByte(4, 7), addImmediate(6, 6, 1)); c.words = append(c.words, branch(copyLoop-len(c.words)))
+	c.patchConditional(copyDone, len(c.words)); c.words = append(c.words, addRegister(7, 2, 3), movz(4, 10), storeByte(4, 7), storeIntegerSlot(3, 19, result.length))
 	return nil
 }
 func (c *windowCode) emitRuntimeResultTextArrayElement(input value, result resultSlot, slots map[string]uint32, constants map[string]constantValue) error {
 	if err := c.emitRuntimeTextOperand(input, slots, constants, 3, 5, c.temporaryBufferOffset+256); err != nil {
 		return err
 	}
-	c.words = append(c.words, loadIntegerSlot(2, 19, result.pointer), movz(6, 0))
-	copyLoop := len(c.words)
+	c.words = append(c.words, loadIntegerSlot(2, 19, result.pointer), movz(6, 0)); copyLoop := len(c.words)
 	c.words = append(c.words, compareRegister(6, 3))
 	copyDone := c.conditionalPlaceholder(10) // b.ge
-	c.words = append(c.words, addRegister(7, 5, 6), loadByte(4, 7), addRegister(7, 2, 6), storeByte(4, 7), addImmediate(6, 6, 1))
-	c.words = append(c.words, branch(copyLoop-len(c.words)))
-	c.patchConditional(copyDone, len(c.words))
-	c.words = append(c.words, addRegister(7, 2, 3), movz(4, 10), storeByte(4, 7), storeIntegerSlot(3, 19, result.length))
+	c.words = append(c.words, addRegister(7, 5, 6), loadByte(4, 7), addRegister(7, 2, 6), storeByte(4, 7), addImmediate(6, 6, 1)); c.words = append(c.words, branch(copyLoop-len(c.words)))
+	c.patchConditional(copyDone, len(c.words)); c.words = append(c.words, addRegister(7, 2, 3), movz(4, 10), storeByte(4, 7), storeIntegerSlot(3, 19, result.length))
 	return nil
 }
-
 func (c *windowCode) emitRuntimeResultTextArgument(input value, result resultSlot, slots map[string]uint32, constants map[string]constantValue) error {
 	if err := c.emitRuntimeArgumentTextOperand(input, slots, constants, 3, 5); err != nil {
 		return err
 	}
-	c.words = append(c.words, loadIntegerSlot(2, 19, result.pointer), movz(6, 0))
-	copyLoop := len(c.words)
+	c.words = append(c.words, loadIntegerSlot(2, 19, result.pointer), movz(6, 0)); copyLoop := len(c.words)
 	c.words = append(c.words, compareRegister(6, 3))
 	copyDone := c.conditionalPlaceholder(10) // b.ge
-	c.words = append(c.words, addRegister(7, 5, 6), loadByte(4, 7), addRegister(7, 2, 6), storeByte(4, 7), addImmediate(6, 6, 1))
-	c.words = append(c.words, branch(copyLoop-len(c.words)))
-	c.patchConditional(copyDone, len(c.words))
-	c.words = append(c.words, addRegister(7, 2, 3), movz(4, 10), storeByte(4, 7), storeIntegerSlot(3, 19, result.length))
+	c.words = append(c.words, addRegister(7, 5, 6), loadByte(4, 7), addRegister(7, 2, 6), storeByte(4, 7), addImmediate(6, 6, 1)); c.words = append(c.words, branch(copyLoop-len(c.words)))
+	c.patchConditional(copyDone, len(c.words)); c.words = append(c.words, addRegister(7, 2, 3), movz(4, 10), storeByte(4, 7), storeIntegerSlot(3, 19, result.length))
 	return nil
 }
 func (c *windowCode) emitRuntimeTextVariable(name string, input value, constants map[string]constantValue, slots map[string]uint32, initialize bool) error {
@@ -1887,13 +1868,21 @@ func (c *windowCode) emitRuntimeTextVariable(name string, input value, constants
 	if isStoredTextReturnCall(input) {
 		return c.emitRuntimeTextReturnStorage(name, input, constants, slots, initialize)
 	}
-	if initialize {
+	if initialize && !isRuntimeEnvironmentRead(input) {
 		if err := c.emitRuntimeTextInit(buffer, length, c.textCapacities[name]); err != nil {
 			return err
 		}
 	}
 	if isRuntimeTextInput(input) {
 		return c.emitReadDynamicText(buffer, length, c.textCapacities[name], 0, c.exitIndex)
+	}
+	if isRuntimeEnvironmentRead(input) {
+		sourceBuffer, sourceLength, err := c.emitRuntimeEnvironmentRead(input, constants, slots)
+		if err != nil {
+			return err
+		}
+		c.words = append(c.words, storeIntegerSlot(sourceBuffer, 19, buffer), storeIntegerSlot(sourceLength, 19, length))
+		return nil
 	}
 	if isTextResultExtraction(input) {
 		return c.emitRuntimeTextResultVariableCopy(input, buffer, length, c.textCapacities[name])
@@ -1920,11 +1909,6 @@ func (c *windowCode) emitRuntimeTextVariable(name string, input value, constants
 	}
 	return err
 }
-
-// emitRuntimeTextReturnStorage adopts a text-return ABI descriptor into a
-// top-level text variable. The returned mapping must be saved before the old
-// target mapping is released, because _munmap may clobber caller-saved
-// registers that carry the descriptor.
 func (c *windowCode) emitRuntimeTextReturnStorage(name string, input value, constants map[string]constantValue, slots map[string]uint32, initialize bool) error {
 	buffer, length := c.textBuffers[name], c.textLengths[name]
 	if initialize {
@@ -1933,15 +1917,11 @@ func (c *windowCode) emitRuntimeTextReturnStorage(name string, input value, cons
 	if err := c.emitRuntimeFunctionCall(input, constants, slots); err != nil {
 		return err
 	}
-	c.words = append(c.words, subImmediate(31, 31, 32), storeIntegerSlot(1, 31, 0), storeIntegerSlot(2, 31, 8), storeIntegerSlot(3, 31, 16))
-	c.words = append(c.words, loadIntegerSlot(0, 19, buffer), compareImmediate(0, 0))
+	c.words = append(c.words, subImmediate(31, 31, 32), storeIntegerSlot(1, 31, 0), storeIntegerSlot(2, 31, 8), storeIntegerSlot(3, 31, 16)); c.words = append(c.words, loadIntegerSlot(0, 19, buffer), compareImmediate(0, 0))
 	noOldMapping := c.conditionalPlaceholder(1) // b.eq
-	c.words = append(c.words, loadIntegerSlot(0, 19, buffer), loadIntegerSlot(1, 19, c.textCapacities[name]))
-	c.call(c.arrayUnmapIndex)
-	c.words = append(c.words, compareImmediate(0, 0))
-	c.branchToRuntimeFailure(1)
-	c.patchConditional(noOldMapping, len(c.words))
-	c.words = append(c.words, loadIntegerSlot(1, 31, 0), loadIntegerSlot(2, 31, 8), loadIntegerSlot(3, 31, 16), addImmediate(31, 31, 32))
+	c.words = append(c.words, loadIntegerSlot(0, 19, buffer), loadIntegerSlot(1, 19, c.textCapacities[name])); c.call(c.arrayUnmapIndex)
+	c.words = append(c.words, compareImmediate(0, 0)); c.branchToRuntimeFailure(1)
+	c.patchConditional(noOldMapping, len(c.words)); c.words = append(c.words, loadIntegerSlot(1, 31, 0), loadIntegerSlot(2, 31, 8), loadIntegerSlot(3, 31, 16), addImmediate(31, 31, 32))
 	c.words = append(c.words, storeIntegerSlot(1, 19, buffer), storeIntegerSlot(2, 19, length))
 	if err := c.emitRegisterImmediate(0, 16*1024*1024); err != nil {
 		return err
@@ -1949,7 +1929,6 @@ func (c *windowCode) emitRuntimeTextReturnStorage(name string, input value, cons
 	c.words = append(c.words, storeIntegerSlot(0, 19, c.textCapacities[name]))
 	return nil
 }
-
 func (c *windowCode) emitConsoleStatements(statements []statement, constants map[string]constantValue, slots map[string]uint32) error {
 	for _, item := range statements {
 		switch item.kind {
@@ -1957,15 +1936,13 @@ func (c *windowCode) emitConsoleStatements(statements []statement, constants map
 			if len(c.loopTargets) == 0 {
 				return fmt.Errorf("跳出语句没有所在循环")
 			}
-			position := c.unconditionalPlaceholder()
-			last := len(c.loopTargets) - 1
+			position := c.unconditionalPlaceholder(); last := len(c.loopTargets) - 1
 			c.loopTargets[last].breaks = append(c.loopTargets[last].breaks, position)
 		case "继续":
 			if len(c.loopTargets) == 0 {
 				return fmt.Errorf("继续语句没有所在循环")
 			}
-			target := c.loopTargets[len(c.loopTargets)-1].continueAt
-			c.words = append(c.words, branch(target-len(c.words)))
+			target := c.loopTargets[len(c.loopTargets)-1].continueAt; c.words = append(c.words, branch(target-len(c.words)))
 		case "变量":
 			if mapSlot, exists := c.mapSlots[item.name.text]; exists {
 				c.words = append(c.words, movz(0, 0), storeIntegerSlot(0, 19, mapSlot.data), storeIntegerSlot(0, 19, mapSlot.length), movz(0, 64), storeIntegerSlot(0, 19, mapSlot.capacity))
@@ -2018,8 +1995,7 @@ func (c *windowCode) emitConsoleStatements(statements []statement, constants map
 				continue
 			}
 			if item.value.kind == "调用" && (item.value.text == "arraySet" || item.value.text == "arrayPush") {
-				var err error
-				array := c.arraySlots[item.name.text]
+				var err error; array := c.arraySlots[item.name.text]
 				if array.text && item.value.text == "arraySet" {
 					err = c.emitRuntimeTextArraySet(item.value, constants, slots)
 				} else if array.text {
@@ -2071,8 +2047,7 @@ func (c *windowCode) emitConsoleStatements(statements []statement, constants map
 				c.patchConditionFalse(falsePatches, len(c.words))
 				continue
 			}
-			end := c.unconditionalPlaceholder()
-			c.patchConditionFalse(falsePatches, len(c.words))
+			end := c.unconditionalPlaceholder(); c.patchConditionFalse(falsePatches, len(c.words))
 			if err := c.emitConsoleStatements(item.otherwise, constants, slots); err != nil {
 				return err
 			}
@@ -2087,17 +2062,14 @@ func (c *windowCode) emitConsoleStatements(statements []statement, constants map
 				if !selected {
 					continue
 				}
-				loopStart := len(c.words)
-				c.loopTargets = append(c.loopTargets, loopTarget{continueAt: loopStart})
+				loopStart := len(c.words); c.loopTargets = append(c.loopTargets, loopTarget{continueAt: loopStart})
 				if err := c.emitConsoleStatements(item.body, constants, slots); err != nil {
 					return err
 				}
-				c.words = append(c.words, branch(loopStart-len(c.words)))
-				c.finishLoop()
+				c.words = append(c.words, branch(loopStart-len(c.words))); c.finishLoop()
 				continue
 			}
-			loopStart := len(c.words)
-			c.loopTargets = append(c.loopTargets, loopTarget{continueAt: loopStart})
+			loopStart := len(c.words); c.loopTargets = append(c.loopTargets, loopTarget{continueAt: loopStart})
 			falsePatches, err := c.emitConditionFalseBranches(item.condition, constants, slots)
 			if err != nil {
 				return err
@@ -2105,8 +2077,7 @@ func (c *windowCode) emitConsoleStatements(statements []statement, constants map
 			if err := c.emitConsoleStatements(item.body, constants, slots); err != nil {
 				return err
 			}
-			c.words = append(c.words, branch(loopStart-len(c.words)))
-			c.patchConditionFalse(falsePatches, len(c.words))
+			c.words = append(c.words, branch(loopStart-len(c.words))); c.patchConditionFalse(falsePatches, len(c.words))
 			c.finishLoop()
 		default:
 			return fmt.Errorf("不支持的控制台运行时语句：%s", item.kind)
@@ -2121,10 +2092,7 @@ func (c *windowCode) emitRuntimeTextConcat(input value, destinationBuffer uint32
 	if destinationLength != nil && c.isRuntimeTextPointerSlot(destinationBuffer) {
 		return c.emitRuntimeDynamicTextConcat(input, destinationBuffer, *destinationLength, slots, constants)
 	}
-	// Build into the reusable 64-byte scratch area so self-concatenation and
-	// overflow leave the destination untouched until the result is complete.
-	scratchBase := c.temporaryBufferOffset + runtimeTextConcatBaseScratch + runtimeTextConcatScratchStride*(runtimeTextConcatScratchLevel(input)-1)
-	leftScratch, rightScratch := scratchBase, scratchBase+256
+	scratchBase := c.temporaryBufferOffset + runtimeTextConcatBaseScratch + runtimeTextConcatScratchStride*(runtimeTextConcatScratchLevel(input)-1); leftScratch, rightScratch := scratchBase, scratchBase+256
 	if err := c.emitRuntimeTextOperand(input.args[0], slots, constants, 21, 24, leftScratch); err != nil {
 		return 0, err
 	}
@@ -2132,23 +2100,17 @@ func (c *windowCode) emitRuntimeTextConcat(input value, destinationBuffer uint32
 	if err := c.emitRuntimeTextOperand(input.args[1], slots, constants, 22, 27, rightScratch); err != nil {
 		return 0, err
 	}
-	c.words = append(c.words, loadIntegerSlot(21, 31, 0), loadIntegerSlot(24, 31, 8), addImmediate(31, 31, 16))
-	c.words = append(c.words, addRegister(23, 21, 22), compareImmediate(23, 63))
+	c.words = append(c.words, loadIntegerSlot(21, 31, 0), loadIntegerSlot(24, 31, 8), addImmediate(31, 31, 16)); c.words = append(c.words, addRegister(23, 21, 22), compareImmediate(23, 63))
 	c.branchToRuntimeFailure(12) // b.gt: the result exceeds 63 input bytes
-	c.emitConsoleStackAddress(25, c.temporaryBufferOffset)
-	c.words = append(c.words, movz(26, 0))
-	leftLoop := len(c.words)
+	c.words = append(c.words, movz(25, 0)); c.emitConsoleStackAddress(25, c.temporaryBufferOffset)
+	c.words = append(c.words, movz(26, 0)); leftLoop := len(c.words)
 	c.words = append(c.words, compareRegister(26, 21))
 	leftDone := c.conditionalPlaceholder(10) // b.ge
-	c.words = append(c.words, addRegister(1, 24, 26), loadByte(28, 1), addRegister(1, 25, 26), storeByte(28, 1), addImmediate(26, 26, 1))
-	c.words = append(c.words, branch(leftLoop-len(c.words)))
-	c.patchConditional(leftDone, len(c.words))
-	c.words = append(c.words, movz(26, 0))
-	rightLoop := len(c.words)
-	c.words = append(c.words, compareRegister(26, 22))
+	c.words = append(c.words, addRegister(1, 24, 26), loadByte(28, 1), addRegister(1, 25, 26), storeByte(28, 1), addImmediate(26, 26, 1)); c.words = append(c.words, branch(leftLoop-len(c.words)))
+	c.patchConditional(leftDone, len(c.words)); c.words = append(c.words, movz(26, 0))
+	rightLoop := len(c.words); c.words = append(c.words, compareRegister(26, 22))
 	rightDone := c.conditionalPlaceholder(10) // b.ge
-	c.words = append(c.words, addRegister(1, 27, 26), loadByte(28, 1), addRegister(1, 25, 21), addRegister(1, 1, 26), storeByte(28, 1), addImmediate(26, 26, 1))
-	c.words = append(c.words, branch(rightLoop-len(c.words)))
+	c.words = append(c.words, addRegister(1, 27, 26), loadByte(28, 1), addRegister(1, 25, 21), addRegister(1, 1, 26), storeByte(28, 1), addImmediate(26, 26, 1)); c.words = append(c.words, branch(rightLoop-len(c.words)))
 	c.patchConditional(rightDone, len(c.words))
 	c.words = append(c.words, addRegister(1, 25, 23))
 	c.movImmediate(28, 10)
@@ -2307,10 +2269,30 @@ func (c *windowCode) emitRuntimeTextCopyOperand(buffer, length, capacity uint32)
 	c.words = append(c.words, storeByte(26, 25), storeIntegerSlot(22, 19, length), addImmediate(31, 31, 32))
 	return nil
 }
-
-// emitRuntimeOwnedTextReturnOperand borrows an owned text descriptor as a
-// read-only operand and unmaps it after the caller has consumed it. The
-// descriptor is saved in a fresh frame before any other call can clobber x1/x2.
+func (c *windowCode) emitRuntimeTextCopyRegisters(buffer, length, capacity, sourceLength, sourceBuffer uint32) error {
+	c.words = append(c.words, subImmediate(31, 31, 32), storeIntegerSlot(sourceLength, 31, 0), storeIntegerSlot(sourceBuffer, 31, 8), addImmediate(23, sourceLength, 1), loadIntegerSlot(24, 19, capacity), compareRegister(24, 23))
+	ready := c.conditionalPlaceholder(2)
+	if err := c.emitArrayMapCall(23); err != nil {
+		return err
+	}
+	c.words = append(c.words, storeIntegerSlot(0, 31, 16), loadIntegerSlot(0, 19, buffer), loadIntegerSlot(1, 19, capacity))
+	c.call(c.arrayUnmapIndex)
+	c.words = append(c.words, compareImmediate(0, 0))
+	c.branchToRuntimeFailure(1)
+	c.words = append(c.words, loadIntegerSlot(0, 31, 16), storeIntegerSlot(0, 19, buffer), storeIntegerSlot(23, 19, capacity))
+	c.patchConditional(ready, len(c.words))
+	c.words = append(c.words, loadIntegerSlot(21, 31, 0), loadIntegerSlot(22, 31, 8), loadIntegerSlot(24, 19, buffer), movz(23, 0))
+	loop := len(c.words)
+	c.words = append(c.words, compareRegister(23, 22))
+	done := c.conditionalPlaceholder(10)
+	c.words = append(c.words, addRegister(25, 21, 23), loadByte(26, 25), addRegister(25, 24, 23), storeByte(26, 25), addImmediate(23, 23, 1))
+	c.words = append(c.words, branch(loop-len(c.words)))
+	c.patchConditional(done, len(c.words))
+	c.words = append(c.words, addRegister(25, 24, 22))
+	c.movImmediate(26, 10)
+	c.words = append(c.words, storeByte(26, 25), storeIntegerSlot(22, 19, length), addImmediate(31, 31, 32))
+	return nil
+}
 func (c *windowCode) emitRuntimeOwnedTextReturnOperand(input value, constants map[string]constantValue, slots map[string]uint32, lengthRegister, bufferRegister uint32) error {
 	c.words = append(c.words, subImmediate(31, 31, 32), storeIntegerSlot(1, 31, 0), storeIntegerSlot(2, 31, 8), storeIntegerSlot(3, 31, 16))
 	if err := c.emitRuntimeFunctionCall(input, constants, slots); err != nil {
@@ -2363,6 +2345,19 @@ func (c *windowCode) emitRuntimeTextOperand(input value, slots map[string]uint32
 		c.words = append(c.words, loadIntegerSlot(lengthRegister, 19, result.length), loadIntegerSlot(bufferRegister, 19, result.pointer))
 		return nil
 	}
+	if isDirectTextResultExtraction(input) {
+		if err := c.emitResultValueRegisters(input.args[0], constants, slots); err != nil {
+			return err
+		}
+		c.words = append(c.words, compareImmediate(0, 1))
+		success := c.conditionalPlaceholder(1)
+		c.movRegister(0, 1)
+		c.call(c.exitIndex)
+		c.patchConditional(success, len(c.words))
+		c.movRegister(lengthRegister, 3)
+		c.movRegister(bufferRegister, 2)
+		return nil
+	}
 	if isRuntimeTextInput(input) {
 		if err := c.emitReadText(scratchBuffer, nil, true, 0, c.exitIndex-1, c.exitIndex); err != nil {
 			return err
@@ -2373,6 +2368,15 @@ func (c *windowCode) emitRuntimeTextOperand(input value, slots map[string]uint32
 	}
 	if isRuntimeArgumentText(input) {
 		return c.emitRuntimeArgumentTextOperand(input, slots, constants, lengthRegister, bufferRegister)
+	}
+	if isRuntimeEnvironmentRead(input) {
+		sourceBuffer, sourceLength, err := c.emitRuntimeEnvironmentRead(input, constants, slots)
+		if err != nil {
+			return err
+		}
+		c.movRegister(lengthRegister, sourceLength)
+		c.movRegister(bufferRegister, sourceBuffer)
+		return nil
 	}
 	if input.kind == "调用" && input.text == "substring" {
 		length, err := c.emitRuntimeTextSubstring(input, scratchBuffer, constants, slots, false)
@@ -2443,8 +2447,6 @@ func (c *windowCode) emitRuntimeTextSubstring(input value, destinationBuffer uin
 	c.branchToRuntimeFailure(11) // b.lt: end precedes start
 	c.words = append(c.words, compareImmediate(7, 63))
 	c.branchToRuntimeFailure(12) // b.gt: byte-bounded text has at most 63 scalars
-	// Walk validated UTF-8 by scalar value, retaining the corresponding byte
-	// offsets. A runtime input shorter than the requested end fails before output.
 	c.words = append(c.words, movz(22, 0), movz(23, 0), movz(24, 0), movz(26, 0))
 	scan := len(c.words)
 	c.words = append(c.words, compareRegister(23, 6))
@@ -2748,7 +2750,6 @@ func runtimeResultOperandShape(input value) bool {
 	}
 	return input.text == "ifElse" && len(input.args) == 3 && (runtimeResultOperandShape(input.args[1]) || runtimeResultOperandShape(input.args[2]))
 }
-
 func (c *windowCode) emitConditionFalseBranches(condition value, constants map[string]constantValue, slots map[string]uint32) ([]conditionFalsePatch, error) {
 	if !containsRuntimeArguments(condition) && !containsRuntimeIntegerInput(condition) && !containsRuntimeTextInput(condition) && !containsIntegerSlotReference(condition, slots) && !containsRuntimeTextVariableReference(condition, c.textBuffers) && !containsTextResultValue(condition) && !containsRuntimeTextReturnCall(condition) && !containsResultStateCall(condition) {
 		selected, err := evaluateBoolean(condition, 0, constants)
@@ -2769,14 +2770,24 @@ func (c *windowCode) emitConditionFalseBranches(condition value, constants map[s
 		patch := c.conditionalPlaceholder(0)
 		return []conditionFalsePatch{{position: patch.position, condition: patch.condition}}, nil
 	}
-	if condition.kind == "调用" && condition.text == "是否失败" && len(condition.args) == 1 && condition.args[0].kind == "引用" {
-		result, exists := c.resultSlots[condition.args[0].text]
-		if !exists {
-			return nil, fmt.Errorf("无法解析结果变量：%s", condition.args[0].text)
+	if condition.kind == "调用" && condition.text == "是否失败" && len(condition.args) == 1 && isResultOperand(condition.args[0]) {
+		if condition.args[0].kind == "引用" {
+			result, exists := c.resultSlots[condition.args[0].text]
+			if !exists {
+				return nil, fmt.Errorf("无法解析结果变量：%s", condition.args[0].text)
+			}
+			c.words = append(c.words, loadIntegerSlot(0, 19, result.tag), compareImmediate(0, 1))
+			patch := c.conditionalPlaceholder(1)
+			return []conditionFalsePatch{{position: patch.position, condition: patch.condition}}, nil
+		} else {
+			if err := c.emitResultValueRegisters(condition.args[0], constants, slots); err != nil {
+				return nil, err
+			}
+			c.emitResultFailureFlag(runtimeResultPayload(condition.args[0], constants) == "运行时文本")
+			c.words = append(c.words, compareImmediate(0, 0))
+			patch := c.conditionalPlaceholder(0)
+			return []conditionFalsePatch{{position: patch.position, condition: patch.condition}}, nil
 		}
-		c.words = append(c.words, loadIntegerSlot(0, 19, result.tag), compareImmediate(0, 1))
-		patch := c.conditionalPlaceholder(1)
-		return []conditionFalsePatch{{position: patch.position, condition: patch.condition}}, nil
 	}
 	if condition.kind == "逻辑" && condition.left != nil && condition.right != nil {
 		left, err := c.emitConditionFalseBranches(*condition.left, constants, slots)
@@ -2828,9 +2839,7 @@ func (c *windowCode) emitConditionFalseBranches(condition value, constants map[s
 	patch := c.conditionalPlaceholder(branchWhenFalse)
 	return []conditionFalsePatch{{position: patch.position, condition: patch.condition}}, nil
 }
-func isTextOrderingOperator(operator string) bool {
-	return operator == "<" || operator == "<=" || operator == ">" || operator == ">="
-}
+func isTextOrderingOperator(operator string) bool { return operator == "<" || operator == "<=" || operator == ">" || operator == ">=" }
 func (c *windowCode) emitRuntimeTextComparisonOperands(left, right, condition value, slots map[string]uint32, constants map[string]constantValue) error {
 	scratchBase := c.temporaryBufferOffset + runtimeTextConcatBaseScratch + runtimeTextConcatScratchStride*runtimeTextConcatScratchLevel(condition)
 	if err := c.emitRuntimeTextOperand(left, slots, constants, 21, 23, scratchBase); err != nil {
@@ -2921,7 +2930,6 @@ func (c *windowCode) emitRuntimeTextComparisonFalseBranches(condition value, slo
 	leftOwned := isTextReturnCall(condition.args[0])
 	rightOwned := isTextReturnCall(condition.args[1])
 	if !leftOwned && !rightOwned {
-		// Original path: no owned mapping, compare and return branch patches.
 		c.words = append(c.words, compareRegister(21, 22))
 		lengthMismatch := c.conditionalPlaceholder(1) // b.ne
 		if condition.text == "equals" {
@@ -2954,7 +2962,6 @@ func (c *windowCode) emitRuntimeTextComparisonFalseBranches(condition value, slo
 		}
 		return falsePatches, nil
 	}
-
 	return falsePatches, nil
 }
 func (c *windowCode) branchToRuntimeFailure(condition uint32) {
@@ -3041,8 +3048,6 @@ func (c *windowCode) emitConsoleString(text string, writeIndex, exitIndex int) e
 	return nil
 }
 func (c *windowCode) emitReadInteger(bufferOffset uint32) error {
-	// readInteger is a primitive, not an ABI frame. Save caller x20 explicitly
-	// rather than caching it in x28, which other text/codegen paths reuse.
 	c.words = append(c.words, subImmediate(31, 31, 16), storeIntegerSlot(20, 31, 0))
 	c.emitConsoleStackAddress(21, bufferOffset)
 	c.movImmediate(20, 0)
@@ -3298,7 +3303,45 @@ func (c *windowCode) emitRuntimeTextFunctionOutput(input value, constants map[st
 	c.call(exitIndex)
 	return nil
 }
-
+func (c *windowCode) emitRuntimeResultTextOutput(input value, constants map[string]constantValue, slots map[string]uint32, writeIndex, exitIndex int) error {
+	if !isDirectTextResultExtraction(input) {
+		return fmt.Errorf("运行时文本结果输出需要直接文本结果值")
+	}
+	result := input.args[0]
+	if err := c.emitResultValueRegisters(result, constants, slots); err != nil {
+		return err
+	}
+	c.words = append(c.words, subImmediate(31, 31, 32), storeIntegerSlot(0, 31, 0), storeIntegerSlot(1, 31, 8), storeIntegerSlot(2, 31, 16), storeIntegerSlot(3, 31, 24))
+	c.words = append(c.words, compareImmediate(0, 1))
+	success := c.conditionalPlaceholder(1)
+	c.movRegister(0, 1)
+	c.call(exitIndex)
+	c.patchConditional(success, len(c.words))
+	c.words = append(c.words, loadIntegerSlot(21, 31, 16), loadIntegerSlot(22, 31, 24), addImmediate(22, 22, 1), movz(23, 0))
+	writeLoop := len(c.words)
+	c.words = append(c.words, movz(0, 1))
+	c.movRegister(1, 21)
+	c.movRegister(2, 22)
+	c.call(writeIndex)
+	c.words = append(c.words, compareImmediate(0, 0))
+	writeFailed := c.conditionalPlaceholder(13)
+	c.words = append(c.words, addRegister(21, 21, 0), subtractRegister(22, 22, 0), compareImmediate(22, 0))
+	c.words = append(c.words, branchCondition(writeLoop-len(c.words), 1))
+	writeDone := c.unconditionalPlaceholder()
+	c.patchConditional(writeFailed, len(c.words))
+	c.movImmediate(23, 1)
+	c.words[writeDone] = branch(len(c.words) - writeDone)
+	if runtimeResultPayload(result, constants) == "运行时文本" {
+		c.words = append(c.words, loadIntegerSlot(0, 31, 16), loadIntegerSlot(1, 31, 8))
+		c.call(c.arrayUnmapIndex)
+		c.words = append(c.words, compareImmediate(0, 0))
+		c.branchToRuntimeFailure(1)
+	}
+	c.words = append(c.words, addImmediate(31, 31, 32))
+	c.movRegister(0, 23)
+	c.call(exitIndex)
+	return nil
+}
 func (c *windowCode) emitRuntimeTextOutput(bufferOffset, lengthOffset uint32, writeIndex, exitIndex int) {
 	c.words = append(c.words, loadIntegerSlot(2, 19, lengthOffset), addImmediate(2, 2, 1))
 	c.movImmediate(0, 1)
@@ -3340,9 +3383,133 @@ func (c *windowCode) emitRuntimeArgumentTextOutput(writeIndex int) error {
 	c.call(c.exitIndex)
 	return nil
 }
+func (c *windowCode) emitRuntimeFileSize(input value, constants map[string]constantValue, slots map[string]uint32) error {
+	if !isRuntimeFileSize(input) || c.fileOpenIndex < 0 || c.moduleStatIndex < 0 {
+		return fmt.Errorf("fileSize 需要静态或参数文本路径和 _open/_fstat/_close")
+	}
+	if err := c.emitRuntimeFilePath(input.args[0], constants, slots, 25, 26); err != nil {
+		return err
+	}
+	c.movRegister(0, 26)
+	c.movImmediate(1, 0) // O_RDONLY
+	c.movImmediate(2, 0)
+	c.call(c.fileOpenIndex)
+	c.words = append(c.words, compareImmediate(0, 0))
+	openReady := c.conditionalPlaceholder(10) // b.ge
+	c.movImmediate(0, 21)
+	c.call(c.exitIndex)
+	c.patchConditional(openReady, len(c.words))
+	c.movRegister(22, 0)
+	c.words = append(c.words, subImmediate(31, 31, 160), storeIntegerSlot(0, 31, 0))
+	c.words = append(c.words, addImmediate(1, 31, 32), addRegister(2, 31, 32))
+	c.call(c.moduleStatIndex)
+	c.words = append(c.words, compareImmediate(0, 0))
+	statReady := c.conditionalPlaceholder(10)
+	c.movImmediate(0, 21)
+	c.call(c.exitIndex)
+	c.patchConditional(statReady, len(c.words))
+	c.words = append(c.words, loadIntegerSlot(22, 31, 0))
+	c.movRegister(0, 22)
+	c.call(c.fileCloseIndex)
+	c.words = append(c.words, compareImmediate(0, 0))
+	closeReady := c.conditionalPlaceholder(10)
+	c.movImmediate(0, 21)
+	c.call(c.exitIndex)
+	c.patchConditional(closeReady, len(c.words))
+	c.words = append(c.words, addImmediate(1, 31, 32+96), loadIntegerSlot(0, 1, 0), addImmediate(31, 31, 160))
+	return nil
+}
+func (c *windowCode) emitRuntimePathExists(input value, constants map[string]constantValue, slots map[string]uint32) error {
+	if !isRuntimePathExists(input) || c.fileOpenIndex < 0 || c.moduleStatIndex < 0 || c.fileCloseIndex < 0 {
+		return fmt.Errorf("exists 需要静态或参数文本路径和 _open/_fstat/_close")
+	}
+	if err := c.emitRuntimeFilePath(input.args[0], constants, slots, 25, 26); err != nil {
+		return err
+	}
+	c.movRegister(0, 26)
+	c.movImmediate(1, 0) // O_RDONLY
+	c.movImmediate(2, 0)
+	c.call(c.fileOpenIndex)
+	c.words = append(c.words, compareImmediate(0, 0))
+	openReady := c.conditionalPlaceholder(10) // b.ge
+	missing := len(c.words)
+	c.words = append(c.words, branch(0))
+	c.patchConditional(openReady, len(c.words))
+	c.movRegister(22, 0)
+	c.words = append(c.words, subImmediate(31, 31, 160), storeIntegerSlot(0, 31, 0), addImmediate(1, 31, 32), addRegister(2, 31, 32))
+	c.call(c.moduleStatIndex)
+	c.words = append(c.words, compareImmediate(0, 0))
+	statReady := c.conditionalPlaceholder(10)
+	c.movImmediate(0, 21)
+	c.call(c.exitIndex)
+	c.patchConditional(statReady, len(c.words))
+	c.words = append(c.words, loadIntegerSlot(22, 31, 0))
+	c.movRegister(0, 22)
+	c.call(c.fileCloseIndex)
+	c.words = append(c.words, compareImmediate(0, 0))
+	closeReady := c.conditionalPlaceholder(10)
+	c.movImmediate(0, 21)
+	c.call(c.exitIndex)
+	c.patchConditional(closeReady, len(c.words))
+	c.movImmediate(0, 1)
+	found := len(c.words)
+	c.words = append(c.words, branch(0))
+	c.words[missing] = branch(len(c.words) - missing)
+	c.movImmediate(0, 0)
+	c.words[found] = branch(len(c.words) - found)
+	c.words = append(c.words, addImmediate(31, 31, 160))
+	return nil
+}
+func (c *windowCode) emitRuntimeDirectoryCheck(input value, constants map[string]constantValue, slots map[string]uint32) error {
+	if !isRuntimeDirectoryCheck(input) || c.fileOpenIndex < 0 || c.moduleStatIndex < 0 || c.fileCloseIndex < 0 {
+		return fmt.Errorf("目录类型查询需要 isDirectory（静态或参数文本路径）和 _open/_fstat/_close")
+	}
+	if err := c.emitRuntimeFilePath(input.args[0], constants, slots, 25, 26); err != nil {
+		return err
+	}
+	c.movRegister(0, 26)
+	c.movImmediate(1, 0)
+	c.movImmediate(2, 0)
+	c.call(c.fileOpenIndex)
+	c.words = append(c.words, compareImmediate(0, 0))
+	openReady := c.conditionalPlaceholder(10)
+	missing := len(c.words)
+	c.words = append(c.words, branch(0))
+	c.patchConditional(openReady, len(c.words))
+	c.movRegister(22, 0)
+	c.words = append(c.words, subImmediate(31, 31, 160), storeIntegerSlot(0, 31, 0), addImmediate(1, 31, 32), addRegister(2, 31, 32))
+	c.call(c.moduleStatIndex)
+	c.words = append(c.words, compareImmediate(0, 0))
+	statReady := c.conditionalPlaceholder(10)
+	c.movImmediate(0, 21)
+	c.call(c.exitIndex)
+	c.patchConditional(statReady, len(c.words))
+	c.words = append(c.words, loadIntegerSlot(22, 31, 0))
+	c.movRegister(0, 22)
+	c.call(c.fileCloseIndex)
+	c.words = append(c.words, compareImmediate(0, 0))
+	closeReady := c.conditionalPlaceholder(10)
+	c.movImmediate(0, 21)
+	c.call(c.exitIndex)
+	c.patchConditional(closeReady, len(c.words))
+	// Darwin st_mode is a uint16 at stat+4; S_IFDIR is bit 0x4000.
+	c.movImmediate(0, 0)
+	c.words = append(c.words, addImmediate(24, 31, 37), loadByte(25, 24))
+	c.movImmediate(26, 0x40)
+	c.words = append(c.words, andRegister(25, 25, 26), compareImmediate(25, 0))
+	notDirectory := c.conditionalPlaceholder(0) // b.eq
+	c.movImmediate(0, 1)
+	found := len(c.words)
+	c.words = append(c.words, branch(0))
+	c.words[missing] = branch(len(c.words) - missing)
+	c.patchConditional(notDirectory, len(c.words))
+	c.movImmediate(0, 0)
+	c.words[found] = branch(len(c.words) - found)
+	return nil
+}
 func (c *windowCode) emitRuntimeFileWrite(input value, constants map[string]constantValue, slots map[string]uint32) error {
 	if !isRuntimeFileWrite(input) {
-		return fmt.Errorf("文件写入需要 writeFile（静态或参数文本路径，文本）")
+		return fmt.Errorf("文件写入需要 writeFile/appendFile（静态或参数文本路径，文本）")
 	}
 	if err := c.emitRuntimeFilePath(input.args[0], constants, slots, 26, 27); err != nil {
 		return err
@@ -3360,8 +3527,10 @@ func (c *windowCode) emitRuntimeFileWrite(input value, constants map[string]cons
 		c.words = append(c.words, loadIntegerSlot(27, 31, 0), addImmediate(31, 31, 16))
 	}
 	c.movRegister(0, 27)
-	c.movImmediate(1, 0644)
-	c.call(c.fileCreateIndex)
+	c.movImmediate(1, map[bool]uint16{false: 0644, true: 521}[input.text == "appendFile"])
+	c.words = append(c.words, subImmediate(31, 31, 16), movz(2, 0644), storeIntegerSlot(2, 31, 0))
+	c.call(map[bool]int{false: c.fileCreateIndex, true: c.fileOpenIndex}[input.text == "appendFile"])
+	c.words = append(c.words, addImmediate(31, 31, 16))
 	c.words = append(c.words, compareImmediate(0, 0))
 	openReady := c.conditionalPlaceholder(10) // b.ge
 	c.movImmediate(0, 21)
@@ -3399,8 +3568,115 @@ func (c *windowCode) emitRuntimeFileWrite(input value, constants map[string]cons
 	c.movRegister(0, 22)
 	return nil
 }
-
-// Validate all elements before opening the destination. The mapping owns a packed copy.
+func (c *windowCode) emitRuntimeFileRemove(input value, constants map[string]constantValue, slots map[string]uint32) error {
+	if !isRuntimeFileRemove(input) || c.fileRemoveIndex < 0 {
+		return fmt.Errorf("文件删除需要 removeFile（静态或参数文本路径）")
+	}
+	if err := c.emitRuntimeFilePath(input.args[0], constants, slots, 25, 26); err != nil {
+		return err
+	}
+	c.movImmediate(24, 1); c.movRegister(0, 26); c.call(c.fileRemoveIndex)
+	c.emitRuntimeFileMutationResult(c.exitIndex)
+	return nil
+}
+func (c *windowCode) emitRuntimeFileRename(input value, constants map[string]constantValue, slots map[string]uint32) error {
+	if !isRuntimeFileRename(input) || c.fileRenameIndex < 0 {
+		return fmt.Errorf("文件重命名需要 renameFile（静态或参数文本路径，静态或参数文本路径）")
+	}
+	return c.emitRuntimeFilePathPair(input, constants, slots, "文件重命名")
+}
+func (c *windowCode) emitRuntimeFileReplace(input value, constants map[string]constantValue, slots map[string]uint32) error {
+	if !isRuntimeFileReplace(input) || c.fileRenameIndex < 0 {
+		return fmt.Errorf("文件原子替换需要 replaceFile（静态或参数文本路径，静态或参数文本路径）")
+	}
+	return c.emitRuntimeFilePathPair(input, constants, slots, "文件原子替换")
+}
+func (c *windowCode) emitRuntimeFilePathPair(input value, constants map[string]constantValue, slots map[string]uint32, label string) error {
+	if err := c.emitRuntimeFilePath(input.args[0], constants, slots, 24, 25); err != nil {
+		return fmt.Errorf("%s源路径：%w", label, err)
+	}
+	c.words = append(c.words, subImmediate(31, 31, 16), storeIntegerSlot(25, 31, 0))
+	if err := c.emitRuntimeFilePath(input.args[1], constants, slots, 26, 27); err != nil {
+		return fmt.Errorf("%s目标路径：%w", label, err)
+	}
+	c.words = append(c.words, loadIntegerSlot(0, 31, 0)); c.movRegister(1, 27)
+	c.words = append(c.words, addImmediate(31, 31, 16)); c.movImmediate(24, 1); c.call(c.fileRenameIndex)
+	c.emitRuntimeFileMutationResult(c.exitIndex)
+	return nil
+}
+func (c *windowCode) emitRuntimeDirectoryMutation(input value, constants map[string]constantValue, slots map[string]uint32) error {
+	if !isRuntimeDirectoryMutation(input) || c.fileMkdirIndex < 0 && c.fileRmdirIndex < 0 {
+		return fmt.Errorf("目录操作需要 createDirectory/removeDirectory（静态或参数文本路径）")
+	}
+	if err := c.emitRuntimeFilePath(input.args[0], constants, slots, 25, 26); err != nil {
+		return err
+	}
+	c.movImmediate(24, 1); c.movRegister(0, 26)
+	if input.text == "createDirectory" {
+		c.movImmediate(1, 0755)
+		c.call(c.fileMkdirIndex)
+	} else {
+		c.call(c.fileRmdirIndex)
+	}
+	c.emitRuntimeFileMutationResult(c.exitIndex)
+	return nil
+}
+func (c *windowCode) emitRuntimeFileMode(input value, constants map[string]constantValue, slots map[string]uint32) error {
+	if !isRuntimeFileMode(input) || input.text == "setFileMode" && c.fileChmodIndex < 0 || input.text == "changeFileMode" && c.fileFchmodIndex < 0 {
+		return fmt.Errorf("权限设置需要 setFileMode/changeFileMode（静态或参数文本路径，整数权限）")
+	}
+	if err := c.emitRuntimeFilePath(input.args[0], constants, slots, 25, 26); err != nil {
+		return err
+	}
+	c.words = append(c.words, subImmediate(31, 31, 16), storeIntegerSlot(26, 31, 0), storeIntegerSlot(27, 31, 0), storeIntegerSlot(0, 31, 8))
+	if input.text == "changeFileMode" {
+		c.movRegister(0, 26)
+		c.movImmediate(1, 0)
+		c.movImmediate(2, 0)
+		c.call(c.fileOpenIndex)
+		c.words = append(c.words, compareImmediate(0, 0))
+		openReady := c.conditionalPlaceholder(10)
+		c.movImmediate(0, 21)
+		c.call(c.exitIndex)
+		c.patchConditional(openReady, len(c.words))
+		c.movRegister(22, 0)
+	}
+	if err := c.emitRuntimeInteger(input.args[1], constants, slots); err != nil {
+		return err
+	}
+	c.words = append(c.words, loadIntegerSlot(1, 31, 0), andRegister(1, 0, 1))
+	c.words = append(c.words, loadIntegerSlot(0, 31, 8))
+	if input.text == "setFileMode" {
+		c.words = append(c.words, addImmediate(31, 31, 16), movz(24, 1))
+		c.call(c.fileChmodIndex)
+	} else {
+		c.movRegister(0, 22)
+		c.words = append(c.words, addImmediate(31, 31, 16), movz(24, 1))
+		c.call(c.fileFchmodIndex)
+		c.words = append(c.words, compareImmediate(0, 0))
+		fchmodReady := c.conditionalPlaceholder(0)
+		c.movRegister(0, 21)
+		c.call(c.exitIndex)
+		c.patchConditional(fchmodReady, len(c.words))
+		c.movRegister(0, 22)
+		c.call(c.fileCloseIndex)
+		c.words = append(c.words, compareImmediate(0, 0))
+		closeReady := c.conditionalPlaceholder(0)
+		c.movRegister(0, 21)
+		c.call(c.exitIndex)
+		c.patchConditional(closeReady, len(c.words))
+	}
+	c.emitRuntimeFileMutationResult(c.exitIndex)
+	return nil
+}
+func (c *windowCode) emitRuntimeFileMutationResult(exitIndex int) {
+	c.words = append(c.words, compareImmediate(0, 0))
+	success := c.conditionalPlaceholder(0)
+	c.movRegister(0, 24)
+	c.call(exitIndex)
+	c.patchConditional(success, len(c.words))
+	c.movImmediate(0, 0)
+}
 func (c *windowCode) packRuntimeBytes(input value) error {
 	array, exists := c.arraySlots[input.text]
 	if !exists || array.text {
@@ -3422,8 +3698,171 @@ func (c *windowCode) packRuntimeBytes(input value) error {
 	c.patchConditional(copyDone, len(c.words))
 	return nil
 }
+func (c *windowCode) emitRuntimeEnvironmentNamesTextOutput(input value, constants map[string]constantValue, slots map[string]uint32, writeIndex, exitIndex int) error {
+	if !isRuntimeEnvironmentNames(input) {
+		return fmt.Errorf("环境变量名称枚举需要 environmentNames（）")
+	}
+	// Read the NULL-terminated envp vector from the bound _environ symbol. Copy
+	// up to 256 names into the scratch frame and sort them with insertion sort.
+	const (
+		namesLimit  = 256
+		regCount    = 24
+		regScan     = 14
+		regName     = 28
+		regEnvBase  = 25
+		regIndex    = 21
+		regHole     = 20
+		regSlot     = 6
+		regByte     = 9
+	)
+	arrayOffset := c.temporaryBufferOffset + 320
+	newlineSlot := c.temporaryBufferOffset + 16
+	countSlot := c.temporaryBufferOffset + 256*8 + 320
+	indexSlot := countSlot + 8
+	c.words = append(c.words, movz(regCount, 0), storeIntegerSlot(regCount, 19, countSlot))
+	// _environ is a bound data symbol: its GOT slot holds the address of the
+	// envp vector, so dereference it after dyld fixups.
+	c.environmentGOTAddress(regScan)
+	c.words = append(c.words, loadPointer(regScan, regScan, 0), compareImmediate(regScan, 0))
+	collect := len(c.words)
+	noEnviron := c.conditionalPlaceholder(0)
+	c.words = append(c.words, loadPointer(regName, regScan, 0), addImmediate(regScan, regScan, 8), compareImmediate(regName, 0))
+	noName := c.conditionalPlaceholder(0)
+	c.words = append(c.words, compareImmediate(regCount, namesLimit))
+	full := c.conditionalPlaceholder(2)
+	c.words = append(c.words, addRegisterShifted(regSlot, 19, regCount, 3), addImmediate(regSlot, regSlot, arrayOffset), storeIntegerSlot(regName, regSlot, 0))
+	c.words = append(c.words, addImmediate(regCount, regCount, 1), storeIntegerSlot(regCount, 19, countSlot), branch(collect-len(c.words)))
+	collected := len(c.words)
+	c.patchConditional(noEnviron, collected)
+	c.patchConditional(noName, collected)
+	c.patchConditional(full, collected)
+	c.words = append(c.words, loadIntegerSlot(regCount, 19, countSlot))
+
+	// All loop state is stack-backed. Register x7 is a byte index, x8 a string
+	// pointer, and x9 a byte value; these roles never overlap.
+	currentSlot := indexSlot + 8
+	holeSlot := currentSlot + 8
+	previousSlot := holeSlot + 8
+	leftIndexSlot := previousSlot + 8
+	rightIndexSlot := leftIndexSlot + 8
+	leftByteSlot := rightIndexSlot + 8
+	rightByteSlot := leftByteSlot + 8
+	c.words = append(c.words, movz(regIndex, 1))
+	outer := len(c.words)
+	c.words = append(c.words, compareRegister(regCount, regIndex))
+	sorted := c.conditionalPlaceholder(10) // count <= index
+	c.words = append(c.words, addRegisterShifted(regSlot, 19, regIndex, 3), addImmediate(regSlot, regSlot, arrayOffset), loadIntegerSlot(7, regSlot, 0), storeIntegerSlot(7, 19, currentSlot))
+	c.words = append(c.words, movz(7, 1), storeIntegerSlot(7, 19, holeSlot))
+	inner := len(c.words)
+	c.words = append(c.words, loadIntegerSlot(7, 19, holeSlot), compareImmediate(7, 0))
+	insertHere := c.conditionalPlaceholder(0) // hole == 0: insert at current hole
+	c.words = append(c.words, loadIntegerSlot(7, 19, holeSlot), subImmediate(7, 7, 1), storeIntegerSlot(7, 19, holeSlot))
+	c.words = append(c.words, loadIntegerSlot(7, 19, holeSlot), compareImmediate(7, 0))
+	insertFirst := c.conditionalPlaceholder(0) // hole == 0: insert at index 0
+	c.words = append(c.words, loadIntegerSlot(7, 19, holeSlot), addRegisterShifted(regSlot, 19, 7, 3), addImmediate(regSlot, regSlot, arrayOffset), loadIntegerSlot(7, regSlot, 0), storeIntegerSlot(7, 19, previousSlot))
+	c.words = append(c.words, movz(7, 0), storeIntegerSlot(7, 19, leftIndexSlot), storeIntegerSlot(7, 19, rightIndexSlot))
+	compare := len(c.words)
+	// Load one byte from each string. x7 and x8 carry byte indexes only inside
+	// this block; byte values live in their own slots.
+	c.words = append(c.words, loadIntegerSlot(8, 19, previousSlot), loadIntegerSlot(7, 19, leftIndexSlot), addRegister(8, 8, 7), loadByte(regByte, 8), storeIntegerSlot(regByte, 19, leftByteSlot))
+	c.words = append(c.words, loadIntegerSlot(7, 19, leftByteSlot), compareWordImmediate(7, 0))
+	previousEnded := c.conditionalPlaceholder(0) // previous is a prefix: insert here
+	c.words = append(c.words, loadIntegerSlot(8, 19, currentSlot), loadIntegerSlot(7, 19, rightIndexSlot), addRegister(8, 8, 7), loadByte(regByte, 8), storeIntegerSlot(regByte, 19, rightByteSlot))
+	c.words = append(c.words, loadIntegerSlot(7, 19, rightByteSlot), compareWordImmediate(7, 0))
+	currentEnded := c.conditionalPlaceholder(0) // current is a prefix: insert here
+	c.words = append(c.words, loadIntegerSlot(7, 19, leftByteSlot), loadIntegerSlot(8, 19, rightByteSlot), compareRegister(8, 7))
+	shiftPrevious := c.conditionalPlaceholder(11) // right < left: shift previous
+	placeCurrent := c.conditionalPlaceholder(8)  // right > left: place current
+	c.words = append(c.words, loadIntegerSlot(7, 19, leftIndexSlot), addImmediate(7, 7, 1), storeIntegerSlot(7, 19, leftIndexSlot), loadIntegerSlot(7, 19, rightIndexSlot), addImmediate(7, 7, 1), storeIntegerSlot(7, 19, rightIndexSlot), branch(compare-len(c.words)))
+	shift := len(c.words)
+	c.patchConditional(shiftPrevious, shift)
+	c.words = append(c.words, loadIntegerSlot(8, 19, previousSlot), loadIntegerSlot(7, 19, holeSlot), addRegisterShifted(regSlot, 19, 7, 3), addImmediate(regSlot, regSlot, arrayOffset), storeIntegerSlot(8, regSlot, 0))
+	c.words = append(c.words, loadIntegerSlot(7, 19, holeSlot), subImmediate(7, 7, 1), storeIntegerSlot(7, 19, holeSlot), branch(inner-len(c.words)))
+	place := len(c.words)
+	c.patchConditional(previousEnded, place)
+	c.patchConditional(currentEnded, place)
+	c.patchConditional(insertHere, place)
+	c.patchConditional(insertFirst, place)
+	c.patchConditional(placeCurrent, place)
+	c.words = append(c.words, loadIntegerSlot(7, 19, currentSlot), loadIntegerSlot(8, 19, holeSlot), addRegisterShifted(regSlot, 19, 8, 3), addImmediate(regSlot, regSlot, arrayOffset), storeIntegerSlot(7, regSlot, 0))
+	outerContinue := len(c.words)
+	c.words = append(c.words, addImmediate(regIndex, regIndex, 1))
+	c.patchConditional(insertHere, outerContinue)
+	c.patchConditional(insertFirst, outerContinue)
+	c.words = append(c.words, branch(outer-len(c.words)))
+	c.patchConditional(sorted, len(c.words))
+
+	c.words = append(c.words, movz(regIndex, 0), movz(9, 10), addImmediate(regSlot, 19, newlineSlot), storeByte(9, regSlot))
+	c.words = append(c.words, storeIntegerSlot(regIndex, 19, indexSlot))
+	c.movImmediate(0, 1)
+	emit := len(c.words)
+	c.words = append(c.words, loadIntegerSlot(regIndex, 19, indexSlot), loadIntegerSlot(regCount, 19, countSlot))
+	c.words = append(c.words, compareRegister(regCount, regIndex))
+	finished := c.conditionalPlaceholder(10)
+	c.words = append(c.words, addRegisterShifted(regSlot, 19, regIndex, 3), addImmediate(regSlot, regSlot, arrayOffset), loadIntegerSlot(26, regSlot, 0), movz(2, 0))
+	c.movRegister(1, 26)
+	length := len(c.words)
+	c.words = append(c.words, addRegister(regScan, 1, 2), loadByte(regByte, regScan), compareWordImmediate(regByte, 61))
+	lengthDone := c.conditionalPlaceholder(0)
+	c.words = append(c.words, addImmediate(2, 2, 1), branch(length-len(c.words)-1))
+	c.patchConditional(lengthDone, len(c.words))
+	c.movRegister(27, 2)
+	c.movRegister(26, 1)
+	c.movImmediate(0, 1)
+	c.movRegister(1, 26)
+	c.movRegister(2, 27)
+	c.call(writeIndex)
+	c.words = append(c.words, movz(1, 0), movz(2, 1), addImmediate(1, 19, newlineSlot))
+	c.movImmediate(0, 1)
+	c.call(writeIndex)
+	c.words = append(c.words, addImmediate(regIndex, regIndex, 1), storeIntegerSlot(regIndex, 19, indexSlot), branch(emit-len(c.words)))
+	c.patchConditional(finished, len(c.words))
+	c.movImmediate(0, 0)
+	c.call(exitIndex)
+	return nil
+}
+
+func (c *windowCode) emitRuntimeEnvironmentNames(input value, constants map[string]constantValue, slots map[string]uint32) (uint32, uint32, error) {
+	if !isRuntimeEnvironmentNames(input) || c.environmentIndex < 0 {
+		return 0, 0, fmt.Errorf("环境变量名称枚举需要 environmentNames（）和 _environ")
+	}
+	return 0, 0, fmt.Errorf("环境变量名称枚举暂不支持作为容器载荷")
+}
+func (c *windowCode) emitRuntimeEnvironmentRead(input value, constants map[string]constantValue, slots map[string]uint32) (uint32, uint32, error) {
+	if !isRuntimeEnvironmentRead(input) || c.getenvIndex < 0 {
+		return 0, 0, fmt.Errorf("环境变量查询需要 readEnvironment（静态文本或参数文本名称）")
+	}
+	if isRuntimeArgumentText(input.args[0]) {
+		return 0, 0, fmt.Errorf("动态环境变量名称尚不支持")
+	}
+	name, problem := evaluateString(input.args[0], 0, constants)
+	if problem != nil {
+		return 0, 0, fmt.Errorf("环境变量名称无法求值：%v", problem)
+	}
+	label := fmt.Sprintf("runtimeEnvironmentName%d", len(c.dataLabels))
+	c.addData(label, append([]byte(name), 0), 1)
+	c.address(label, 0)
+	c.call(c.getenvIndex)
+	c.words = append(c.words, compareImmediate(0, 0))
+	notFound := c.conditionalPlaceholder(0)
+	c.movImmediate(21, 0)
+	lengthLoop := len(c.words)
+	c.words = append(c.words, addRegister(25, 0, 21), loadByte(25, 25), compareImmediate(25, 0))
+	lengthDone := c.conditionalPlaceholder(0)
+	c.words = append(c.words, addImmediate(21, 21, 1), branch(lengthLoop-len(c.words)-1))
+	c.patchConditional(lengthDone, len(c.words))
+	c.emitRuntimeUTF8Validation(0, 21)
+	valid := c.unconditionalPlaceholder()
+	c.patchConditional(notFound, len(c.words))
+	emptyLabel := fmt.Sprintf("runtimeEnvironmentEmpty%d", len(c.dataLabels))
+	c.addData(emptyLabel, []byte{0}, 1)
+	c.address(emptyLabel, 0)
+	c.words = append(c.words, movz(21, 0))
+	c.words[valid] = branch(len(c.words) - valid)
+	return 0, 21, nil
+}
 func (c *windowCode) emitRuntimeFilePath(input value, constants map[string]constantValue, slots map[string]uint32, lengthRegister, pointerRegister uint32) error {
-	if path, problem := evaluateString(input, 0, constants); problem == nil {
+	if path, problem := evaluateString(input.args[0], 0, constants); problem == nil {
 		if path == "" || strings.IndexByte(path, 0) >= 0 {
 			return fmt.Errorf("静态文件路径不能为空或包含 NUL")
 		}
@@ -3432,7 +3871,7 @@ func (c *windowCode) emitRuntimeFilePath(input value, constants map[string]const
 		c.address(label, pointerRegister)
 		return nil
 	}
-	if isRuntimeArgumentText(input) {
+	if isRuntimeArgumentText(input.args[0]) {
 		return c.emitRuntimeArgumentTextOperand(input, slots, constants, lengthRegister, pointerRegister)
 	}
 	return fmt.Errorf("文件路径需要静态文本或 argumentText（整数下标）")
@@ -3543,6 +3982,21 @@ func (c *windowCode) emitRuntimeFileOutput(input value, constants map[string]con
 	c.movImmediate(0, 0)
 	c.call(exitIndex)
 	return nil
+}
+func (c *windowCode) emitRuntimeEnvironmentTextOutputRegisters(bufferRegister, lengthRegister uint32, writeIndex, exitIndex int) {
+	c.movRegister(26, bufferRegister)
+	c.movRegister(27, lengthRegister)
+	c.movImmediate(0, 1)
+	c.movRegister(1, 26)
+	c.movRegister(2, 27)
+	c.call(writeIndex)
+	c.addData("runtimeEnvironmentNewline", []byte{'\n'}, 1)
+	c.address("runtimeEnvironmentNewline", 1)
+	c.movImmediate(0, 1)
+	c.movImmediate(2, 1)
+	c.call(writeIndex)
+	c.movImmediate(0, 0)
+	c.call(exitIndex)
 }
 func (c *windowCode) emitRuntimeTextOutputRegisters(bufferRegister, lengthRegister uint32, writeIndex, exitIndex int) {
 	c.movImmediate(0, 1)
@@ -3831,20 +4285,10 @@ func (c *windowCode) emitRuntimeInteger(input value, constants map[string]consta
 			c.patchConditional(success, len(c.words))
 			return nil
 		}
-		if input.text == "结果值" && len(input.args) == 1 && input.args[0].kind == "引用" {
-			result, exists := c.resultSlots[input.args[0].text]
-			if !exists {
-				return fmt.Errorf("无法解析结果变量：%s", input.args[0].text)
-			}
-			c.words = append(c.words, loadIntegerSlot(2, 19, result.tag), compareImmediate(2, 1))
-			success := c.conditionalPlaceholder(1)
-			c.words = append(c.words, loadIntegerSlot(0, 19, result.value))
-			c.call(c.exitIndex)
-			c.patchConditional(success, len(c.words))
-			c.words = append(c.words, loadIntegerSlot(0, 19, result.value))
-			return nil
-		}
-		if isRuntimeArgumentCount(input) {
+		if input.text == "结果值" && len(input.args) == 1 && runtimeResultOperandShape(input.args[0]) {
+			var success conditionalPatch
+			if input.args[0].kind == "引用" {
+			if isRuntimeArgumentCount(input) {
 			c.words = append(c.words, loadIntegerSlot(0, 19, c.argumentCountOffset))
 			return nil
 		}

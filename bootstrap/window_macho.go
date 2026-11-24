@@ -1,43 +1,28 @@
 // SPDX-License-Identifier: Apache-2.0
 // Copyright (c) 2026 行简（Serica）贡献者
 package main
-
 import (
 	"encoding/binary"
 	"fmt"
 	"math"
 )
-
 type importedSymbol struct {
 	name    string
 	ordinal uint8
 }
-type importCallPatch struct {
-	word, index int
-}
+type importCallPatch struct{ word, index int }
+type dataAddressReference struct{ word int; index uint32 }
 type addressReference struct {
 	word     int
 	label    string
 	register uint32
 	code     bool
 }
-type arraySlot struct {
-	data, length, capacity uint32
-	text                   bool
-}
+type arraySlot struct{ data, length, capacity uint32; text bool }
 type mapSlot struct{ data, length, capacity uint32 }
-type resultSlot struct {
-	tag, value, pointer, length uint32
-	text, runtimeText           bool
-}
-type loopTarget struct {
-	continueAt int
-	breaks     []int
-}
-type runtimeCallPatch struct {
-	position int
-	name     string
-}
+type resultSlot struct{ tag, value, pointer, length uint32; text, runtimeText bool }
+type loopTarget struct{ continueAt int; breaks []int }
+type runtimeCallPatch struct{ position int; name string }
 type windowCode struct {
 	words                 []uint32
 	constants             []byte
@@ -45,6 +30,7 @@ type windowCode struct {
 	codeLabels            map[string]int
 	refs                  []addressReference
 	importCallPatches     []importCallPatch
+	dataAddressRefs       []dataAddressReference
 	exitIndex             int
 	failurePatches        []conditionalPatch
 	arraySlots            map[string]arraySlot
@@ -52,6 +38,8 @@ type windowCode struct {
 	resultSlots           map[string]resultSlot
 	arrayMapIndex         int
 	arrayUnmapIndex       int
+	environmentIndex      int
+	getenvIndex           int
 	writeIndex            int
 	fileOpenIndex         int
 	moduleOpenIndex       int
@@ -61,11 +49,19 @@ type windowCode struct {
 	fileCreateIndex       int
 	fileCloseIndex        int
 	fileReadIndex         int
+	fileRemoveIndex       int
+	fileRenameIndex       int
+	fileMkdirIndex        int
+	fileRmdirIndex        int
+	fileChmodIndex        int
+	fileFchmodIndex       int
 	textBuffers           map[string]uint32
 	textLengths           map[string]uint32
 	textCapacities        map[string]uint32
 	loopTargets           []loopTarget
 	usesArguments         bool
+	usesEnvironment       bool
+	borrowedEnvironmentText map[string]bool
 	argumentCountOffset   uint32
 	argumentVectorOffset  uint32
 	temporaryBufferOffset uint32
@@ -75,7 +71,6 @@ type windowCode struct {
 	runtimeFunctionAt     map[string]int
 	runtimeCallPatches    []runtimeCallPatch
 }
-
 func makeWindowMachO(title, text string) ([]byte, error) {
 	imports := []importedSymbol{
 		{"_objc_autoreleasePoolPush", 2},
@@ -108,7 +103,6 @@ func makeWindowMachO(title, text string) ([]byte, error) {
 	stringOffset := symbolOffset + 16*len(imports)
 	fileEnd := stringOffset + len(stringTable)
 	image := make([]byte, fileEnd)
-
 	commandAt, commandCount := 32, 0
 	writeSegment(image, commandAt, "__PAGEZERO", 72, 0, 0x100000000, 0, 0, 0, 0, 0)
 	commandAt += 72
@@ -163,7 +157,6 @@ func makeWindowMachO(title, text string) ([]byte, error) {
 	copy(image[stringOffset:], stringTable)
 	return image, nil
 }
-
 func (c *windowCode) emitWindow(title, text string) {
 	c.addCString("class:NSApplication", "NSApplication")
 	c.call(0)
@@ -175,7 +168,6 @@ func (c *windowCode) emitWindow(title, text string) {
 	c.message(20, "setActivationPolicy:")
 	c.movImmediate(2, 0)
 	c.call(4)
-
 	c.loadClass("NSWindow", 21)
 	c.message(21, "alloc")
 	c.call(4)
@@ -297,6 +289,11 @@ func (c *windowCode) call(index int) {
 	c.importCallPatches = append(c.importCallPatches, importCallPatch{word: len(c.words), index: index})
 	c.words = append(c.words, 0, loadPointer(16, 16, uint32(index*8)), 0xd63f0200)
 }
+func (c *windowCode) environmentGOTAddress(destination uint32) {
+	word := len(c.words)
+	c.words = append(c.words, 0x10000000|destination)
+	c.dataAddressRefs = append(c.dataAddressRefs, dataAddressReference{word: word, index: uint32(c.environmentIndex)})
+}
 
 func (c *windowCode) movRegister(destination, source uint32) {
 	c.words = append(c.words, 0xaa0003e0|source<<16|destination)
@@ -360,6 +357,19 @@ func (c *windowCode) resolve(constOffset, importOffset uint64) error {
 		}
 		pc := imageBase + uint64(codeFileOff+patch.word*4)
 		c.words[patch.word] = adrp(16, imageBase+importOffset, pc)
+	}
+	for _, ref := range c.dataAddressRefs {
+		if ref.index*8 >= 4096 {
+			return fmt.Errorf("系统数据导入槽超出范围：%d", ref.index)
+		}
+		pc := imageBase + uint64(codeFileOff+ref.word*4)
+		target := imageBase + importOffset + uint64(ref.index*8)
+		displacement := int64(target) - int64(pc)
+		if displacement < -(1<<20) || displacement >= 1<<20 {
+			return fmt.Errorf("ADR 数据导入地址偏移超出范围：%d", ref.index)
+		}
+		register := c.words[ref.word] & 31
+		c.words[ref.word] = adr(register, displacement)
 	}
 	for _, ref := range c.refs {
 		target := uint64(0)
@@ -436,20 +446,10 @@ func writeSymbolTable(image []byte, at, symbolOffset, stringOffset, count, strin
 	put32(image, at+20, uint32(stringSize))
 }
 
-func writeDynamicSymbolTable(image []byte, at, undefinedCount int) {
-	put32(image, at, 0xb)
-	put32(image, at+4, 80)
-	put32(image, at+28, uint32(undefinedCount))
-}
+func writeDynamicSymbolTable(image []byte, at, undefinedCount int) { put32(image, at, 0xb); put32(image, at+4, 80); put32(image, at+28, uint32(undefinedCount)) }
 
-func wordsBytes(words []uint32) []byte {
-	data := make([]byte, len(words)*4)
-	for index, word := range words {
-		binary.LittleEndian.PutUint32(data[index*4:], word)
-	}
-	return data
-}
+func wordsBytes(words []uint32) []byte { data := make([]byte, len(words)*4)
+	for index, word := range words { binary.LittleEndian.PutUint32(data[index*4:], word) }
+	return data }
 
-func loadDouble(destination, base, offset uint32) uint32 {
-	return 0xfd400000 | (offset/8)<<10 | base<<5 | destination
-}
+func loadDouble(destination, base, offset uint32) uint32 { return 0xfd400000 | (offset/8)<<10 | base<<5 | destination }

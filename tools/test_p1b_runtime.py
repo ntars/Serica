@@ -2,10 +2,12 @@
 # Copyright (c) 2026 行简（Serica）贡献者
 """Execute native ARM64 integer and bounded text programs emitted by stage0."""
 
+import os
 import pathlib
 import re
 import resource
 import signal
+import stat
 import subprocess
 import sys
 import tempfile
@@ -170,6 +172,21 @@ CASES = [
     ("dynamic integer array length", "变量 数组=array（10，20，30）。\n程序=【输出=arrayLength（数组）】。\n", "3\n"),
     ("constant array indexed value", "常量 数组=array（10，20，30）。\n程序=【输出=arrayGet（数组，1）】。\n", "20\n"),
     ("inline array literal indexed value", "程序=【输出=arrayGet（array（10，20，30），2）】。\n", "30\n"),
+    (
+        "direct static result value",
+        "程序=【能力=array（『stdout』），输出=结果值（成功（42））】。\n",
+        "42\n",
+    ),
+    (
+        "direct static result failure flag",
+        "程序=【能力=array（『stdout』），输出=是否失败（成功（42））】。\n",
+        "0\n",
+    ),
+    (
+        "direct static result empty error code",
+        "程序=【能力=array（『stdout』），输出=错误码（成功（42））】。\n",
+        "0\n",
+    ),
 ]
 DYNAMIC_CASES = [
     ("runtime boolean variable true", RUNTIME_BOOLEAN_FIXTURE, "1\n5\n", "42\n", "b.eq", True),
@@ -583,6 +600,20 @@ RESULT_FUNCTION_CASES = [
         "程序=【能力=array（『stdout』，『stdin』），输出=结果值（结果）】。\n",
         "🟿𠀀\n",
         "🟿𠀀\n",
+        0,
+    ),
+    (
+        "direct runtime result failure flag",
+        "函数 选择（开关）=ifElse（开关==1，成功（7），失败（31））。\n变量 开关=readInteger（）。\n程序=【能力=array（『stdout』，『stdin』），输出=是否失败（选择（开关））】。\n",
+        "0\n",
+        "1\n",
+        0,
+    ),
+    (
+        "direct runtime result error code",
+        "函数 选择（开关）=ifElse（开关==1，成功（7），失败（31））。\n变量 开关=readInteger（）。\n程序=【能力=array（『stdout』，『stdin』），输出=错误码（选择（开关））】。\n",
+        "0\n",
+        "31\n",
         0,
     ),
 ]
@@ -1667,6 +1698,27 @@ DYNAMIC_TEXT_RESULT_CASES = [
         "",
         17,
     ),
+    (
+        "direct runtime text result output",
+        "函数 选择（开关）能力=array（『stdin』）=ifElse（开关==1，成功（readText（）），失败（29））。\n变量 开关=readInteger（）。\n程序=【能力=array（『stdout』，『stdin』），输出=结果值（选择（开关））】。\n",
+        "1\n直接载荷\n",
+        "直接载荷\n",
+        0,
+    ),
+    (
+        "direct runtime text result failure",
+        "函数 选择（开关）能力=array（『stdin』）=ifElse（开关==1，成功（readText（）），失败（29））。\n变量 开关=readInteger（）。\n程序=【能力=array（『stdout』，『stdin』），输出=结果值（选择（开关））】。\n",
+        "0\n",
+        "",
+        29,
+    ),
+    (
+        "direct runtime text result length",
+        "函数 选择（开关）能力=array（『stdin』）=ifElse（开关==1，成功（readText（）），失败（29））。\n变量 开关=readInteger（）。\n程序=【能力=array（『stdout』，『stdin』），输出=textLength（结果值（选择（开关）））】。\n",
+        "1\n𠮷野家\n",
+        "3\n",
+        0,
+    ),
 ]
 TEXT_RESULT_CASES = [
     (
@@ -2185,6 +2237,112 @@ def main() -> int:
                 )
                 return 1
 
+        environment_examples = [
+            (
+                "static environment direct output",
+                "程序=【能力=array（『stdout』，『args』），输出=readEnvironment（『SERICA_ENV_PROBE』）】。\n",
+                "探针中文\n",
+            ),
+            (
+                "static environment text length",
+                "程序=【能力=array（『stdout』，『args』），输出=textLength（readEnvironment（『SERICA_ENV_PROBE』））】。\n",
+                "4\n",
+            ),
+        ]
+        for index, (label, source_text, expected) in enumerate(environment_examples):
+            source = temp / f"environment-{index}.serica"
+            source.write_text(source_text, encoding="utf-8")
+            checked = run_unmodified("check", str(source))
+            output = temp / f"environment-{index}"
+            built = run_unmodified("build", str(source), "-o", str(output))
+            if checked.returncode != 0 or built.returncode != 0:
+                sys.stderr.write(checked.stdout + checked.stderr + built.stdout + built.stderr)
+                print(f"环境变量读取产物检查或构建失败：{label}", file=sys.stderr)
+                return 1
+            try:
+                verify_native_console_artifact(output, require_integer=False, required_imports=("_getenv",))
+            except RuntimeError as failure:
+                print(f"{label}：{failure}", file=sys.stderr)
+                return 1
+            executed = subprocess.run(
+                [str(output)], cwd=ROOT, text=True, capture_output=True, check=False,
+                env={**os.environ, "SERICA_ENV_PROBE": "探针中文"},
+            )
+            if executed.returncode != 0 or executed.stdout != expected or executed.stderr:
+                sys.stderr.write(executed.stdout + executed.stderr)
+                print(
+                    f"环境变量读取运行不符：{label}，期望 {expected!r}，"
+                    f"实际 stdout={executed.stdout!r}，退出码 {executed.returncode}",
+                    file=sys.stderr,
+                )
+                return 1
+        environment_names_source = temp / "environment-names.serica"
+        environment_names_source.write_text(
+            "程序=【能力=array（『stdout』，『args』），输出=environmentNames（）】。\n",
+            encoding="utf-8",
+        )
+        environment_names_output = temp / "environment-names"
+        for command in ("check", "build"):
+            result = (
+                run_unmodified("build", str(environment_names_source), "-o", str(environment_names_output))
+                if command == "build"
+                else run_unmodified("check", str(environment_names_source))
+            )
+            if result.returncode != 0:
+                sys.stderr.write(result.stdout + result.stderr)
+                print(f"环境变量名称枚举 {command} 失败", file=sys.stderr)
+                return 1
+        try:
+            verify_native_console_artifact(
+                environment_names_output,
+                require_integer=False,
+                required_imports=("_environ",),
+                forbidden_imports=("_getenv",),
+            )
+        except RuntimeError as failure:
+            print(f"环境变量名称枚举产物：{failure}", file=sys.stderr)
+            return 1
+        controlled_env = {"FOO": "bar", "PATH": "/usr/bin", "AAA": "1", "ZZZ": "2"}
+        executed = subprocess.run(
+            [str(environment_names_output)], cwd=ROOT, text=True, capture_output=True,
+            check=False, env=controlled_env,
+        )
+        expected_names = "".join(name + "\n" for name in sorted(controlled_env))
+        if executed.returncode != 0 or executed.stdout != expected_names or executed.stderr:
+            sys.stderr.write(executed.stdout + executed.stderr)
+            print(
+                f"环境变量名称枚举运行不符：期望 {expected_names!r}，"
+                f"实际 {executed.stdout!r}，退出码 {executed.returncode}",
+                file=sys.stderr,
+            )
+            return 1
+
+        environment_missing_source = temp / "environment-missing.serica"
+        environment_missing_source.write_text(
+            "程序=【能力=array（『stdout』，『args』），输出=readEnvironment（『SERICA_ENV_PROBE』）】。\n",
+            encoding="utf-8",
+        )
+        environment_missing_output = temp / "environment-missing"
+        built = run_unmodified(
+            "build", str(environment_missing_source), "-o", str(environment_missing_output)
+        )
+        if built.returncode != 0:
+            sys.stderr.write(built.stdout + built.stderr)
+            print("环境变量缺失候选项无法构建", file=sys.stderr)
+            return 1
+        for label, env, expected in [
+            ("missing environment", {k: v for k, v in os.environ.items() if k != "SERICA_ENV_PROBE"}, "\n"),
+            ("empty environment", {**os.environ, "SERICA_ENV_PROBE": ""}, "\n"),
+        ]:
+            executed = subprocess.run(
+                [str(environment_missing_output)], cwd=ROOT, text=True, capture_output=True,
+                check=False, env=env,
+            )
+            if executed.returncode != 0 or executed.stdout != expected or executed.stderr:
+                sys.stderr.write(executed.stdout + executed.stderr)
+                print(f"{label} 未按空文本处理", file=sys.stderr)
+                return 1
+
         missing_argument_source = temp / "arguments-missing.serica"
         missing_argument_source.write_text(
             "程序=【能力=array（『stdout』，『args』），输出=argumentText（1）】。\n",
@@ -2562,6 +2720,28 @@ def main() -> int:
                 True,
                 ("_creat", "_close"),
             ),
+            (
+                "appendFile preserves existing contents",
+                {"append-target.txt": "开头".encode("utf-8")},
+                "程序=【能力=array（『stdout』，『filesystem.write』），"
+                "输出=appendFile（『append-target.txt』，『尾』）】。\n",
+                b"3\n",
+                "append-target.txt",
+                "开头尾".encode("utf-8"),
+                True,
+                ("_open", "_close"),
+            ),
+            (
+                "appendFile creates missing file",
+                {},
+                "程序=【能力=array（『stdout』，『filesystem.write』），"
+                "输出=appendFile（『append-new.txt』，『新』）】。\n",
+                b"3\n",
+                "append-new.txt",
+                "新".encode("utf-8"),
+                True,
+                ("_open", "_close"),
+            ),
         ]
         for index, (
             label,
@@ -2611,6 +2791,7 @@ def main() -> int:
                 )
                 return 1
 
+        dynamic_write_success_count = 2
         dynamic_write_path = temp / "动态写入.txt"
         dynamic_write_source = temp / "file-write-dynamic-path.serica"
         dynamic_write_source.write_text(
@@ -2651,6 +2832,450 @@ def main() -> int:
             sys.stderr.buffer.write(executed.stdout + executed.stderr)
             print("动态路径文件写入运行不符", file=sys.stderr)
             return 1
+
+        dynamic_append_path = temp / "动态追加.txt"
+        dynamic_append_path.write_bytes("开头".encode("utf-8"))
+        dynamic_append_source = temp / "file-append-dynamic-path.serica"
+        dynamic_append_source.write_text(
+            "变量 字节=appendFile（argumentText（1），argumentText（2））。\n"
+            "程序=【能力=array（『stdout』，『args』，『filesystem.write』），输出=字节】。\n",
+            encoding="utf-8",
+        )
+        dynamic_append_output = temp / "file-append-dynamic-path"
+        checked = run_unmodified("check", str(dynamic_append_source))
+        built = run_unmodified("build", str(dynamic_append_source), "-o", str(dynamic_append_output))
+        if checked.returncode != 0 or built.returncode != 0:
+            sys.stderr.write(checked.stdout + checked.stderr + built.stdout + built.stderr)
+            print("动态路径文件追加无法构建", file=sys.stderr)
+            return 1
+        try:
+            verify_native_console_artifact(
+                dynamic_append_output,
+                require_integer=True,
+                require_variable_storage=True,
+                required_imports=("_open", "_close"),
+            )
+        except RuntimeError as failure:
+            print(f"动态路径文件追加：{failure}", file=sys.stderr)
+            return 1
+        executed = subprocess.run(
+            [str(dynamic_append_output), str(dynamic_append_path), "尾"],
+            cwd=temp,
+            capture_output=True,
+            check=False,
+            timeout=5,
+        )
+        if (
+            executed.returncode != 0
+            or executed.stdout != b"3\n"
+            or executed.stderr
+            or dynamic_append_path.read_bytes() != "开头尾".encode("utf-8")
+        ):
+            sys.stderr.buffer.write(executed.stdout + executed.stderr)
+            print("动态路径文件追加运行不符", file=sys.stderr)
+            return 1
+
+        mode_source = temp / "file-mode.serica"
+        mode_failure_count = 0
+        for label, source_text, expected_imports, expected_mode in [
+            ("chmod", "程序=【能力=array（『stdout』，『args』，『filesystem.write』），输出=setFileMode（argumentText（1），420）】。\n", ("_chmod",), 0o640),
+            ("fchmod", "程序=【能力=array（『stdout』，『args』，『filesystem.write』），输出=changeFileMode（argumentText（1），493）】。\n", ("_open", "_fchmod", "_close"), 0o740),
+        ]:
+            mode_source = temp / f"file-mode-{label}.serica"
+            mode_source.write_text(source_text, encoding="utf-8")
+            mode_output = temp / f"file-mode-{label}"
+            checked = run_unmodified("check", str(mode_source))
+            built = run_unmodified("build", str(mode_source), "-o", str(mode_output))
+            if checked.returncode != 0 or built.returncode != 0:
+                sys.stderr.write(checked.stdout + checked.stderr + built.stdout + built.stderr)
+                print(f"文件权限 {label} 无法构建", file=sys.stderr)
+                return 1
+            try:
+                verify_native_console_artifact(
+                    mode_output,
+                    require_integer=True,
+                    required_imports=expected_imports,
+                )
+            except RuntimeError as failure:
+                print(f"文件权限 {label}：{failure}", file=sys.stderr)
+                return 1
+            mode_target = temp / f"权限目标-{label}.txt"
+            mode_target.write_text("权限", encoding="utf-8")
+            mode_target.chmod(0o600)
+            executed = subprocess.run(
+                [str(mode_output), str(mode_target.relative_to(temp))],
+                cwd=temp,
+                capture_output=True,
+                check=False,
+                timeout=5,
+            )
+            mode_value = stat.S_IMODE(mode_target.stat().st_mode)
+            if executed.returncode != 0 or executed.stdout != b"0\n" or executed.stderr or mode_value != expected_mode:
+                sys.stderr.buffer.write(executed.stdout + executed.stderr)
+                print(f"文件权限 {label} 运行不符：{oct(mode_value)}", file=sys.stderr)
+                return 1
+            rejected_run = subprocess.run(
+                [str(mode_output), str(temp / "不存在权限.txt")],
+                cwd=temp,
+                capture_output=True,
+                check=False,
+                timeout=5,
+            )
+            mode_failure_count += 1
+            if rejected_run.returncode == 0 or rejected_run.stdout or rejected_run.stderr:
+                sys.stderr.buffer.write(rejected_run.stdout[:256] + rejected_run.stderr[:256])
+                print(f"文件权限 {label} 缺失路径未被拒绝", file=sys.stderr)
+                return 1
+        file_size_source = temp / "file-size.serica"
+        file_size_source.write_text(
+            "程序=【能力=array（『stdout』，『args』，『filesystem.read』），输出=fileSize（argumentText（1））】。\n",
+            encoding="utf-8",
+        )
+        file_size_output = temp / "file-size"
+        checked = run_unmodified("check", str(file_size_source))
+        built = run_unmodified("build", str(file_size_source), "-o", str(file_size_output))
+        if checked.returncode != 0 or built.returncode != 0:
+            sys.stderr.write(checked.stdout + checked.stderr + built.stdout + built.stderr)
+            print("文件大小查询无法构建", file=sys.stderr)
+            return 1
+        try:
+            verify_native_console_artifact(
+                file_size_output,
+                require_integer=True,
+                required_imports=("_open", "_fstat", "_close"),
+            )
+        except RuntimeError as failure:
+            print(f"文件大小查询：{failure}", file=sys.stderr)
+            return 1
+        file_size_target = temp / "大小目标.txt"
+        file_size_target.write_bytes(b"12345")
+        executed = subprocess.run(
+            [str(file_size_output), str(file_size_target.relative_to(temp))],
+            cwd=temp,
+            capture_output=True,
+            check=False,
+            timeout=5,
+        )
+        if executed.returncode != 0 or executed.stdout != b"5\n" or executed.stderr:
+            sys.stderr.buffer.write(executed.stdout + executed.stderr)
+            print("文件大小查询运行不符", file=sys.stderr)
+            return 1
+        rejected_run = subprocess.run(
+            [str(file_size_output), str(temp / "不存在大小.txt")],
+            cwd=temp,
+            capture_output=True,
+            check=False,
+            timeout=5,
+        )
+        if rejected_run.returncode == 0 or rejected_run.stdout or rejected_run.stderr:
+            sys.stderr.buffer.write(rejected_run.stdout[:256] + rejected_run.stderr[:256])
+            print("文件大小查询缺失路径未被拒绝", file=sys.stderr)
+            return 1
+
+        exists_source = temp / "path-exists.serica"
+        exists_source.write_text(
+            "程序=【能力=array（『stdout』，『args』，『filesystem.read』），输出=exists（argumentText（1））】。\n",
+            encoding="utf-8",
+        )
+        exists_output = temp / "path-exists"
+        checked = run_unmodified("check", str(exists_source))
+        built = run_unmodified("build", str(exists_source), "-o", str(exists_output))
+        if checked.returncode != 0 or built.returncode != 0:
+            sys.stderr.write(checked.stdout + checked.stderr + built.stdout + built.stderr)
+            print("路径存在性查询无法构建", file=sys.stderr)
+            return 1
+        try:
+            verify_native_console_artifact(
+                exists_output,
+                require_integer=True,
+                required_imports=("_open", "_fstat", "_close"),
+            )
+        except RuntimeError as failure:
+            print(f"路径存在性查询：{failure}", file=sys.stderr)
+            return 1
+        exists_directory = temp / "存在目录"
+        exists_directory.mkdir(exist_ok=True)
+        (temp / "存在目标.txt").write_bytes(b"data")
+        for label, target, expected in (
+            ("文件", "存在目标.txt", b"1\n"),
+            ("目录", str(exists_directory.relative_to(temp)), b"1\n"),
+            ("缺失", "不存在路径.txt", b"0\n"),
+        ):
+            executed = subprocess.run(
+                [str(exists_output), target],
+                cwd=temp,
+                capture_output=True,
+                check=False,
+                timeout=5,
+            )
+            if executed.returncode != 0 or executed.stdout != expected or executed.stderr:
+                sys.stderr.buffer.write(executed.stdout[:256] + executed.stderr[:256])
+                print(f"路径存在性查询{label}场景运行不符", file=sys.stderr)
+                return 1
+
+        is_directory_source = temp / "path-is-directory.serica"
+        is_directory_source.write_text(
+            "程序=【能力=array（『stdout』，『args』，『filesystem.read』），输出=isDirectory（argumentText（1））】。\n",
+            encoding="utf-8",
+        )
+        is_directory_output = temp / "path-is-directory"
+        checked = run_unmodified("check", str(is_directory_source))
+        built = run_unmodified("build", str(is_directory_source), "-o", str(is_directory_output))
+        if checked.returncode != 0 or built.returncode != 0:
+            sys.stderr.write(checked.stdout + checked.stderr + built.stdout + built.stderr)
+            print("目录类型查询无法构建", file=sys.stderr)
+            return 1
+        try:
+            verify_native_console_artifact(
+                is_directory_output,
+                require_integer=True,
+                required_imports=("_open", "_fstat", "_close"),
+            )
+        except RuntimeError as failure:
+            print(f"目录类型查询：{failure}", file=sys.stderr)
+            return 1
+        is_directory_target = temp / "类型目标.txt"
+        is_directory_target.write_bytes(b"data")
+        for label, target, expected in (
+            ("文件", str(is_directory_target.relative_to(temp)), b"0\n"),
+            ("目录", str(exists_directory.relative_to(temp)), b"1\n"),
+            ("缺失", "不存在类型.txt", b"0\n"),
+        ):
+            executed = subprocess.run(
+                [str(is_directory_output), str(temp / target)],
+                cwd=ROOT,
+                capture_output=True,
+                check=False,
+                timeout=5,
+            )
+            if executed.returncode != 0 or executed.stdout != expected or executed.stderr:
+                sys.stderr.buffer.write(executed.stdout[:256] + executed.stderr[:256])
+                print(f"目录类型查询{label}场景运行不符", file=sys.stderr)
+                return 1
+
+        static_is_directory_source = temp / "path-is-directory-static.serica"
+        static_is_directory_source.write_text(
+            f"程序=【能力=array（『stdout』，『filesystem.read』），"
+            f"输出=isDirectory（『{exists_directory}』）】。\n",
+            encoding="utf-8",
+        )
+        static_is_directory_output = temp / "path-is-directory-static"
+        checked = run_unmodified("check", str(static_is_directory_source))
+        built = run_unmodified("build", str(static_is_directory_source), "-o", str(static_is_directory_output))
+        if checked.returncode != 0 or built.returncode != 0:
+            sys.stderr.write(checked.stdout + checked.stderr + built.stdout + built.stderr)
+            print("静态目录类型查询无法构建", file=sys.stderr)
+            return 1
+        executed = subprocess.run([str(static_is_directory_output)], cwd=ROOT, capture_output=True, check=False, timeout=5)
+        if executed.returncode != 0 or executed.stdout != b"1\n" or executed.stderr:
+            sys.stderr.buffer.write(executed.stdout[:256] + executed.stderr[:256])
+            print("静态目录类型查询运行不符", file=sys.stderr)
+            return 1
+
+        out_of_range_source = temp / "file-mode-out-of-range.serica"
+        out_of_range_source.write_text(
+            "程序=【能力=array（『stdout』，『filesystem.write』），输出=setFileMode（『目标.txt』，512）】。\n",
+            encoding="utf-8",
+        )
+        rejected_check = run_unmodified("check", str(out_of_range_source))
+        mode_failure_count += 1
+        if rejected_check.returncode == 0 or "S-3079" not in rejected_check.stderr:
+            sys.stderr.write(rejected_check.stdout + rejected_check.stderr)
+            print("越界权限未被编译期拒绝", file=sys.stderr)
+            return 1
+
+        directory_source = temp / "file-directory-mutation.serica"
+        directory_source.write_text(
+            "变量 建=createDirectory（argumentText（1））。\n"
+            "变量 删=removeDirectory（argumentText（2））。\n"
+            "程序=【能力=array（『stdout』，『args』，『filesystem.write』），输出=建+删】。\n",
+            encoding="utf-8",
+        )
+        directory_output = temp / "file-directory-mutation"
+        checked = run_unmodified("check", str(directory_source))
+        built = run_unmodified("build", str(directory_source), "-o", str(directory_output))
+        if checked.returncode != 0 or built.returncode != 0:
+            sys.stderr.write(checked.stdout + checked.stderr + built.stdout + built.stderr)
+            print("动态路径目录创建与删除无法构建", file=sys.stderr)
+            return 1
+        try:
+            verify_native_console_artifact(
+                directory_output,
+                require_integer=True,
+                required_imports=("_mkdir", "_rmdir"),
+            )
+        except RuntimeError as failure:
+            print(f"动态路径目录创建与删除：{failure}", file=sys.stderr)
+            return 1
+        created_directory = temp / "新建目录"
+        removed_directory = temp / "待删目录"
+        removed_directory.mkdir()
+        executed = subprocess.run(
+            [str(directory_output), str(created_directory), str(removed_directory)],
+            cwd=temp,
+            capture_output=True,
+            check=False,
+            timeout=5,
+        )
+        if (
+            executed.returncode != 0
+            or executed.stdout != b"0\n"
+            or executed.stderr
+            or not created_directory.is_dir()
+            or removed_directory.exists()
+        ):
+            sys.stderr.buffer.write(executed.stdout + executed.stderr)
+            print("动态路径目录创建与删除运行不符", file=sys.stderr)
+            return 1
+        directory_failure_count = 0
+        for label, arguments in [
+            ("重复创建目录", (str(created_directory), str(temp / "不存在目录"))),
+            ("删除非空目录", (str(temp / "另一目录"), str(temp))),
+        ]:
+            directory_failure_count += 1
+            rejected_run = subprocess.run(
+                [str(directory_output), *arguments],
+                cwd=temp,
+                capture_output=True,
+                check=False,
+                timeout=5,
+            )
+            if rejected_run.returncode == 0 or rejected_run.stdout or rejected_run.stderr:
+                sys.stderr.buffer.write(rejected_run.stdout[:256] + rejected_run.stderr[:256])
+                print(f"动态目录{label}未被拒绝", file=sys.stderr)
+                return 1
+
+        mutation_remove = temp / "待删除.txt"
+        mutation_replace_from = temp / "待替换.txt"
+        mutation_replace_to = temp / "已替换.txt"
+        mutation_remove.write_bytes("删除".encode("utf-8"))
+        mutation_replace_from.write_bytes("再替换".encode("utf-8"))
+        mutation_from = temp / "待重命名.txt"
+        mutation_from.write_bytes("保留".encode("utf-8"))
+        mutation_to = temp / "已重命名.txt"
+        mutation_source = temp / "file-mutation-dynamic-path.serica"
+        mutation_source.write_text(
+            "变量 删除=removeFile（argumentText（1））。\n"
+            "变量 改名=renameFile（argumentText（2），argumentText（3））。\n"
+            "程序=【能力=array（『stdout』，『args』，『filesystem.write』），输出=改名】。\n",
+            encoding="utf-8",
+        )
+        replace_source = temp / "file-replace-dynamic-path.serica"
+        replace_source.write_text(
+            "变量 替换=replaceFile（argumentText（1），argumentText（2））。\n"
+            "程序=【能力=array（『stdout』，『args』，『filesystem.write』），输出=替换】。\n",
+            encoding="utf-8",
+        )
+        mutation_output = temp / "file-mutation-dynamic-path"
+        checked = run_unmodified("check", str(mutation_source))
+        built = run_unmodified("build", str(mutation_source), "-o", str(mutation_output))
+        if checked.returncode != 0 or built.returncode != 0:
+            sys.stderr.write(checked.stdout + checked.stderr + built.stdout + built.stderr)
+            print("动态路径文件删除与重命名无法构建", file=sys.stderr)
+            return 1
+        try:
+            verify_native_console_artifact(
+                mutation_output,
+                require_integer=True,
+                required_imports=("_unlink", "_rename"),
+            )
+        except RuntimeError as failure:
+            print(f"动态路径文件删除与重命名：{failure}", file=sys.stderr)
+            return 1
+        executed = subprocess.run(
+            [str(mutation_output), str(mutation_remove), str(mutation_from), str(mutation_to)],
+            cwd=temp,
+            capture_output=True,
+            check=False,
+            timeout=5,
+        )
+        if (
+            executed.returncode != 0
+            or executed.stdout != b"0\n"
+            or executed.stderr
+        ):
+            sys.stderr.buffer.write(executed.stdout + executed.stderr)
+            print(f"动态路径文件删除与重命名执行失败：rc={executed.returncode} out={executed.stdout!r} err={executed.stderr!r}", file=sys.stderr)
+            print(f"路径：删除={mutation_remove} 源={mutation_from} 目标={mutation_to} 替换源={mutation_replace_from} 替换目标={mutation_replace_to}", file=sys.stderr)
+            return 1
+        if (
+            mutation_remove.exists()
+            or mutation_from.exists()
+            or mutation_to.read_bytes() != "保留".encode("utf-8")
+        ):
+            sys.stderr.buffer.write(executed.stdout + executed.stderr)
+            print("动态路径文件删除与重命名运行不符", file=sys.stderr)
+            return 1
+        replace_output = temp / "file-replace-dynamic-path"
+        replace_check = run_unmodified("check", str(replace_source))
+        replace_build = run_unmodified("build", str(replace_source), "-o", str(replace_output))
+        if replace_check.returncode != 0 or replace_build.returncode != 0:
+            sys.stderr.write(replace_check.stdout + replace_check.stderr + replace_build.stdout + replace_build.stderr)
+            print("动态路径文件原子替换无法构建", file=sys.stderr)
+            return 1
+        try:
+            verify_native_console_artifact(replace_output, require_integer=True, required_imports=("_rename",))
+        except RuntimeError as failure:
+            print(f"动态路径文件原子替换：{failure}", file=sys.stderr)
+            return 1
+        replace_executed = subprocess.run(
+            [str(replace_output), str(mutation_replace_from), str(mutation_replace_to)],
+            cwd=temp,
+            capture_output=True,
+            check=False,
+            timeout=5,
+        )
+        if (
+            replace_executed.returncode != 0
+            or replace_executed.stdout != b"0\n"
+            or replace_executed.stderr
+            or mutation_replace_from.exists()
+            or mutation_replace_to.read_bytes() != "再替换".encode("utf-8")
+        ):
+            sys.stderr.buffer.write(replace_executed.stdout + replace_executed.stderr)
+            print(f"动态路径文件原子替换运行不符：rc={replace_executed.returncode} out={replace_executed.stdout!r} err={replace_executed.stderr!r} from_exists={mutation_replace_from.exists()} to={mutation_replace_to.read_bytes() if mutation_replace_to.exists() else None!r}", file=sys.stderr)
+            return 1
+        mutation_replace_from.write_bytes("再替换".encode("utf-8"))
+        mutation_to.write_bytes("保留".encode("utf-8"))
+        mutation_from.write_bytes("保留".encode("utf-8"))
+        file_mutation_failure_count = 0
+        mutation_missing_replace = subprocess.run(
+            [str(replace_output), str(temp / "不存在替换源.txt"), str(mutation_replace_to)],
+            cwd=temp,
+            capture_output=True,
+            check=False,
+            timeout=5,
+        )
+        if mutation_missing_replace.returncode == 0 or mutation_missing_replace.stdout:
+            sys.stderr.buffer.write(mutation_missing_replace.stdout + mutation_missing_replace.stderr)
+            print("动态路径文件原子替换缺少源路径未被拒绝", file=sys.stderr)
+            return 1
+        mutation_missing_remove = subprocess.run(
+            [str(mutation_output), str(temp / "不存在.txt"), str(mutation_from), str(mutation_to)],
+            cwd=temp,
+            capture_output=True,
+            check=False,
+            timeout=5,
+        )
+        file_mutation_failure_count += 1
+        second_remove = temp / "第二次删除.txt"
+        second_remove.write_bytes(b"x")
+        mutation_missing_rename = subprocess.run(
+            [str(mutation_output), str(second_remove), str(temp / "不存在源.txt"), str(mutation_to)],
+            cwd=temp,
+            capture_output=True,
+            check=False,
+            timeout=5,
+        )
+        file_mutation_failure_count += 1
+        for label, rejected in [
+            ("删除缺失目标", mutation_missing_remove),
+            ("重命名缺失源", mutation_missing_rename),
+        ]:
+            if rejected.returncode == 0 or rejected.stdout or rejected.stderr:
+                sys.stderr.buffer.write(rejected.stdout[:256] + rejected.stderr[:256])
+                print(f"动态文件{label}未被拒绝", file=sys.stderr)
+                return 1
 
         dynamic_write_rejections = [
             ("missing path and content arguments", [], 2),
@@ -5586,6 +6211,93 @@ def main() -> int:
             print("整数余数除零没有在构建前被拒绝", file=sys.stderr)
             return 1
 
+        environment_diagnostic_cases = [
+            (
+                "environment-missing-args",
+                "程序=【能力=array（『stdout』），输出=readEnvironment（『PATH』）】。\n",
+                "S-4102",
+            ),
+            (
+                "environment-invalid-name",
+                "程序=【能力=array（『stdout』，『args』），输出=readEnvironment（『A=B』）】。\n",
+                "S-3083",
+            ),
+            (
+                "environment-empty-name",
+                "程序=【能力=array（『stdout』，『args』），输出=readEnvironment（『』）】。\n",
+                "S-3083",
+            ),
+            (
+                "environment-hidden-effect",
+                "函数 取环境变量（）能力=array（『args』）=readEnvironment（『PATH』）。\n"
+                "程序=【能力=array（『stdout』），输出=取环境变量（）】。\n",
+                "S-4106",
+            ),
+            (
+                "environment-names-missing-args",
+                "程序=【能力=array（『stdout』），输出=environmentNames（）】。\n",
+                "S-4102",
+            ),
+            (
+                "environment-names-argument",
+                "程序=【能力=array（『stdout』，『args』），输出=environmentNames（1）】。\n",
+                "S-3083",
+            ),
+            (
+                "environment-names-hidden-effect",
+                "函数 列环境变量（）能力=array（『args』）=environmentNames（）。\n"
+                "程序=【能力=array（『stdout』），输出=列环境变量（）】。\n",
+                "S-4106",
+            ),
+        ]
+        for name, source_text, expected_code in environment_diagnostic_cases:
+            source = temp / f"{name}.serica"
+            source.write_text(source_text, encoding="utf-8")
+            for command in ("check", "build"):
+                rejected = (
+                    run_unmodified(command, str(source), "-o", str(temp / f"{name}-{command}"))
+                    if command == "build"
+                    else run_unmodified(command, str(source))
+                )
+                diagnostic = rejected.stdout + rejected.stderr
+                if rejected.returncode == 0 or f"错误 {expected_code}：" not in diagnostic:
+                    sys.stderr.write(diagnostic)
+                    print(f"环境变量诊断 {name} 的 {command} 未返回 {expected_code}", file=sys.stderr)
+                    return 1
+
+        directory_diagnostic_cases = [
+            (
+                "directory-missing-read",
+                "程序=【能力=array（『stdout』），输出=isDirectory（『.』）】。\n",
+                "S-4102",
+            ),
+            (
+                "directory-bad-argument",
+                "程序=【能力=array（『stdout』，『filesystem.read』），输出=isDirectory（1）】。\n",
+                "S-3081",
+            ),
+            (
+                "directory-hidden-effect",
+                "函数 查目录（）能力=array（『filesystem.read』）=isDirectory（『.』）。\n"
+                "程序=【能力=array（『stdout』），输出=查目录（）】。\n",
+                "S-4106",
+            ),
+        ]
+        for name, source_text, expected_code in directory_diagnostic_cases:
+            source = temp / f"{name}.serica"
+            source.write_text(source_text, encoding="utf-8")
+            for command in ("check", "build"):
+                rejected = (
+                    run_unmodified(command, str(source), "-o", str(temp / f"{name}-{command}"))
+                    if command == "build"
+                    else run_unmodified(command, str(source))
+                )
+                diagnostic = rejected.stdout + rejected.stderr
+                if rejected.returncode == 0 or f"错误 {expected_code}：" not in diagnostic:
+                    sys.stderr.write(diagnostic)
+                    print(f"目录类型诊断 {name} 的 {command} 未返回 {expected_code}", file=sys.stderr)
+                    return 1
+
         capability_cases = [
             ("capability-missing-field", "程序=【输出=1】。\n", "S-4101"),
             ("capability-missing-stdout", "程序=【能力=array（『stdin』），输出=1】。\n", "S-4102"),
@@ -6142,6 +6854,12 @@ def main() -> int:
                 "S-4102",
             ),
             (
+                "append-file-missing-root-capability",
+                "变量 字节数=appendFile（『x.txt』，『x』）。\n"
+                "程序=【能力=array（『stdout』），输出=字节数】。\n",
+                "S-4102",
+            ),
+            (
                 "function-hidden-file-write",
                 "函数 写入（）=writeFile（『x.txt』，『x』）。\n"
                 "程序=【能力=array（『stdout』，『filesystem.write』），输出=写入（）】。\n",
@@ -6189,6 +6907,65 @@ def main() -> int:
                 "函数 读取（）能力=array（『args』，『filesystem.read』）=readFile（argumentText（1））。\n"
                 "函数 代理（）能力=array（『filesystem.read』）=读取（）。\n"
                 "程序=【能力=array（『stdout』，『args』，『filesystem.read』），输出=代理（）】。\n",
+                "S-4106",
+            ),
+            (
+                "remove-file-integer-path",
+                "程序=【能力=array（『stdout』，『filesystem.write』），输出=removeFile（1）】。\n",
+                "S-3075",
+            ),
+            (
+                "rename-file-missing-destination",
+                "程序=【能力=array（『stdout』，『filesystem.write』），输出=renameFile（『x』）】。\n",
+                "S-3076",
+            ),
+            (
+                "rename-file-integer-destination",
+                "程序=【能力=array（『stdout』，『filesystem.write』），输出=renameFile（『x』，1）】。\n",
+                "S-3076",
+            ),
+            (
+                "replace-file-missing-destination",
+                "程序=【能力=array（『stdout』，『filesystem.write』），输出=replaceFile（『x』）】。\n",
+                "S-3082",
+            ),
+            (
+                "replace-file-integer-destination",
+                "程序=【能力=array（『stdout』，『filesystem.write』），输出=replaceFile（『x』，1）】。\n",
+                "S-3082",
+            ),
+            (
+                "remove-file-missing-root-capability",
+                "变量 字节数=removeFile（『x』）。\n"
+                "程序=【能力=array（『stdout』），输出=字节数】。\n",
+                "S-4102",
+            ),
+            (
+                "function-hidden-file-rename",
+                "函数 改名（）=renameFile（『x』，『y』）。\n"
+                "程序=【能力=array（『stdout』，『filesystem.write』），输出=改名（）】。\n",
+                "S-4106",
+            ),
+            (
+                "create-directory-arity",
+                "程序=【能力=array（『stdout』，『filesystem.write』），输出=createDirectory（）】。\n",
+                "S-3077",
+            ),
+            (
+                "remove-directory-integer-path",
+                "程序=【能力=array（『stdout』，『filesystem.write』），输出=removeDirectory（1）】。\n",
+                "S-3078",
+            ),
+            (
+                "create-directory-missing-root-capability",
+                "变量 结果=createDirectory（『目录』）。\n"
+                "程序=【能力=array（『stdout』），输出=结果】。\n",
+                "S-4102",
+            ),
+            (
+                "function-hidden-directory-creation",
+                "函数 建目录（）=createDirectory（『目录』）。\n"
+                "程序=【能力=array（『stdout』，『filesystem.write』），输出=建目录（）】。\n",
                 "S-4106",
             ),
         ]
@@ -6377,10 +7154,10 @@ def main() -> int:
             ("integer-result-text-concat", "变量 结果=成功（42）。\n程序=【能力=array（『stdout』），输出=textConcat（结果值（结果），『！』）】。\n", "S-3044"),
             ("integer-result-text-comparison", "变量 结果=成功（42）。\n程序=【能力=array（『stdout』），输出=ifElse（equals（结果值（结果），『42』），1，0）】。\n", "S-3015"),
             ("result-status-no-argument", "变量 结果=成功（1）。\n程序=【能力=array（『stdout』），输出=是否失败（）】。\n", "S-3013"),
-            ("result-value-non-reference", "程序=【能力=array（『stdout』），输出=结果值（成功（1））】。\n", "S-3013"),
-            ("result-status-non-reference", "程序=【能力=array（『stdout』），输出=是否失败（成功（1））】。\n", "S-3013"),
-            ("result-error-code-non-reference", "程序=【能力=array（『stdout』），输出=错误码（成功（1））】。\n", "S-3013"),
             ("result-error-wrong-variable", "变量 数值=1。\n程序=【能力=array（『stdout』），输出=错误码（数值）】。\n", "S-3015"),
+            ("result-value-non-result-call", "程序=【能力=array（『stdout』，『stdin』），输出=结果值（readInteger（））】。\n", "S-3013"),
+            ("result-status-integer-literal", "程序=【能力=array（『stdout』），输出=是否失败（1）】。\n", "S-3013"),
+            ("result-error-code-non-result-call", "程序=【能力=array（『stdout』），输出=错误码（成功（1）+1）】。\n", "S-3013"),
             ("result-direct-output", "变量 结果=成功（42）。\n程序=【能力=array（『stdout』），输出=结果】。\n", "S-3023"),
             ("result-to-integer-variable", "变量 结果=成功（42）。\n变量 数值=结果。\n程序=【能力=array（『stdout』），输出=数值】。\n", "S-3023"),
             ("integer-to-result-variable", "变量 结果=成功（42）。\n赋值 结果=1。\n程序=【能力=array（『stdout』），输出=错误码（结果）】。\n", "S-3023"),
@@ -6524,7 +7301,7 @@ def main() -> int:
             return 1
 
     print(
-        f"P1b 原生输出子门通过：{len(CASES) + len(DYNAMIC_CASES) + len(MAP_CASES) + len(RESULT_FUNCTION_CASES) + len(BLOCK_FUNCTION_CASES) + len(RUNTIME_BLOCK_LOOP_CASES) + len(RUNTIME_TEXT_PARAMETER_CASES) + len(RUNTIME_FUNCTION_ABI_CASES) + len(RUNTIME_RESULT_ABI_CASES) + 6} 个 arm64 整数形态产物和 1 个静态 UTF-8 文本产物执行，其中 {len(MAP_CASES)} 个覆盖整数键值哈希映射；另有 5 个静态文件输入成功产物（另有 3 个无输出失败）、1 个参数文本动态路径读取产物（另有 {dynamic_file_path_failure_count // 2} 个无输出失败）、{len(file_variable_cases)} 个文件文本变量成功产物（另有 {len(file_variable_failures)} 个无输出失败）、{len(file_write_cases)} 个文件写入成功产物（另有 {len(file_write_failures) + 1} 个无输出失败）和 1 个参数文本动态路径写入产物（另有 {dynamic_file_path_failure_count - dynamic_file_path_failure_count // 2} 个无输出失败）、{len(TEXT_RESULT_CASES)} 个静态文本结果产物、{len(DYNAMIC_TEXT_RESULT_CASES)} 个运行时文本结果产物、{len(RESULT_FUNCTION_CASES)} 个函数结果边界产物、{len(BLOCK_FUNCTION_CASES)} 个块体函数局部作用域产物、{len(RUNTIME_BLOCK_LOOP_CASES)} 个运行时整数块循环函数产物、{len(RUNTIME_TEXT_PARAMETER_CASES)} 个运行时文本参数比较/长度/本地副本桥产物、{len(OWNED_TEXT_RETURN_CASES)} 个文本所有权返回产物、{len(OWNED_TEXT_RETURN_STORAGE_CASES)} 个文本返回调用方存储产物、{len(RUNTIME_FUNCTION_ABI_CASES)} 个递归运行时函数调用帧产物、{len(RUNTIME_RESULT_ABI_CASES)} 个递归整数结果 ABI 产物、{len(RUNTIME_TEXT_RESULT_ABI_CASES)} 个递归编译期文本结果 ABI 产物、1 个直接输入、1 个运行时整数纯函数、1 个复合实参运行时整数纯函数、1 个运行时文本纯函数、1 个整数 stdin 效果函数、1 个文本 stdin 效果函数和 1 个嵌套 array.write 效果函数产物、4 个文本长度、2 个文本变量、4 个拼接、1 个 readText 拼接、1 个 readText 切片拼接、1 个文本数组元素切片、1 个数组元素切片拼接、10 个嵌套文本拼接、6 个文本相等比较（含五层拼接比较）、3 个文本排序比较（含五层拼接比较）、7 个文本切片及 1 个直接 readText 切片、1 个拼接结果切片、1 个拼接切片长度、1 个切片拼接操作数、1 个拼接源切片操作数、4 个文本数组及 {len(argument_examples)} 个参数文本产物（{len(RUNTIME_TEXT_CASES) + 2 * len(RUNTIME_TEXT_LENGTH_CASES) + len(RUNTIME_TEXT_VARIABLE_CASES) + len(RUNTIME_TEXT_CONCAT_CASES) + len(RUNTIME_TEXT_CONCAT_OUTPUT_CASES) + len(RUNTIME_TEXT_CONCAT_LITERAL_CASES) + len(RUNTIME_TEXT_CONCAT_READ_CASES) + len(RUNTIME_TEXT_CONCAT_READ_SLICE_CASES) + len(RUNTIME_TEXT_ARRAY_SLICE_CASES) + len(RUNTIME_TEXT_ARRAY_SLICE_CONCAT_CASES) + len(RUNTIME_TEXT_COMPARISON_CASES) + len(RUNTIME_TEXT_STATIC_COMPARISON_CASES) + len(RUNTIME_TEXT_NOT_EQUAL_CASES) + len(RUNTIME_TEXT_SHORT_CIRCUIT_CASES) + len(RUNTIME_TEXT_ORDERING_CASES) + len(RUNTIME_TEXT_ORDER_EXPRESSION_CASES) + len(RUNTIME_TEXT_SLICE_CASES) + len(RUNTIME_TEXT_READ_SLICE_CASES) + len(RUNTIME_TEXT_ALIAS_SLICE_CASES) + len(RUNTIME_TEXT_DYNAMIC_SLICE_CASES) + len(RUNTIME_TEXT_CONCAT_SLICE_CASES) + len(RUNTIME_TEXT_CONCAT_SLICE_LENGTH_CASES) + len(RUNTIME_TEXT_PARAMETER_CASES) + len(OWNED_TEXT_RETURN_CASES) + len(OWNED_TEXT_RETURN_STORAGE_CASES) + 18} 个成功文本输入）、{56 + len(capability_cases) + len(loop_control_cases) + len(function_cases) + 2 * len(text_parameter_failures) + 2 * len(file_write_diagnostics) + 2 * len(boolean_type_failures) + 2 * len(map_type_failures) + 2 * len(result_type_failures) + 1} 个编译诊断及 {21 + len(DYNAMIC_FAILURES) + len(RESULT_FAILURE_CASES) + 3 * len(RUNTIME_TEXT_FAILURES) + len(RUNTIME_TEXT_VARIABLE_FAILURES) + len(RUNTIME_TEXT_CONCAT_FAILURES) + len(RUNTIME_TEXT_CONCAT_OUTPUT_FAILURES) + len(RUNTIME_TEXT_CONCAT_LITERAL_FAILURES) + len(RUNTIME_TEXT_CONCAT_READ_FAILURES) + len(RUNTIME_TEXT_CONCAT_READ_SLICE_FAILURES) + len(RUNTIME_TEXT_ARRAY_SLICE_FAILURES) + len(RUNTIME_TEXT_ARRAY_SLICE_CONCAT_FAILURES) + len(RUNTIME_TEXT_SLICE_FAILURES) + len(RUNTIME_TEXT_DYNAMIC_SLICE_FAILURES) + len(RUNTIME_TEXT_CONCAT_SLICE_FAILURES) + len(RUNTIME_TEXT_CONCAT_SLICE_FAILURES) + len(RUNTIME_TEXT_READ_SLICE_FAILURES) + len(file_write_failures) + dynamic_file_path_failure_count} 个运行时拒绝样例"
+        f"P1b 原生输出子门通过：{len(CASES) + len(DYNAMIC_CASES) + len(MAP_CASES) + len(RESULT_FUNCTION_CASES) + len(BLOCK_FUNCTION_CASES) + len(RUNTIME_BLOCK_LOOP_CASES) + len(RUNTIME_TEXT_PARAMETER_CASES) + len(RUNTIME_FUNCTION_ABI_CASES) + len(RUNTIME_RESULT_ABI_CASES) + 8} 个 arm64 整数形态产物和 1 个静态 UTF-8 文本产物执行，其中 {len(MAP_CASES)} 个覆盖整数键值哈希映射；另有 5 个静态文件输入成功产物（另有 3 个无输出失败）、1 个参数文本动态路径读取产物（另有 {dynamic_file_path_failure_count // 2} 个无输出失败）、{len(file_variable_cases)} 个文件文本变量成功产物（另有 {len(file_variable_failures)} 个无输出失败）、{len(file_write_cases)} 个文件写入成功产物（另有 {len(file_write_failures) + 1} 个无输出失败）、{dynamic_write_success_count} 个参数文本动态路径写入产物（另有 {dynamic_file_path_failure_count - dynamic_file_path_failure_count // 2} 个无输出失败）、1 个参数文本删除/重命名产物（另有 {file_mutation_failure_count} 个无输出失败）和 1 个参数文本目录创建/删除产物（另有 {directory_failure_count} 个无输出失败）、1 个文件大小查询产物（另有 1 个无输出失败）、1 个路径存在性查询产物（文件/目录/缺失三种场景）、1 个目录类型查询产物（文件/目录/缺失三种场景及静态路径）、2 个文件权限设置/变更产物（另有 {mode_failure_count} 个拒绝样例）、{len(TEXT_RESULT_CASES)} 个静态文本结果产物、{len(DYNAMIC_TEXT_RESULT_CASES)} 个运行时文本结果产物、{len(RESULT_FUNCTION_CASES)} 个函数结果边界产物、{len(BLOCK_FUNCTION_CASES)} 个块体函数局部作用域产物、{len(RUNTIME_BLOCK_LOOP_CASES)} 个运行时整数块循环函数产物、{len(RUNTIME_TEXT_PARAMETER_CASES)} 个运行时文本参数比较/长度/本地副本桥产物、{len(OWNED_TEXT_RETURN_CASES)} 个文本所有权返回产物、{len(OWNED_TEXT_RETURN_STORAGE_CASES)} 个文本返回调用方存储产物、{len(RUNTIME_FUNCTION_ABI_CASES)} 个递归运行时函数调用帧产物、{len(RUNTIME_RESULT_ABI_CASES)} 个递归整数结果 ABI 产物、{len(RUNTIME_TEXT_RESULT_ABI_CASES)} 个递归编译期文本结果 ABI 产物、1 个直接输入、1 个运行时整数纯函数、1 个复合实参运行时整数纯函数、1 个运行时文本纯函数、1 个整数 stdin 效果函数、1 个文本 stdin 效果函数和 1 个嵌套 array.write 效果函数产物、4 个文本长度、2 个文本变量、4 个拼接、1 个 readText 拼接、1 个 readText 切片拼接、1 个文本数组元素切片、1 个数组元素切片拼接、10 个嵌套文本拼接、6 个文本相等比较（含五层拼接比较）、3 个文本排序比较（含五层拼接比较）、7 个文本切片及 1 个直接 readText 切片、1 个拼接结果切片、1 个拼接切片长度、1 个切片拼接操作数、1 个拼接源切片操作数、4 个文本数组及 {len(argument_examples)} 个参数文本产物（{len(RUNTIME_TEXT_CASES) + 2 * len(RUNTIME_TEXT_LENGTH_CASES) + len(RUNTIME_TEXT_VARIABLE_CASES) + len(RUNTIME_TEXT_CONCAT_CASES) + len(RUNTIME_TEXT_CONCAT_OUTPUT_CASES) + len(RUNTIME_TEXT_CONCAT_LITERAL_CASES) + len(RUNTIME_TEXT_CONCAT_READ_CASES) + len(RUNTIME_TEXT_CONCAT_READ_SLICE_CASES) + len(RUNTIME_TEXT_ARRAY_SLICE_CASES) + len(RUNTIME_TEXT_ARRAY_SLICE_CONCAT_CASES) + len(RUNTIME_TEXT_COMPARISON_CASES) + len(RUNTIME_TEXT_STATIC_COMPARISON_CASES) + len(RUNTIME_TEXT_NOT_EQUAL_CASES) + len(RUNTIME_TEXT_SHORT_CIRCUIT_CASES) + len(RUNTIME_TEXT_ORDERING_CASES) + len(RUNTIME_TEXT_ORDER_EXPRESSION_CASES) + len(RUNTIME_TEXT_SLICE_CASES) + len(RUNTIME_TEXT_READ_SLICE_CASES) + len(RUNTIME_TEXT_ALIAS_SLICE_CASES) + len(RUNTIME_TEXT_DYNAMIC_SLICE_CASES) + len(RUNTIME_TEXT_CONCAT_SLICE_CASES) + len(RUNTIME_TEXT_CONCAT_SLICE_LENGTH_CASES) + len(RUNTIME_TEXT_PARAMETER_CASES) + len(OWNED_TEXT_RETURN_CASES) + len(OWNED_TEXT_RETURN_STORAGE_CASES) + 18} 个成功文本输入）、{56 + len(capability_cases) + len(loop_control_cases) + len(function_cases) + 2 * len(text_parameter_failures) + 2 * len(file_write_diagnostics) + 2 * len(boolean_type_failures) + 2 * len(map_type_failures) + 2 * len(result_type_failures) + 1} 个编译诊断及 {21 + len(DYNAMIC_FAILURES) + len(RESULT_FAILURE_CASES) + 3 * len(RUNTIME_TEXT_FAILURES) + len(RUNTIME_TEXT_VARIABLE_FAILURES) + len(RUNTIME_TEXT_CONCAT_FAILURES) + len(RUNTIME_TEXT_CONCAT_OUTPUT_FAILURES) + len(RUNTIME_TEXT_CONCAT_LITERAL_FAILURES) + len(RUNTIME_TEXT_CONCAT_READ_FAILURES) + len(RUNTIME_TEXT_CONCAT_READ_SLICE_FAILURES) + len(RUNTIME_TEXT_ARRAY_SLICE_FAILURES) + len(RUNTIME_TEXT_ARRAY_SLICE_CONCAT_FAILURES) + len(RUNTIME_TEXT_SLICE_FAILURES) + len(RUNTIME_TEXT_DYNAMIC_SLICE_FAILURES) + len(RUNTIME_TEXT_CONCAT_SLICE_FAILURES) + len(RUNTIME_TEXT_CONCAT_SLICE_FAILURES) + len(RUNTIME_TEXT_READ_SLICE_FAILURES) + len(file_write_failures) + dynamic_file_path_failure_count + file_mutation_failure_count + directory_failure_count + 1} 个运行时拒绝样例"
     )
     print("证明静态/运行时整数运算和六种比较、且/故短路逻辑、若/否分支、凡/跳出/继续嵌套控制流、有符号 64 位整数键值哈希映射的碰撞链、覆盖更新、3/4 负载几何扩容和 200 项重排、映射式动态整数和文本数组追加/增长/索引/更新及边界拒绝、最多 16 MiB 的动态 UTF-8 文本变量、输入与变量拼接/切片写回、最多五层的动态文本拼接和相等比较、63 字节根输出/切片、文本长度/相等/码位顺序比较、布尔值 1/0 输出及带标签的整数、编译期文本或直接运行时输入成功载荷、失败结果替换、复制、重赋值、错误码观察和有界失败传播、无效果块体运行时函数通过相邻指针/长度寄存器接收只读 UTF-8 文本参数并保存到调用帧槽位、以八寄存器展平预算调用并返回 textLength 整数或六种文本比较结果、由函数体文本证据或顶层调用实参确定比较参数 ABI、将文本参数或受支持拼接/切片结果复制到函数顶层文本局部并在统一收束点清理、将已初始化函数文本局部的所有权通过 x1/x2/x3 返回给程序根输出并由调用方释放、先在调用后保存返回描述符再释放旧目标映射并由顶层文本变量接管、递归纯整数函数独立保存帧指针/链接寄存器/整数参数槽并以寄存器传参和直接链接调用返回、自递归和互递归及 200 层调用、整数及编译期静态文本成功/失败结果的调用帧返回和失败码传播、命令行参数计数与静态或运行时整数下标 UTF-8 文本输出、参数文本存储和未存储拼接/切片/相等以及成功结果载荷，以及静态或参数文本动态路径文件直接输出、装入动态文本变量和从静态或参数文本动态路径覆盖写入后的有限原生输入，运行时文本结果的独立缓冲复制、拼接/切片/文本数组元素成功载荷及复制到普通文本变量或数组元素（含越界与负索引拒绝）；支持函数顶层文本参数本地副本；D-0151/D-0152/D-0153/D-0154 另外证明效果语句体函数可直接构造整数或文本结果局部（含拼接与切片文本载荷），以及单次引用的直接或显式效果调用可进入纯函数唯一形参位；仍不证明通用文本/容器结果载荷、文本返回在表达式/条件/函数体/容器中的嵌套存储或容器逃逸、完整效果函数运行时 ABI、通用调用求值顺序、跨函数恢复、容器通用载荷、通用键值类型、通用容器、通用文件/进程 IO 或完整 P1b")
     return 0

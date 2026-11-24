@@ -1,20 +1,14 @@
 // SPDX-License-Identifier: Apache-2.0
 // Copyright (c) 2026 行简（Serica）贡献者
 package main
-
 import (
-	"strconv"
-	"strings"
+	"strconv"; "strings"
 )
-
 type constantValue struct {
-	kind          string
-	text          string
-	integer       int64
-	resultPayload string
+	kind          string; text          string
+	integer       int64; resultPayload string
 	array         []constantValue
 }
-
 func walkValue(input value, visit func(value) bool) {
 	if input.kind == "" || !visit(input) {
 		return
@@ -32,37 +26,31 @@ func walkValue(input value, visit func(value) bool) {
 		walkValue(*input.right, visit)
 	}
 }
-
 func walkStatements(items []statement, visit func(statement) bool) {
 	for _, item := range items {
 		if !visit(item) {
 			continue
 		}
-		walkStatements(item.body, visit)
-		walkStatements(item.otherwise, visit)
+		walkStatements(item.body, visit); walkStatements(item.otherwise, visit)
 	}
 }
-
 func walkProgramValues(program *program, visit func(value) bool) {
 	walkValue(program.root, visit)
 	for _, item := range program.bindings {
 		walkValue(item.value, visit)
 	}
 	walkStatements(program.statements, func(item statement) bool {
-		walkValue(item.value, visit)
-		walkValue(item.condition, visit)
+		walkValue(item.value, visit); walkValue(item.condition, visit)
 		return true
 	})
 	for _, function := range program.functions {
 		walkValue(function.body, visit)
 		walkStatements(function.statements, func(item statement) bool {
-			walkValue(item.value, visit)
-			walkValue(item.condition, visit)
+			walkValue(item.value, visit); walkValue(item.condition, visit)
 			return true
 		})
 	}
 }
-
 func seedRuntimeResultPayloads(program *program) map[string]constantValue {
 	payloads := map[string]constantValue{}
 	for _, function := range program.functions {
@@ -103,21 +91,17 @@ func programRootEffects(root value) map[string]bool {
 	}
 	return effects
 }
-
 func expandProgramFunctions(program *program, payloads map[string]constantValue) *issue {
 	if len(program.functions) == 0 {
 		return nil
 	}
-	rootEffects := programRootEffects(program.root)
-	functions := make(map[string]functionDecl, len(program.functions))
+	rootEffects := programRootEffects(program.root); functions := make(map[string]functionDecl, len(program.functions))
 	for index := range program.functions {
-		function := program.functions[index]
-		effects, problem := functionEffects(function)
+		function := program.functions[index]; effects, problem := functionEffects(function)
 		if problem != nil {
 			return problem
 		}
-		function.effects = effects
-		program.functions[index] = function
+		function.effects = effects; program.functions[index] = function
 		if _, exists := functions[function.name.text]; exists {
 			return &issue{code: "S-3060", expected: "唯一函数名", actual: function.name.text, suggestion: "每个函数只声明一次", pos: function.name.pos}
 		}
@@ -132,8 +116,7 @@ func expandProgramFunctions(program *program, payloads map[string]constantValue)
 		for _, parameter := range function.parameters {
 			environment[parameter.text] = value{kind: "引用", text: parameter.text, pos: parameter.pos}
 		}
-		locals := map[string]bool{}
-		collectFunctionLocals(function.statements, locals)
+		locals := map[string]bool{}; collectFunctionLocals(function.statements, locals)
 		body, problem := lowerFunctionStatements(function.statements, environment, locals, functions, 0)
 		if problem != nil {
 			if problem.pos.line == 0 {
@@ -146,13 +129,10 @@ func expandProgramFunctions(program *program, payloads map[string]constantValue)
 				return functionBlockIssue(item.value.pos, "已复制的局部文本", "未复制的文本返回值", "先声明文本局部变量并复制返回值，再在局部作用域使用")
 			}
 		}
-		function.body = body
-		function.statements = nil
-		program.functions[index] = function
-		functions[function.name.text] = function
+		function.body = body; function.statements = nil
+		program.functions[index] = function; functions[function.name.text] = function
 	}
-	runtimeFunctions, runtimeFunctionNames := recursiveRuntimeFunctions(program.functions, functions)
-	annotateRuntimeFunctionResults(runtimeFunctions)
+	runtimeFunctions, runtimeFunctionNames := recursiveRuntimeFunctions(program.functions, functions); annotateRuntimeFunctionResults(runtimeFunctions)
 	annotateRuntimeResultPayloads(program, payloads)
 	for _, function := range runtimeFunctions {
 		if function.runtimeReturnsResult {
@@ -162,12 +142,10 @@ func expandProgramFunctions(program *program, payloads map[string]constantValue)
 	for index := range program.functions {
 		name := program.functions[index].name.text
 		if function, exists := runtimeFunctions[name]; exists {
-			program.functions[index].runtimeReturnsResult = function.runtimeReturnsResult
-			program.functions[index].runtimeResultPayload = function.runtimeResultPayload
+			program.functions[index].runtimeReturnsResult = function.runtimeReturnsResult; program.functions[index].runtimeResultPayload = function.runtimeResultPayload
 		}
 	}
-	program.runtimeFunctions = runtimeFunctions
-	program.runtimeFunctionNames = runtimeFunctionNames
+	program.runtimeFunctions = runtimeFunctions; program.runtimeFunctionNames = runtimeFunctionNames
 	for index := range program.functions {
 		function := program.functions[index]
 		if function.body.kind == "" {
@@ -180,21 +158,18 @@ func expandProgramFunctions(program *program, payloads map[string]constantValue)
 				function.statements[statementIndex] = statement
 			}
 		} else {
-			remaining := 65536
-			body, problem := expandFunctionValue(function.body, functions, runtimeFunctions, []string{function.name.text}, 0, &remaining, rootEffects, payloads, function.statements)
+			remaining := 65536; body, problem := expandFunctionValue(function.body, functions, runtimeFunctions, []string{function.name.text}, 0, &remaining, rootEffects, payloads, function.statements)
 			if problem != nil {
 				return problem
 			}
 			function.body = body
 		}
-		program.functions[index] = function
-		functions[function.name.text] = function
+		program.functions[index] = function; functions[function.name.text] = function
 		if _, runtimeFunction := runtimeFunctions[function.name.text]; runtimeFunction {
 			runtimeFunctions[function.name.text] = function
 		}
 	}
-	remaining := 65536
-	var problem *issue
+	remaining := 65536; var problem *issue
 	for index := range program.bindings {
 		program.bindings[index].value, problem = expandFunctionValue(program.bindings[index].value, functions, runtimeFunctions, nil, 0, &remaining, rootEffects, payloads, program.statements)
 		if problem != nil {
@@ -218,22 +193,17 @@ func expandProgramFunctions(program *program, payloads map[string]constantValue)
 func recursiveRuntimeFunctions(ordered []functionDecl, functions map[string]functionDecl) (map[string]functionDecl, []string) {
 	graph := make(map[string]map[string]bool, len(ordered))
 	for _, function := range ordered {
-		calls := map[string]bool{}
-		collectFunctionCalls(function.body, functions, calls)
+		calls := map[string]bool{}; collectFunctionCalls(function.body, functions, calls)
 		var visitStatements func([]statement)
 		visitStatements = func(items []statement) {
 			for _, item := range items {
-				collectFunctionCalls(item.value, functions, calls)
-				collectFunctionCalls(item.condition, functions, calls)
-				visitStatements(item.body)
-				visitStatements(item.otherwise)
+				collectFunctionCalls(item.value, functions, calls); collectFunctionCalls(item.condition, functions, calls)
+				visitStatements(item.body); visitStatements(item.otherwise)
 			}
 		}
-		visitStatements(function.statements)
-		graph[function.name.text] = calls
+		visitStatements(function.statements); graph[function.name.text] = calls
 	}
-	runtime := map[string]functionDecl{}
-	names := []string{}
+	runtime := map[string]functionDecl{}; names := []string{}
 	for _, function := range ordered {
 		if len(function.effects) != 0 && function.body.kind != "" {
 			continue
@@ -241,12 +211,10 @@ func recursiveRuntimeFunctions(ordered []functionDecl, functions map[string]func
 		if function.body.kind != "" && !callGraphReaches(graph, function.name.text, function.name.text, map[string]bool{}) {
 			continue
 		}
-		runtime[function.name.text] = function
-		names = append(names, function.name.text)
+		runtime[function.name.text] = function; names = append(names, function.name.text)
 	}
 	return runtime, names
 }
-
 func containsStatementKind(statements []statement, kind string) bool {
 	for _, item := range statements {
 		if item.kind == kind || containsStatementKind(item.body, kind) || containsStatementKind(item.otherwise, kind) {
@@ -255,18 +223,14 @@ func containsStatementKind(statements []statement, kind string) bool {
 	}
 	return false
 }
-
 func blockFunctionUsesRuntimeTextParameter(function functionDecl) bool {
 	parameters := make(map[string]bool, len(function.parameters))
 	for _, parameter := range function.parameters {
 		parameters[parameter.text] = true
 	}
-	textParameters := map[string]bool{}
-	returnTextParameters := map[string]bool{}
-	integerParameters := map[string]bool{}
-	collectRuntimeTextParameterUses(function.statements, parameters, textParameters)
-	collectRuntimeTextReturnParameters(function.statements, parameters, returnTextParameters)
-	collectRuntimeIntegerParameterUses(function.statements, parameters, integerParameters)
+	textParameters := map[string]bool{}; returnTextParameters := map[string]bool{}
+	integerParameters := map[string]bool{}; collectRuntimeTextParameterUses(function.statements, parameters, textParameters)
+	collectRuntimeTextReturnParameters(function.statements, parameters, returnTextParameters); collectRuntimeIntegerParameterUses(function.statements, parameters, integerParameters)
 	collectRuntimeIntegerParameterUsesValue(function.body, parameters, integerParameters)
 	if len(textParameters) != 0 {
 		return true
@@ -278,9 +242,6 @@ func blockFunctionUsesRuntimeTextParameter(function functionDecl) bool {
 	}
 	return false
 }
-
-// blockFunctionObservesResultState keeps result-querying block functions on
-// the statement ABI so lowering cannot replace a result local by its initializer.
 func blockFunctionObservesResultState(function functionDecl) bool {
 	observed := func(input value) bool {
 		found := false
@@ -303,10 +264,6 @@ func blockFunctionObservesResultState(function functionDecl) bool {
 	})
 	return found
 }
-
-// blockFunctionConstructsResultLocal keeps effectful functions with an
-// explicit result local on the statement-based runtime ABI. The expression
-// lowering path cannot preserve the local's tag/value pair across an effect.
 func blockFunctionConstructsResultLocal(function functionDecl) bool {
 	constructs := func(input value) bool {
 		found := false
@@ -326,7 +283,6 @@ func blockFunctionConstructsResultLocal(function functionDecl) bool {
 	})
 	return found
 }
-
 func blockFunctionReturnsRuntimeCall(function functionDecl, functions map[string]functionDecl) bool {
 	found := false
 	walkStatements(function.statements, func(item statement) bool {
@@ -346,7 +302,6 @@ func blockFunctionReturnsRuntimeCall(function functionDecl, functions map[string
 	})
 	return found
 }
-
 func runtimeResultStateUsesValue(input value, name string, found *bool) bool {
 	walkValue(input, func(current value) bool {
 		if current.kind == "调用" && (current.text == "是否失败" || current.text == "错误码" || current.text == "结果值") && len(current.args) == 1 && current.args[0].kind == "引用" && current.args[0].text == name {
@@ -357,7 +312,6 @@ func runtimeResultStateUsesValue(input value, name string, found *bool) bool {
 	})
 	return *found
 }
-
 func functionResultBranchUsesParameter(input value, name string) bool {
 	found := false
 	walkValue(input, func(current value) bool {
@@ -373,7 +327,6 @@ func functionResultBranchUsesParameter(input value, name string) bool {
 	})
 	return found
 }
-
 func functionResultBranchUsesValue(items []statement, name string) bool {
 	for _, item := range items {
 		if functionResultBranchUsesParameter(item.value, name) || functionResultBranchUsesParameter(item.condition, name) {
@@ -385,7 +338,6 @@ func functionResultBranchUsesValue(items []statement, name string) bool {
 	}
 	return false
 }
-
 func collectBlockCalls(items []statement, calls map[string]bool) {
 	for _, item := range items {
 		if item.value.kind == "调用" {
@@ -394,16 +346,11 @@ func collectBlockCalls(items []statement, calls map[string]bool) {
 		if item.condition.kind == "调用" {
 			calls[item.condition.text] = true
 		}
-		collectBlockCalls(item.body, calls)
-		collectBlockCalls(item.otherwise, calls)
+		collectBlockCalls(item.body, calls); collectBlockCalls(item.otherwise, calls)
 	}
 }
-
 func inferRuntimeResultStateParameters(program *program, function functionDecl, parameters map[string]bool) map[string]bool {
-	resultParameters := map[string]bool{}
-	// A parameter receiving an already-created result at any call site must
-	// use the result ABI even when the body only forwards it.
-	environment := copyConstantEnvironment(program.constants)
+	resultParameters := map[string]bool{}; environment := copyConstantEnvironment(program.constants)
 	for _, local := range functionLocalNames(function.statements) {
 		if constant, exists := program.constants[local]; exists {
 			environment[local] = constant
@@ -473,19 +420,16 @@ func inferRuntimeResultStateParameters(program *program, function functionDecl, 
 		inspectCalls(item.value)
 	}
 	for _, item := range program.statements {
-		inspectCalls(item.value)
-		inspectCalls(item.condition)
+		inspectCalls(item.value); inspectCalls(item.condition)
 	}
 	for _, item := range program.functions {
 		inspectCalls(item.body)
 		for _, statement := range item.statements {
-			inspectCalls(statement.value)
-			inspectCalls(statement.condition)
+			inspectCalls(statement.value); inspectCalls(statement.condition)
 		}
 	}
 	for name := range parameters {
-		resultObserved := false
-		runtimeResultStateUsesValue(function.body, name, &resultObserved)
+		resultObserved := false; runtimeResultStateUsesValue(function.body, name, &resultObserved)
 		for _, item := range function.statements {
 			if runtimeResultStateUsesValue(item.value, name, &resultObserved) || runtimeResultStateUsesValue(item.condition, name, &resultObserved) {
 				break
@@ -497,10 +441,8 @@ func inferRuntimeResultStateParameters(program *program, function functionDecl, 
 	}
 	return resultParameters
 }
-
 func inferRuntimeResultParameterPayloads(program *program, functionName string, parameters []token, types []string) (map[string]string, *issue) {
-	payloads := map[string]string{}
-	environment := copyConstantEnvironment(program.constants)
+	payloads := map[string]string{}; environment := copyConstantEnvironment(program.constants)
 	for _, item := range program.statements {
 		if item.kind != "变量" {
 			continue
@@ -565,14 +507,12 @@ func inferRuntimeResultParameterPayloads(program *program, functionName string, 
 	}
 	return payloads, nil
 }
-
 func inspectResultReturn(input value, environment map[string]constantValue, resultParameters map[string]bool) {
 	if input.kind != "调用" {
 		return
 	}
 	if input.text == "ifElse" && len(input.args) == 3 {
-		inspectResultReturn(input.args[1], environment, resultParameters)
-		inspectResultReturn(input.args[2], environment, resultParameters)
+		inspectResultReturn(input.args[1], environment, resultParameters); inspectResultReturn(input.args[2], environment, resultParameters)
 		return
 	}
 	if input.kind == "调用" && input.runtimeFunction && input.runtimeFunctionResult {
@@ -589,11 +529,9 @@ func inspectResultReturn(input value, environment map[string]constantValue, resu
 		}
 	}
 }
-
 func classifyRuntimeFunctionParameterTypes(program *program) *issue {
 	for _, name := range program.runtimeFunctionNames {
-		function := program.runtimeFunctions[name]
-		parameters := make(map[string]bool, len(function.parameters))
+		function := program.runtimeFunctions[name]; parameters := make(map[string]bool, len(function.parameters))
 		for _, parameter := range function.parameters {
 			parameters[parameter.text] = true
 		}
@@ -618,18 +556,15 @@ func classifyRuntimeFunctionParameterTypes(program *program) *issue {
 		for parameter := range resultParameters {
 			delete(returnTextParameters, parameter)
 		}
-		integerParameters := map[string]bool{}
-		blockCalls := map[string]bool{}
+		integerParameters := map[string]bool{}; blockCalls := map[string]bool{}
 		collectBlockCalls(function.statements, blockCalls)
 		for _, parameter := range function.parameters {
 			if blockCalls[parameter.text] && !functionResultBranchUsesValue(function.statements, parameter.text) {
 				integerParameters[parameter.text] = true
 			}
 		}
-		collectRuntimeIntegerParameterUses(function.statements, parameters, integerParameters)
-		collectRuntimeIntegerParameterUsesValue(function.body, parameters, integerParameters)
-		inferRuntimeTextParametersFromCalls(program, name, function.parameters, textParameters, integerParameters)
-		types := make([]string, len(function.parameters))
+		collectRuntimeIntegerParameterUses(function.statements, parameters, integerParameters); collectRuntimeIntegerParameterUsesValue(function.body, parameters, integerParameters)
+		inferRuntimeTextParametersFromCalls(program, name, function.parameters, textParameters, integerParameters); types := make([]string, len(function.parameters))
 		for index, parameter := range function.parameters {
 			types[index] = "运行时整数"
 			if resultParameters[parameter.text] {
@@ -652,20 +587,17 @@ func classifyRuntimeFunctionParameterTypes(program *program) *issue {
 		if problem != nil {
 			return problem
 		}
-		function.parameterResultPayloads = payloads
-		function.parameterTypes = types
+		function.parameterResultPayloads = payloads; function.parameterTypes = types
 		program.runtimeFunctions[name] = function
 		for index := range program.functions {
 			if program.functions[index].name.text == name {
-				program.functions[index].parameterTypes = types
-				program.functions[index].parameterResultPayloads = payloads
+				program.functions[index].parameterTypes = types; program.functions[index].parameterResultPayloads = payloads
 				break
 			}
 		}
 	}
 	return nil
 }
-
 func inferRuntimeTextParametersFromCalls(program *program, functionName string, parameters []token, textParameters, integerParameters map[string]bool) {
 	environment := copyConstantEnvironment(program.constants)
 	for _, item := range program.statements {
@@ -684,25 +616,19 @@ func inferRuntimeTextParametersFromCalls(program *program, functionName string, 
 		collectRuntimeTextFunctionCallArguments(program.root.fields[index].value, environment, functionName, parameters, textParameters, integerParameters)
 	}
 	for index := range program.statements {
-		collectRuntimeTextFunctionCallArguments(program.statements[index].value, environment, functionName, parameters, textParameters, integerParameters)
-		collectRuntimeTextFunctionCallArguments(program.statements[index].condition, environment, functionName, parameters, textParameters, integerParameters)
+		collectRuntimeTextFunctionCallArguments(program.statements[index].value, environment, functionName, parameters, textParameters, integerParameters); collectRuntimeTextFunctionCallArguments(program.statements[index].condition, environment, functionName, parameters, textParameters, integerParameters)
 	}
 	for index := range program.functions {
 		collectRuntimeTextFunctionCallArguments(program.functions[index].body, environment, functionName, parameters, textParameters, integerParameters)
 		for statementIndex := range program.functions[index].statements {
-			collectRuntimeTextFunctionCallArguments(program.functions[index].statements[statementIndex].value, environment, functionName, parameters, textParameters, integerParameters)
-			collectRuntimeTextFunctionCallArguments(program.functions[index].statements[statementIndex].condition, environment, functionName, parameters, textParameters, integerParameters)
+			collectRuntimeTextFunctionCallArguments(program.functions[index].statements[statementIndex].value, environment, functionName, parameters, textParameters, integerParameters); collectRuntimeTextFunctionCallArguments(program.functions[index].statements[statementIndex].condition, environment, functionName, parameters, textParameters, integerParameters)
 		}
 	}
 }
-
 func collectRuntimeTextFunctionCallArguments(input value, environment map[string]constantValue, functionName string, parameters []token, textParameters, integerParameters map[string]bool) {
 	walkValue(input, func(current value) bool {
 		if current.kind == "调用" && current.text == functionName {
 			for index, argument := range current.args {
-				// This pass only gathers positive type evidence. A malformed or
-				// runtime-only argument must not surface its inner diagnostic before
-				// the actual runtime-function call boundary reports S-3062.
 				kind, problem := constantType(argument, environment)
 				if problem != nil || index >= len(parameters) || kind == "" {
 					continue
@@ -719,29 +645,23 @@ func collectRuntimeTextFunctionCallArguments(input value, environment map[string
 		return true
 	})
 }
-
 func collectRuntimeIntegerParameterUses(items []statement, parameters, integerParameters map[string]bool) {
 	walkStatements(items, func(item statement) bool {
-		collectRuntimeIntegerParameterUsesValue(item.value, parameters, integerParameters)
-		collectRuntimeIntegerParameterUsesValue(item.condition, parameters, integerParameters)
+		collectRuntimeIntegerParameterUsesValue(item.value, parameters, integerParameters); collectRuntimeIntegerParameterUsesValue(item.condition, parameters, integerParameters)
 		return true
 	})
 }
-
 func isRuntimeTextValueOperation(name string) bool {
 	switch name {
-	case "readText", "textLength", "textByteLength", "textByteAt", "textConcat", "substring", "equals", "notEquals", "argumentText", "readFile":
+	case "readText", "textLength", "textByteLength", "textByteAt", "textConcat", "substring", "equals", "notEquals", "argumentText", "readFile", "readEnvironment", "environmentNames":
 		return true
 	}
 	return false
 }
-
 func collectRuntimeIntegerParameterUsesValue(input value, parameters, integerParameters map[string]bool) {
 	walkValue(input, func(current value) bool {
-		integerOperation := current.kind == "表达式" && (current.operator == "-" || current.operator == "*" || current.operator == "/" || current.operator == "%" || current.operator == "<<" || current.operator == ">>")
-		integerAddition := current.kind == "表达式" && current.operator == "+" && current.left != nil && current.right != nil && (current.left.kind == "整数" || current.right.kind == "整数")
-		integerComparison := current.kind == "比较" && current.left != nil && current.right != nil && (current.left.kind == "整数" || current.right.kind == "整数")
-		integerEquality := current.kind == "调用" && (current.text == "equals" || current.text == "notEquals") && len(current.args) == 2 && (current.args[0].kind == "整数" || current.args[1].kind == "整数")
+		integerOperation := current.kind == "表达式" && (current.operator == "-" || current.operator == "*" || current.operator == "/" || current.operator == "%" || current.operator == "<<" || current.operator == ">>"); integerAddition := current.kind == "表达式" && current.operator == "+" && current.left != nil && current.right != nil && (current.left.kind == "整数" || current.right.kind == "整数")
+		integerComparison := current.kind == "比较" && current.left != nil && current.right != nil && (current.left.kind == "整数" || current.right.kind == "整数"); integerEquality := current.kind == "调用" && (current.text == "equals" || current.text == "notEquals") && len(current.args) == 2 && (current.args[0].kind == "整数" || current.args[1].kind == "整数")
 		if integerOperation || integerAddition || integerComparison || integerEquality {
 			markRuntimeIntegerParameterReferences(current, parameters, integerParameters)
 		}
@@ -751,7 +671,6 @@ func collectRuntimeIntegerParameterUsesValue(input value, parameters, integerPar
 		return true
 	})
 }
-
 func markRuntimeIntegerParameterReferences(input value, parameters, integerParameters map[string]bool) {
 	walkValue(input, func(current value) bool {
 		if current.kind == "调用" && isRuntimeTextValueOperation(current.text) {
@@ -763,16 +682,12 @@ func markRuntimeIntegerParameterReferences(input value, parameters, integerParam
 		return true
 	})
 }
-
 func collectRuntimeTextParameterUses(items []statement, parameters, textParameters map[string]bool) {
-	aliases := runtimeTextAliasSources(items)
-	previous := -1
+	aliases := runtimeTextAliasSources(items); previous := -1
 	for previous != len(textParameters) {
-		previous = len(textParameters)
-		visitRuntimeTextParameterUses(items, parameters, textParameters, aliases)
+		previous = len(textParameters); visitRuntimeTextParameterUses(items, parameters, textParameters, aliases)
 	}
 }
-
 func collectRuntimeTextReturnParameters(items []statement, parameters, textParameters map[string]bool) {
 	sources := map[string][]value{}
 	for _, item := range items {
@@ -791,17 +706,13 @@ func collectRuntimeTextReturnParameters(items []statement, parameters, textParam
 		}
 	}
 }
-
 func visitRuntimeTextParameterUses(items []statement, parameters, textParameters map[string]bool, aliases map[string][]value) {
 	walkStatements(items, func(item statement) bool {
-		collectRuntimeTextParameterUsesValue(item.value, parameters, textParameters, aliases)
-		collectRuntimeTextParameterUsesValue(item.condition, parameters, textParameters, aliases)
-		collectRuntimeTextParameterComparisons(item.value, parameters, textParameters, aliases)
-		collectRuntimeTextParameterComparisons(item.condition, parameters, textParameters, aliases)
+		collectRuntimeTextParameterUsesValue(item.value, parameters, textParameters, aliases); collectRuntimeTextParameterUsesValue(item.condition, parameters, textParameters, aliases)
+		collectRuntimeTextParameterComparisons(item.value, parameters, textParameters, aliases); collectRuntimeTextParameterComparisons(item.condition, parameters, textParameters, aliases)
 		return true
 	})
 }
-
 func runtimeTextAliasSources(items []statement) map[string][]value {
 	aliases := map[string][]value{}
 	walkStatements(items, func(item statement) bool {
@@ -812,7 +723,6 @@ func runtimeTextAliasSources(items []statement) map[string][]value {
 	})
 	return aliases
 }
-
 func collectRuntimeTextParameterUsesValue(input value, parameters, textParameters map[string]bool, aliases map[string][]value) {
 	walkValue(input, func(current value) bool {
 		if current.kind == "调用" && current.text == "textLength" && len(current.args) == 1 {
@@ -824,7 +734,6 @@ func collectRuntimeTextParameterUsesValue(input value, parameters, textParameter
 		return true
 	})
 }
-
 func markRuntimeTextParameterReferencesResolved(input value, parameters, textParameters map[string]bool, aliases map[string][]value, visited map[string]bool) {
 	walkValue(input, func(current value) bool {
 		if current.kind == "引用" && parameters[current.text] {
@@ -841,7 +750,6 @@ func markRuntimeTextParameterReferencesResolved(input value, parameters, textPar
 		return true
 	})
 }
-
 func collectRuntimeTextParameterComparisons(input value, parameters, textParameters map[string]bool, aliases map[string][]value) {
 	walkValue(input, func(current value) bool {
 		var left, right *value
@@ -857,13 +765,11 @@ func collectRuntimeTextParameterComparisons(input value, parameters, textParamet
 		}
 		if left != nil && right != nil &&
 			(runtimeTextComparisonAnchorResolved(*left, parameters, textParameters, aliases, map[string]bool{}) || runtimeTextComparisonAnchorResolved(*right, parameters, textParameters, aliases, map[string]bool{})) {
-			markRuntimeTextParameterReferencesResolved(*left, parameters, textParameters, aliases, map[string]bool{})
-			markRuntimeTextParameterReferencesResolved(*right, parameters, textParameters, aliases, map[string]bool{})
+			markRuntimeTextParameterReferencesResolved(*left, parameters, textParameters, aliases, map[string]bool{}); markRuntimeTextParameterReferencesResolved(*right, parameters, textParameters, aliases, map[string]bool{})
 		}
 		return true
 	})
 }
-
 func runtimeTextComparisonAnchorResolved(input value, parameters, textParameters map[string]bool, aliases map[string][]value, visited map[string]bool) bool {
 	if input.kind == "引用" && !visited[input.text] {
 		if aliasValues, exists := aliases[input.text]; exists {
@@ -877,7 +783,6 @@ func runtimeTextComparisonAnchorResolved(input value, parameters, textParameters
 	}
 	return runtimeTextComparisonAnchor(input, parameters, textParameters)
 }
-
 func runtimeTextComparisonAnchor(input value, parameters, textParameters map[string]bool) bool {
 	if input.kind == "字符串" {
 		return true
@@ -894,11 +799,9 @@ func runtimeTextComparisonAnchor(input value, parameters, textParameters map[str
 	}
 	return false
 }
-
 func isRuntimeTextOrderingOperator(operator string) bool {
 	return operator == "<" || operator == "<=" || operator == ">" || operator == ">="
 }
-
 func runtimeFunctionParameterTypes(function functionDecl) []string {
 	if len(function.parameterTypes) == len(function.parameters) {
 		return function.parameterTypes
@@ -909,17 +812,14 @@ func runtimeFunctionParameterTypes(function functionDecl) []string {
 	}
 	return types
 }
-
 func runtimeResultParameterPayload(function functionDecl, name string) string {
 	if payload := function.parameterResultPayloads[name]; payload != "" {
 		return payload
 	}
 	return "整数"
 }
-
 func runtimeFunctionParameterPayloads(function functionDecl) []string {
-	types := runtimeFunctionParameterTypes(function)
-	payloads := make([]string, len(types))
+	types := runtimeFunctionParameterTypes(function); payloads := make([]string, len(types))
 	for index, parameterType := range types {
 		if parameterType == "运行时结果" {
 			payloads[index] = runtimeResultParameterPayload(function, function.parameters[index].text)
@@ -927,10 +827,8 @@ func runtimeFunctionParameterPayloads(function functionDecl) []string {
 	}
 	return payloads
 }
-
 func runtimeFunctionRegisterCount(function functionDecl) int {
-	payloads := runtimeFunctionParameterPayloads(function)
-	count := 0
+	payloads := runtimeFunctionParameterPayloads(function); count := 0
 	for index, parameterType := range runtimeFunctionParameterTypes(function) {
 		if parameterType == "运行时结果" && isTextResultPayload(payloads[index]) {
 			count += 4
@@ -942,21 +840,16 @@ func runtimeFunctionRegisterCount(function functionDecl) int {
 	}
 	return count
 }
-
-// Text results use four registers; other parameters retain the existing pair or scalar layout.
 func runtimeFunctionParameterOffsets(types, payloads []string) []uint32 {
-	offsets := make([]uint32, len(types))
-	offset := uint32(0)
+	offsets := make([]uint32, len(types)); offset := uint32(0)
 	for index := range types {
-		offsets[index] = offset
-		offset += 16
+		offsets[index] = offset; offset += 16
 		if types[index] == "运行时结果" && index < len(payloads) && isTextResultPayload(payloads[index]) {
 			offset += 16
 		}
 	}
 	return offsets
 }
-
 func runtimeFunctionParameterBytes(types, payloads []string) uint32 {
 	bytes := uint32(0)
 	for index := range types {
@@ -967,7 +860,6 @@ func runtimeFunctionParameterBytes(types, payloads []string) uint32 {
 	}
 	return bytes
 }
-
 func registerIndexForParameter(types, payloads []string, index int) int {
 	register := 0
 	for i := 0; i < index; i++ {
@@ -981,7 +873,6 @@ func registerIndexForParameter(types, payloads []string, index int) int {
 	}
 	return register
 }
-
 func runtimeStatementLocalType(function functionDecl, name string) string {
 	if function.localTypes[name] == "运行时字符串" {
 		return "运行时字符串"
@@ -991,7 +882,6 @@ func runtimeStatementLocalType(function functionDecl, name string) string {
 	}
 	return "运行时整数"
 }
-
 func runtimeStatementLocalSlotCount(function functionDecl) int {
 	count := 0
 	for _, name := range functionLocalNames(function.statements) {
@@ -1009,7 +899,6 @@ func runtimeStatementLocalSlotCount(function functionDecl) int {
 	}
 	return count
 }
-
 func isRuntimeTextDurableCopyValue(input value, environment map[string]constantValue) bool {
 	kind, problem := constantType(input, environment)
 	if problem != nil || kind != "运行时字符串" {
@@ -1020,33 +909,25 @@ func isRuntimeTextDurableCopyValue(input value, environment map[string]constantV
 	}
 	return input.kind == "调用" && (input.text == "textConcat" || input.text == "substring")
 }
-
 func classifyRuntimeFunctionLocalTypes(program *program, payloads map[string]constantValue) *issue {
 	for _, name := range program.runtimeFunctionNames {
 		function := program.runtimeFunctions[name]
 		if function.body.kind != "" {
 			continue
 		}
-		environment := copyConstantEnvironment(payloads)
-		parameterPayloads := runtimeFunctionParameterPayloads(function)
+		environment := copyConstantEnvironment(payloads); parameterPayloads := runtimeFunctionParameterPayloads(function)
 		for index, parameter := range function.parameters {
-			kind := runtimeFunctionParameterTypes(function)[index]
-			environment[parameter.text] = constantValue{kind: kind, resultPayload: parameterPayloads[index]}
+			kind := runtimeFunctionParameterTypes(function)[index]; environment[parameter.text] = constantValue{kind: kind, resultPayload: parameterPayloads[index]}
 		}
-		localTypes := map[string]string{}
-		localResultPayloads := map[string]string{}
-		resultObservations := map[string]bool{}
-		var collectResultObservations func([]statement)
+		localTypes := map[string]string{}; localResultPayloads := map[string]string{}
+		resultObservations := map[string]bool{}; var collectResultObservations func([]statement)
 		collectResultObservations = func(items []statement) {
 			for _, item := range items {
-				collectRuntimeResultObservations(item.value, resultObservations)
-				collectRuntimeResultObservations(item.condition, resultObservations)
-				collectResultObservations(item.body)
-				collectResultObservations(item.otherwise)
+				collectRuntimeResultObservations(item.value, resultObservations); collectRuntimeResultObservations(item.condition, resultObservations)
+				collectResultObservations(item.body); collectResultObservations(item.otherwise)
 			}
 		}
-		collectResultObservations(function.statements)
-		var visit func([]statement)
+		collectResultObservations(function.statements); var visit func([]statement)
 		visit = func(items []statement) {
 			for _, item := range items {
 				switch item.kind {
@@ -1054,8 +935,7 @@ func classifyRuntimeFunctionLocalTypes(program *program, payloads map[string]con
 					kind, problem := constantType(item.value, environment)
 					if problem != nil {
 						if item.kind == "变量" && resultObservations[item.name.text] {
-							localTypes[item.name.text] = "运行时结果"
-							localResultPayloads[item.name.text] = "整数"
+							localTypes[item.name.text] = "运行时结果"; localResultPayloads[item.name.text] = "整数"
 							environment[item.name.text] = constantValue{kind: "运行时结果", resultPayload: "整数"}
 						}
 						continue
@@ -1073,8 +953,7 @@ func classifyRuntimeFunctionLocalTypes(program *program, payloads map[string]con
 						}
 						constant := constantValue{kind: localTypes[item.name.text]}
 						if kind == "运行时结果" {
-							constant.resultPayload = runtimeResultPayload(item.value, environment)
-							localResultPayloads[item.name.text] = constant.resultPayload
+							constant.resultPayload = runtimeResultPayload(item.value, environment); localResultPayloads[item.name.text] = constant.resultPayload
 						}
 						environment[item.name.text] = constant
 						continue
@@ -1085,26 +964,21 @@ func classifyRuntimeFunctionLocalTypes(program *program, payloads map[string]con
 						}
 					}
 				case "若":
-					visit(item.body)
-					visit(item.otherwise)
+					visit(item.body); visit(item.otherwise)
 				}
 			}
 		}
-		visit(function.statements)
-		function.localTypes = localTypes
-		function.localResultPayloads = localResultPayloads
-		program.runtimeFunctions[name] = function
+		visit(function.statements); function.localTypes = localTypes
+		function.localResultPayloads = localResultPayloads; program.runtimeFunctions[name] = function
 		for index := range program.functions {
 			if program.functions[index].name.text == name {
-				program.functions[index].localTypes = localTypes
-				program.functions[index].localResultPayloads = localResultPayloads
+				program.functions[index].localTypes = localTypes; program.functions[index].localResultPayloads = localResultPayloads
 				break
 			}
 		}
 	}
 	return nil
 }
-
 func collectRuntimeResultObservations(input value, observations map[string]bool) {
 	walkValue(input, func(current value) bool {
 		if current.kind == "调用" && (current.text == "是否失败" || current.text == "错误码" || current.text == "结果值") && len(current.args) == 1 && current.args[0].kind == "引用" {
@@ -1113,13 +987,11 @@ func collectRuntimeResultObservations(input value, observations map[string]bool)
 		return true
 	})
 }
-
 func annotateRuntimeTextReturns(program *program) {
 	for _, name := range program.runtimeFunctionNames {
 		function := program.runtimeFunctions[name]
 		if function.body.kind == "" && function.runtimeReturnsResult && function.runtimeResultPayload == "" {
-			function.runtimeResultPayload = "整数"
-			program.runtimeFunctions[name] = function
+			function.runtimeResultPayload = "整数"; program.runtimeFunctions[name] = function
 			for index := range program.functions {
 				if program.functions[index].name.text == name {
 					program.functions[index].runtimeResultPayload = "整数"
@@ -1140,19 +1012,16 @@ func annotateRuntimeTextReturns(program *program) {
 		if containsStatementKind(function.statements[:len(function.statements)-1], "返回") {
 			continue
 		}
-		function.runtimeReturnsText = true
-		function.runtimeReturnLocal = last.value.text
+		function.runtimeReturnsText = true; function.runtimeReturnLocal = last.value.text
 		program.runtimeFunctions[name] = function
 		for index := range program.functions {
 			if program.functions[index].name.text == name {
-				program.functions[index].runtimeReturnsText = true
-				program.functions[index].runtimeReturnLocal = last.value.text
+				program.functions[index].runtimeReturnsText = true; program.functions[index].runtimeReturnLocal = last.value.text
 				break
 			}
 		}
 	}
 }
-
 func validateRuntimeTextReturnCalls(program *program) *issue {
 	for index := range program.functions {
 		function := program.functions[index]
@@ -1199,19 +1068,15 @@ func validateRuntimeTextReturnCalls(program *program) *issue {
 	}
 	return nil
 }
-
 func runtimeTextReturnCallIssue(pos sourcePosition) *issue {
 	return &issue{code: "S-3023", expected: "运行时文本返回函数仅直接作为程序输出", actual: "文本返回调用出现在变量、条件、函数体或嵌套表达式中", suggestion: "先把文本返回函数调用保留为程序根 输出 的完整表达式", pos: pos}
 }
-
 func statementContainsRuntimeTextReturnCall(item statement) bool {
 	return containsRuntimeTextReturnCall(item.value) || containsRuntimeTextReturnCall(item.condition) || statementsContainRuntimeTextReturnCall(item.body) || statementsContainRuntimeTextReturnCall(item.otherwise)
 }
-
 func isTextReturnCall(input value) bool {
 	return input.kind == "调用" && input.runtimeFunction && input.runtimeFunctionText
 }
-
 func statementsContainRuntimeTextReturnCall(items []statement) bool {
 	for _, item := range items {
 		if statementContainsRuntimeTextReturnCall(item) {
@@ -1220,7 +1085,6 @@ func statementsContainRuntimeTextReturnCall(items []statement) bool {
 	}
 	return false
 }
-
 func valuesContainRuntimeTextReturnCall(items []value) bool {
 	for _, item := range items {
 		if containsRuntimeTextReturnCall(item) {
@@ -1229,7 +1093,6 @@ func valuesContainRuntimeTextReturnCall(items []value) bool {
 	}
 	return false
 }
-
 func containsRuntimeTextReturnCall(input value) bool {
 	found := false
 	walkValue(input, func(current value) bool {
@@ -1241,7 +1104,6 @@ func containsRuntimeTextReturnCall(input value) bool {
 	})
 	return found
 }
-
 func annotateRuntimeResultPayloads(program *program, constants map[string]constantValue) {
 	functions := map[string]functionDecl{}
 	for _, function := range program.functions {
@@ -1254,8 +1116,7 @@ func annotateRuntimeResultPayloads(program *program, constants map[string]consta
 			if !function.runtimeReturnsResult {
 				continue
 			}
-			environment := copyConstantEnvironment(constants)
-			parameterTypes := runtimeFunctionParameterTypes(function)
+			environment := copyConstantEnvironment(constants); parameterTypes := runtimeFunctionParameterTypes(function)
 			for index, parameter := range function.parameters {
 				environment[parameter.text] = constantValue{kind: parameterTypes[index]}
 			}
@@ -1275,8 +1136,7 @@ func annotateRuntimeResultPayloads(program *program, constants map[string]consta
 				}
 			}
 			if payload != "" && payload != function.runtimeResultPayload {
-				function.runtimeResultPayload = payload
-				functions[name] = function
+				function.runtimeResultPayload = payload; functions[name] = function
 				program.runtimeFunctions[name] = function
 				for index := range program.functions {
 					if program.functions[index].name.text == name {
@@ -1292,7 +1152,6 @@ func annotateRuntimeResultPayloads(program *program, constants map[string]consta
 	}
 	annotateRuntimeResultCalls(program, program.runtimeFunctions)
 }
-
 func runtimeResultReturnPayload(input value, functions map[string]functionDecl, environment map[string]constantValue, visiting map[string]bool) string {
 	if input.kind == "调用" {
 		if function, exists := functions[input.text]; exists && function.runtimeReturnsResult {
@@ -1302,14 +1161,12 @@ func runtimeResultReturnPayload(input value, functions map[string]functionDecl, 
 			if visiting[input.text] {
 				return ""
 			}
-			visiting[input.text] = true
-			payload := runtimeResultReturnPayload(function.body, functions, environment, visiting)
+			visiting[input.text] = true; payload := runtimeResultReturnPayload(function.body, functions, environment, visiting)
 			delete(visiting, input.text)
 			return payload
 		}
 		if input.text == "ifElse" && len(input.args) == 3 {
-			whenTrue := runtimeResultReturnPayload(input.args[1], functions, environment, visiting)
-			whenFalse := runtimeResultReturnPayload(input.args[2], functions, environment, visiting)
+			whenTrue := runtimeResultReturnPayload(input.args[1], functions, environment, visiting); whenFalse := runtimeResultReturnPayload(input.args[2], functions, environment, visiting)
 			if whenTrue == "" {
 				return whenFalse
 			}
@@ -1324,7 +1181,6 @@ func runtimeResultReturnPayload(input value, functions map[string]functionDecl, 
 	}
 	return runtimeResultPayload(input, environment)
 }
-
 func annotateRuntimeResultCalls(program *program, runtimeFunctions map[string]functionDecl) {
 	for index := range program.bindings {
 		setRuntimeFunctionPayload(&program.bindings[index].value, runtimeFunctions)
@@ -1342,19 +1198,15 @@ func annotateRuntimeResultCalls(program *program, runtimeFunctions map[string]fu
 		}
 	}
 }
-
 func setRuntimeFunctionPayload(input *value, runtimeFunctions map[string]functionDecl) {
 	if input == nil {
 		return
 	}
 	if input.kind == "调用" {
 		if function, exists := runtimeFunctions[input.text]; exists {
-			input.runtimeFunction = true
-			input.runtimeFunctionResult = function.runtimeReturnsResult
-			input.runtimeFunctionPayload = function.runtimeResultPayload
-			input.runtimeFunctionText = function.runtimeReturnsText
-			input.runtimeArgumentTypes = runtimeFunctionParameterTypes(function)
-			input.runtimeArgumentPayloads = runtimeFunctionParameterPayloads(function)
+			input.runtimeFunction = true; input.runtimeFunctionResult = function.runtimeReturnsResult
+			input.runtimeFunctionPayload = function.runtimeResultPayload; input.runtimeFunctionText = function.runtimeReturnsText
+			input.runtimeArgumentTypes = runtimeFunctionParameterTypes(function); input.runtimeArgumentPayloads = runtimeFunctionParameterPayloads(function)
 		}
 	}
 	for index := range input.args {
@@ -1370,10 +1222,8 @@ func setRuntimeFunctionPayload(input *value, runtimeFunctions map[string]functio
 		setRuntimeFunctionPayload(input.right, runtimeFunctions)
 	}
 }
-
 func setStatementRuntimeFunctionPayload(item *statement, runtimeFunctions map[string]functionDecl) {
-	setRuntimeFunctionPayload(&item.value, runtimeFunctions)
-	setRuntimeFunctionPayload(&item.condition, runtimeFunctions)
+	setRuntimeFunctionPayload(&item.value, runtimeFunctions); setRuntimeFunctionPayload(&item.condition, runtimeFunctions)
 	for index := range item.body {
 		setStatementRuntimeFunctionPayload(&item.body[index], runtimeFunctions)
 	}
@@ -1381,18 +1231,15 @@ func setStatementRuntimeFunctionPayload(item *statement, runtimeFunctions map[st
 		setStatementRuntimeFunctionPayload(&item.otherwise[index], runtimeFunctions)
 	}
 }
-
 func blockFunctionReturnsResult(statements []statement) bool {
 	return blockFunctionReturnsResultIn(statements, statements)
 }
-
 func blockFunctionReturnsResultValue(statements []statement, value value) bool {
 	if runtimeResultReturnShape(value, nil, map[string]bool{}) == "运行时结果" {
 		return true
 	}
 	return value.kind == "引用" && localResultShape(statements, value.text, nil)
 }
-
 func blockFunctionReturnsResultIn(statements, allStatements []statement) bool {
 	for _, item := range statements {
 		if item.kind == "返回" && blockFunctionReturnsResultValue(allStatements, item.value) {
@@ -1404,7 +1251,6 @@ func blockFunctionReturnsResultIn(statements, allStatements []statement) bool {
 	}
 	return false
 }
-
 func functionBodyUsesResultParameter(function functionDecl) bool {
 	parameters := map[string]bool{}
 	for _, parameter := range function.parameters {
@@ -1440,19 +1286,12 @@ func functionBodyUsesResultParameter(function functionDecl) bool {
 	}
 	return false
 }
-
-// functionReturnsResultParameter recognizes a result parameter returned from
-// an ifElse branch while it is only forwarded through calls. Integer operands
-// are excluded so ordinary recursive arithmetic functions keep their integer ABI.
-
 func functionReturnsResultParameter(function functionDecl) bool {
-	parameters := map[string]bool{}
-	integerParameters := map[string]bool{}
+	parameters := map[string]bool{}; integerParameters := map[string]bool{}
 	for _, parameter := range function.parameters {
 		parameters[parameter.text] = true
 	}
-	collectRuntimeIntegerParameterUses(function.statements, parameters, integerParameters)
-	collectRuntimeIntegerParameterUsesValue(function.body, parameters, integerParameters)
+	collectRuntimeIntegerParameterUses(function.statements, parameters, integerParameters); collectRuntimeIntegerParameterUsesValue(function.body, parameters, integerParameters)
 	for name := range parameters {
 		if !integerParameters[name] && functionResultBranchUsesParameter(function.body, name) {
 			return true
@@ -1460,7 +1299,6 @@ func functionReturnsResultParameter(function functionDecl) bool {
 	}
 	return false
 }
-
 func localResultShape(statements []statement, name string, functions map[string]functionDecl) bool {
 	for _, statement := range statements {
 		if statement.kind == "变量" && statement.name.text == name && runtimeResultReturnShape(statement.value, functions, map[string]bool{}) == "运行时结果" {
@@ -1472,7 +1310,6 @@ func localResultShape(statements []statement, name string, functions map[string]
 	}
 	return false
 }
-
 func annotateRuntimeFunctionResults(functions map[string]functionDecl) {
 	changed := true
 	for changed {
@@ -1482,18 +1319,12 @@ func annotateRuntimeFunctionResults(functions map[string]functionDecl) {
 				continue
 			}
 			if runtimeResultReturnShape(function.body, functions, map[string]bool{name: true}) == "运行时结果" || blockFunctionReturnsResult(function.statements) || functionBodyUsesResultParameter(function) || functionReturnsResultParameter(function) {
-				function.runtimeReturnsResult = true
-				functions[name] = function
+				function.runtimeReturnsResult = true; functions[name] = function
 				changed = true
 			}
 		}
 	}
 }
-
-// functionBodyUsesResultParameter recognizes result-state operations on a
-// parameter before parameter types are annotated. Such a runtime function
-// must use the four-register result ABI even when its branches return an
-// existing result value instead of constructing 成功/失败.
 func runtimeResultReturnShape(input value, functions map[string]functionDecl, visiting map[string]bool) string {
 	if input.kind == "引用" {
 		if localResultShape(nil, input.text, functions) {
@@ -1513,8 +1344,7 @@ func runtimeResultReturnShape(input value, functions map[string]functionDecl, vi
 			if visiting[input.text] {
 				return ""
 			}
-			visiting[input.text] = true
-			shape := runtimeResultReturnShape(function.body, functions, visiting)
+			visiting[input.text] = true; shape := runtimeResultReturnShape(function.body, functions, visiting)
 			delete(visiting, input.text)
 			return shape
 		}
@@ -1522,8 +1352,7 @@ func runtimeResultReturnShape(input value, functions map[string]functionDecl, vi
 			return "运行时结果"
 		}
 		if input.text == "ifElse" && len(input.args) == 3 {
-			whenTrue := runtimeResultReturnShape(input.args[1], functions, visiting)
-			whenFalse := runtimeResultReturnShape(input.args[2], functions, visiting)
+			whenTrue := runtimeResultReturnShape(input.args[1], functions, visiting); whenFalse := runtimeResultReturnShape(input.args[2], functions, visiting)
 			if whenTrue == "运行时结果" && (whenFalse == "运行时结果" || whenFalse == "") || whenFalse == "运行时结果" && whenTrue == "" {
 				return "运行时结果"
 			}
@@ -1531,7 +1360,6 @@ func runtimeResultReturnShape(input value, functions map[string]functionDecl, vi
 	}
 	return ""
 }
-
 func collectFunctionCalls(input value, functions map[string]functionDecl, calls map[string]bool) {
 	walkValue(input, func(current value) bool {
 		if current.kind == "调用" {
@@ -1542,7 +1370,6 @@ func collectFunctionCalls(input value, functions map[string]functionDecl, calls 
 		return true
 	})
 }
-
 func callGraphReaches(graph map[string]map[string]bool, start, current string, visited map[string]bool) bool {
 	for next := range graph[current] {
 		if next == start {
@@ -1558,10 +1385,8 @@ func callGraphReaches(graph map[string]map[string]bool, start, current string, v
 	}
 	return false
 }
-
 func expandFunctionStatement(item statement, functions map[string]functionDecl, runtimeFunctions map[string]functionDecl, depth int, remaining *int, rootEffects map[string]bool, payloads map[string]constantValue, statements []statement) (statement, *issue) {
-	var problem *issue
-	localPayloads := payloads
+	var problem *issue; localPayloads := payloads
 	for _, candidate := range statements {
 		if candidate.kind != "变量" || candidate.value.kind != "调用" {
 			continue
@@ -1570,8 +1395,7 @@ func expandFunctionStatement(item statement, functions map[string]functionDecl, 
 		if kindProblem != nil || kind != "运行时结果" {
 			continue
 		}
-		localPayloads = copyConstantEnvironment(localPayloads)
-		localPayloads[candidate.name.text] = constantValue{kind: kind, resultPayload: runtimeResultPayload(candidate.value, localPayloads)}
+		localPayloads = copyConstantEnvironment(localPayloads); localPayloads[candidate.name.text] = constantValue{kind: kind, resultPayload: runtimeResultPayload(candidate.value, localPayloads)}
 	}
 	for _, candidate := range statements {
 		if candidate.kind != "变量" {
@@ -1581,8 +1405,7 @@ func expandFunctionStatement(item statement, functions map[string]functionDecl, 
 		if kindProblem != nil || kind != "运行时结果" {
 			continue
 		}
-		localPayloads = copyConstantEnvironment(localPayloads)
-		localPayloads[candidate.name.text] = constantValue{kind: kind, resultPayload: runtimeResultPayload(candidate.value, localPayloads)}
+		localPayloads = copyConstantEnvironment(localPayloads); localPayloads[candidate.name.text] = constantValue{kind: kind, resultPayload: runtimeResultPayload(candidate.value, localPayloads)}
 	}
 	item.value, problem = expandFunctionValue(item.value, functions, runtimeFunctions, nil, depth, remaining, rootEffects, localPayloads, statements)
 	if problem != nil {
@@ -1606,7 +1429,6 @@ func expandFunctionStatement(item statement, functions map[string]functionDecl, 
 	}
 	return item, nil
 }
-
 func expandFunctionValue(input value, functions map[string]functionDecl, runtimeFunctions map[string]functionDecl, stack []string, depth int, remaining *int, rootEffects map[string]bool, payloads map[string]constantValue, statements []statement) (value, *issue) {
 	if depth > 256 {
 		return value{}, &issue{code: "S-3063", expected: "不超过 256 层的函数表达式", actual: "展开嵌套过深", suggestion: "拆分函数表达式", pos: input.pos}
@@ -1620,8 +1442,7 @@ func expandFunctionValue(input value, functions map[string]functionDecl, runtime
 		if kindProblem != nil || kind != "运行时结果" {
 			continue
 		}
-		callPayloads = copyConstantEnvironment(callPayloads)
-		callPayloads[candidate.name.text] = constantValue{kind: kind, resultPayload: runtimeResultPayload(candidate.value, callPayloads)}
+		callPayloads = copyConstantEnvironment(callPayloads); callPayloads[candidate.name.text] = constantValue{kind: kind, resultPayload: runtimeResultPayload(candidate.value, callPayloads)}
 	}
 	for _, candidate := range statements {
 		if candidate.kind != "变量" {
@@ -1631,8 +1452,7 @@ func expandFunctionValue(input value, functions map[string]functionDecl, runtime
 		if kindProblem != nil || kind != "运行时结果" {
 			continue
 		}
-		callPayloads = copyConstantEnvironment(callPayloads)
-		callPayloads[candidate.name.text] = constantValue{kind: kind, resultPayload: runtimeResultPayload(candidate.value, callPayloads)}
+		callPayloads = copyConstantEnvironment(callPayloads); callPayloads[candidate.name.text] = constantValue{kind: kind, resultPayload: runtimeResultPayload(candidate.value, callPayloads)}
 	}
 	if input.kind == "调用" && len(stack) > 0 && isFunctionEffect(input.text) {
 		effect := requiredFunctionEffect(input.text)
@@ -1650,10 +1470,8 @@ func expandFunctionValue(input value, functions map[string]functionDecl, runtime
 			if len(input.args) != len(function.parameters) {
 				return value{}, &issue{code: "S-3061", expected: strconv.Itoa(len(function.parameters)) + " 个实参", actual: strconv.Itoa(len(input.args)) + " 个实参", suggestion: "按函数声明提供相同数量的参数", pos: input.pos}
 			}
-			input.runtimeFunction = true
-			input.runtimeFunctionResult = function.runtimeReturnsResult
-			input.runtimeFunctionPayload = function.runtimeResultPayload
-			var problem *issue
+			input.runtimeFunction = true; input.runtimeFunctionResult = function.runtimeReturnsResult
+			input.runtimeFunctionPayload = function.runtimeResultPayload; var problem *issue
 			for index := range input.args {
 				input.args[index], problem = expandFunctionValue(input.args[index], functions, runtimeFunctions, stack, depth+1, remaining, rootEffects, callPayloads, statements)
 				if problem != nil {
@@ -1691,8 +1509,7 @@ func expandFunctionValue(input value, functions map[string]functionDecl, runtime
 			}
 			arguments := make(map[string]value, len(function.parameters))
 			for index, parameter := range function.parameters {
-				argument := input.args[index]
-				parameterUses := countFunctionParameter(function.body, parameter.text)
+				argument := input.args[index]; parameterUses := countFunctionParameter(function.body, parameter.text)
 				if parameterUses == 0 {
 					return value{}, &issue{code: "S-3065", expected: "函数体使用的参数", actual: parameter.text, suggestion: "删除未使用参数或在返回表达式中使用它", pos: parameter.pos}
 				}
@@ -1758,17 +1575,14 @@ func expandFunctionValue(input value, functions map[string]functionDecl, runtime
 	}
 	return input, nil
 }
-
 func collectFunctionLocals(statements []statement, locals map[string]bool) {
 	for _, item := range statements {
 		if item.kind == "变量" {
 			locals[item.name.text] = true
 		}
-		collectFunctionLocals(item.body, locals)
-		collectFunctionLocals(item.otherwise, locals)
+		collectFunctionLocals(item.body, locals); collectFunctionLocals(item.otherwise, locals)
 	}
 }
-
 func lowerFunctionStatements(statements []statement, environment map[string]value, locals map[string]bool, functions map[string]functionDecl, depth int) (value, *issue) {
 	if depth > 256 {
 		return value{}, &issue{code: "S-3063", expected: "不超过 256 层的函数局部作用域", actual: "局部作用域嵌套过深", suggestion: "拆分函数局部控制语句", pos: sourcePosition{}}
@@ -1789,8 +1603,7 @@ func lowerFunctionStatements(statements []statement, environment map[string]valu
 		if isTextReturnCall(initial) {
 			return value{}, functionBlockIssue(item.value.pos, "已复制的局部文本", "未复制的文本返回值", "先声明文本局部变量并复制返回值，再在局部作用域使用")
 		}
-		next := cloneFunctionEnvironment(environment)
-		next[item.name.text] = initial
+		next := cloneFunctionEnvironment(environment); next[item.name.text] = initial
 		return lowerFunctionStatements(statements[1:], next, locals, functions, depth+1)
 	case "赋值":
 		if _, exists := environment[item.name.text]; !exists {
@@ -1800,8 +1613,7 @@ func lowerFunctionStatements(statements []statement, environment map[string]valu
 		if problem != nil {
 			return value{}, problem
 		}
-		next := cloneFunctionEnvironment(environment)
-		next[item.name.text] = updated
+		next := cloneFunctionEnvironment(environment); next[item.name.text] = updated
 		return lowerFunctionStatements(statements[1:], next, locals, functions, depth+1)
 	case "返回":
 		result, problem := lowerFunctionValue(item.value, environment, locals, functions, true)
@@ -1844,7 +1656,6 @@ func lowerFunctionStatements(statements []statement, environment map[string]valu
 		return value{}, functionBlockIssue(item.name.pos, "函数局部变量、赋值、若或返回语句", item.kind, "使用当前纯函数块支持的语句")
 	}
 }
-
 func lowerFunctionValue(input value, environment map[string]value, locals map[string]bool, functions map[string]functionDecl, allowEffects bool) (value, *issue) {
 	resolved, problem := substituteFunctionParameters(input, environment, 0)
 	if problem != nil {
@@ -1858,12 +1669,10 @@ func lowerFunctionValue(input value, environment map[string]value, locals map[st
 	}
 	return resolved, nil
 }
-
 func validateLocalReferences(input value, environment map[string]value, locals map[string]bool) *issue {
 	stack := []value{input}
 	for len(stack) > 0 {
-		last := len(stack) - 1
-		current := stack[last]
+		last := len(stack) - 1; current := stack[last]
 		stack = stack[:last]
 		if current.kind == "引用" && locals[current.text] {
 			if _, exists := environment[current.text]; !exists {
@@ -1883,7 +1692,6 @@ func validateLocalReferences(input value, environment map[string]value, locals m
 	}
 	return nil
 }
-
 func cloneFunctionEnvironment(input map[string]value) map[string]value {
 	output := make(map[string]value, len(input))
 	for name, item := range input {
@@ -1891,11 +1699,9 @@ func cloneFunctionEnvironment(input map[string]value) map[string]value {
 	}
 	return output
 }
-
 func functionBlockIssue(pos sourcePosition, expected, actual, suggestion string) *issue {
 	return &issue{code: "S-3068", expected: expected, actual: actual, suggestion: suggestion, pos: pos}
 }
-
 func functionEffects(function functionDecl) ([]string, *issue) {
 	if !function.hasEffects {
 		return nil, nil
@@ -1904,8 +1710,7 @@ func functionEffects(function functionDecl) ([]string, *issue) {
 	if declaration.kind != "调用" || declaration.text != "array" {
 		return nil, &issue{code: "S-4105", expected: "静态文本数组效果声明", actual: declaration.kind, suggestion: "使用能力=array（『stdin』）声明函数效果", pos: declaration.pos}
 	}
-	effects := make([]string, 0, len(declaration.args))
-	seen := map[string]bool{}
+	effects := make([]string, 0, len(declaration.args)); seen := map[string]bool{}
 	for _, item := range declaration.args {
 		if item.kind != "字符串" {
 			return nil, &issue{code: "S-4105", expected: "静态文本效果名", actual: item.kind, suggestion: "仅使用文本字面量声明函数效果", pos: item.pos}
@@ -1916,8 +1721,7 @@ func functionEffects(function functionDecl) ([]string, *issue) {
 		if seen[item.text] {
 			return nil, &issue{code: "S-4104", expected: "唯一函数效果名", actual: item.text, suggestion: "每项效果只声明一次", pos: item.pos}
 		}
-		seen[item.text] = true
-		effects = append(effects, item.text)
+		seen[item.text] = true; effects = append(effects, item.text)
 	}
 	return effects, nil
 }
@@ -2026,7 +1830,7 @@ func countValueNodes(input value) int {
 }
 func isFunctionEffect(name string) bool {
 	switch name {
-	case "readInteger", "readText", "readFile", "readModule", "readModuleResult", "writeFile", "writeByteArray", "arrayPush", "arraySet", "映射置", "argumentCount", "argumentText":
+	case "readInteger", "readText", "readFile", "readModule", "readModuleResult", "fileSize", "exists", "isDirectory", "writeFile", "appendFile", "writeByteArray", "removeFile", "renameFile", "createDirectory", "removeDirectory", "setFileMode", "changeFileMode", "replaceFile", "environmentNames", "arrayPush", "arraySet", "映射置", "argumentCount", "argumentText", "readEnvironment":
 		return true
 	}
 	return false
@@ -2038,13 +1842,13 @@ func requiredFunctionEffect(name string) string {
 	if name == "映射置" {
 		return "map.write"
 	}
-	if name == "argumentCount" || name == "argumentText" {
+	if name == "argumentCount" || name == "argumentText" || name == "readEnvironment" || name == "environmentNames" {
 		return "args"
 	}
-	if name == "readFile" || name == "readModule" || name == "readModuleResult" {
+	if name == "readFile" || name == "readModule" || name == "readModuleResult" || name == "fileSize" || name == "exists" || name == "isDirectory" {
 		return "filesystem.read"
 	}
-	if name == "writeFile" || name == "writeByteArray" {
+	if name == "writeFile" || name == "appendFile" || name == "writeByteArray" || name == "removeFile" || name == "renameFile" || name == "replaceFile" || name == "createDirectory" || name == "removeDirectory" || name == "setFileMode" || name == "changeFileMode" {
 		return "filesystem.write"
 	}
 	return "stdin"
@@ -2075,8 +1879,7 @@ func isPureFunctionBuiltin(name string) bool {
 }
 func validateRuntimeTextParameterReturns(program *program) *issue {
 	for _, name := range program.runtimeFunctionNames {
-		function := program.runtimeFunctions[name]
-		parameterTypes := runtimeFunctionParameterTypes(function)
+		function := program.runtimeFunctions[name]; parameterTypes := runtimeFunctionParameterTypes(function)
 		parameters := map[string]string{}
 		for index, parameter := range function.parameters {
 			if index < len(parameterTypes) {
@@ -2104,7 +1907,6 @@ func validateRuntimeTextParameterReturns(program *program) *issue {
 	}
 	return nil
 }
-
 func validateProgram(program *program) *issue {
 	payloads := seedRuntimeResultPayloads(program)
 	if problem := expandProgramFunctions(program, payloads); problem != nil {
@@ -2154,8 +1956,7 @@ func validateProgram(program *program) *issue {
 	if problem := classifyRuntimeFunctionLocalTypes(program, constants); problem != nil {
 		return problem
 	}
-	annotateRuntimeTextReturns(program)
-	annotateRuntimeResultPayloads(program, constants)
+	annotateRuntimeTextReturns(program); annotateRuntimeResultPayloads(program, constants)
 	if problem := validateRuntimeTextReturnCalls(program); problem != nil {
 		return problem
 	}
@@ -2198,7 +1999,6 @@ func validateProgram(program *program) *issue {
 	}
 	return nil
 }
-
 func annotateResultStateCallsInValue(input *value, constants map[string]constantValue) {
 	if input == nil {
 		return
@@ -2206,12 +2006,9 @@ func annotateResultStateCallsInValue(input *value, constants map[string]constant
 	if input.kind == "调用" && (input.text == "是否失败" || input.text == "错误码" || input.text == "结果值") && len(input.args) == 1 {
 		argument := input.args[0]
 		if argument.kind == "调用" && argument.text == "ifElse" && len(argument.args) == 3 {
-			argument.runtimeFunction = true
-			argument.runtimeFunctionResult = true
-			argument.runtimeFunctionPayload = "整数"
-			argument.runtimeFunctionText = false
-			argument.runtimeArgumentTypes = []string{"运行时布尔值", "运行时结果", "运行时结果"}
-			argument.runtimeArgumentPayloads = []string{"", "整数", "整数"}
+			argument.runtimeFunction = true; argument.runtimeFunctionResult = true
+			argument.runtimeFunctionPayload = "整数"; argument.runtimeFunctionText = false
+			argument.runtimeArgumentTypes = []string{"运行时布尔值", "运行时结果", "运行时结果"}; argument.runtimeArgumentPayloads = []string{"", "整数", "整数"}
 			for index := range argument.args {
 				annotateResultStateCallsInValue(&argument.args[index], constants)
 			}
@@ -2224,32 +2021,23 @@ func annotateResultStateCallsInValue(input *value, constants map[string]constant
 	for index := range input.fields {
 		annotateResultStateCallsInValue(&input.fields[index].value, constants)
 	}
-	annotateResultStateCallsInValue(input.left, constants)
-	annotateResultStateCallsInValue(input.right, constants)
+	annotateResultStateCallsInValue(input.left, constants); annotateResultStateCallsInValue(input.right, constants)
 }
-
 func annotateResultStateCallsInStatements(items []statement, constants map[string]constantValue) {
 	for index := range items {
-		annotateResultStateCallsInValue(&items[index].value, constants)
-		annotateResultStateCallsInValue(&items[index].condition, constants)
-		annotateResultStateCallsInStatements(items[index].body, constants)
-		annotateResultStateCallsInStatements(items[index].otherwise, constants)
+		annotateResultStateCallsInValue(&items[index].value, constants); annotateResultStateCallsInValue(&items[index].condition, constants)
+		annotateResultStateCallsInStatements(items[index].body, constants); annotateResultStateCallsInStatements(items[index].otherwise, constants)
 	}
 }
-
-// statementRuntimeEffects collects effects reachable from a statement
-// expression, including effects declared by other runtime functions.
 func statementRuntimeEffects(input value, functions map[string]functionDecl) []string {
-	effects := []string{}
-	seen := map[string]bool{}
+	effects := []string{}; seen := map[string]bool{}
 	var walk func(value, map[string]bool)
 	walk = func(current value, active map[string]bool) {
 		if current.kind == "调用" {
 			if isFunctionEffect(current.text) {
 				effect := requiredFunctionEffect(current.text)
 				if !seen[effect] {
-					seen[effect] = true
-					effects = append(effects, effect)
+					seen[effect] = true; effects = append(effects, effect)
 				}
 			}
 			if function, exists := functions[current.text]; exists && !active[current.text] {
@@ -2259,14 +2047,12 @@ func statementRuntimeEffects(input value, functions map[string]functionDecl) []s
 				}
 				for _, declared := range function.effects {
 					if !seen[declared] {
-						seen[declared] = true
-						effects = append(effects, declared)
+						seen[declared] = true; effects = append(effects, declared)
 					}
 				}
 				walk(function.body, next)
 				for _, item := range function.statements {
-					walk(item.value, next)
-					walk(item.condition, next)
+					walk(item.value, next); walk(item.condition, next)
 				}
 			}
 		}
@@ -2286,7 +2072,6 @@ func statementRuntimeEffects(input value, functions map[string]functionDecl) []s
 	walk(input, map[string]bool{})
 	return effects
 }
-
 func hasStatementEffectSupport(input value, functions map[string]functionDecl, allowReadText ...bool) bool {
 	if input.kind == "调用" {
 		if input.text == "readInteger" || len(allowReadText) > 0 && input.text == "readText" {
@@ -2317,7 +2102,6 @@ func hasStatementEffectSupport(input value, functions map[string]functionDecl, a
 	}
 	return true
 }
-
 func hasRuntimeResultEffectSupport(input value, functions map[string]functionDecl) bool {
 	if input.kind == "调用" && input.text == "成功" && len(input.args) == 1 {
 		return hasStatementEffectSupport(input.args[0], functions, true)
@@ -2329,28 +2113,24 @@ func hasRuntimeResultEffectSupport(input value, functions map[string]functionDec
 	}
 	return hasStatementEffectSupport(input, functions)
 }
-
 func statementEffectSupport(function functionDecl, item statement, input value, functions map[string]functionDecl) bool {
 	if (item.kind == "变量" || item.kind == "赋值") && runtimeStatementLocalType(function, item.name.text) == "运行时结果" {
 		return hasRuntimeResultEffectSupport(input, functions)
 	}
 	return hasStatementEffectSupport(input, functions)
 }
-
 func validateRuntimeFunctions(program *program, constants map[string]constantValue, rootEffects map[string]bool) *issue {
 	functions := make(map[string]functionDecl, len(program.functions))
 	for _, function := range program.functions {
 		functions[function.name.text] = function
 	}
 	for _, name := range program.runtimeFunctionNames {
-		function := program.runtimeFunctions[name]
-		environment := copyConstantEnvironment(constants)
+		function := program.runtimeFunctions[name]; environment := copyConstantEnvironment(constants)
 		registerCount := runtimeFunctionRegisterCount(function)
 		if registerCount > 8 {
 			return &issue{code: "S-3062", expected: "最多 8 个展平运行时参数寄存器", actual: strconv.Itoa(registerCount), suggestion: "减少参数；整数参数占一个寄存器，文本参数占两个，文本结果参数占四个", pos: function.name.pos}
 		}
-		parameterTypes := runtimeFunctionParameterTypes(function)
-		parameterPayloads := runtimeFunctionParameterPayloads(function)
+		parameterTypes := runtimeFunctionParameterTypes(function); parameterPayloads := runtimeFunctionParameterPayloads(function)
 		for index, parameter := range function.parameters {
 			environment[parameter.text] = constantValue{kind: parameterTypes[index]}
 			if parameterTypes[index] == "运行时结果" {
@@ -2358,8 +2138,6 @@ func validateRuntimeFunctions(program *program, constants map[string]constantVal
 			}
 		}
 		if function.body.kind == "" {
-			// Result locals live in two stack slots and are observed by result
-			// queries, so seed their payload metadata before validation.
 			var registerResultLocals func([]statement)
 			registerResultLocals = func(items []statement) {
 				for _, item := range items {
@@ -2369,12 +2147,10 @@ func validateRuntimeFunctions(program *program, constants map[string]constantVal
 							environment[item.name.text] = constantValue{kind: kind, resultPayload: runtimeResultPayload(item.value, environment)}
 						}
 					}
-					registerResultLocals(item.body)
-					registerResultLocals(item.otherwise)
+					registerResultLocals(item.body); registerResultLocals(item.otherwise)
 				}
 			}
-			registerResultLocals(function.statements)
-			annotateResultStateCallsInStatements(function.statements, environment)
+			registerResultLocals(function.statements); annotateResultStateCallsInStatements(function.statements, environment)
 			if problem := validateRuntimeStatementFunction(function, constants, functions, rootEffects); problem != nil {
 				return problem
 			}
@@ -2402,12 +2178,9 @@ func validateRuntimeFunctions(program *program, constants map[string]constantVal
 	}
 	return nil
 }
-
 func validateRuntimeStatementFunction(function functionDecl, constants map[string]constantValue, functions map[string]functionDecl, rootEffects map[string]bool) *issue {
-	environment := copyConstantEnvironment(constants)
-	writable := map[string]bool{}
-	parameterTypes := runtimeFunctionParameterTypes(function)
-	parameterPayloads := runtimeFunctionParameterPayloads(function)
+	environment := copyConstantEnvironment(constants); writable := map[string]bool{}
+	parameterTypes := runtimeFunctionParameterTypes(function); parameterPayloads := runtimeFunctionParameterPayloads(function)
 	parameterSlotCount := 0
 	for index, parameter := range function.parameters {
 		if parameterTypes[index] == "运行时结果" {
@@ -2427,8 +2200,7 @@ func validateRuntimeStatementFunction(function functionDecl, constants map[strin
 			writable[parameter.text] = true
 		}
 	}
-	localNames := functionLocalNames(function.statements)
-	seenLocals := map[string]bool{}
+	localNames := functionLocalNames(function.statements); seenLocals := map[string]bool{}
 	for _, name := range localNames {
 		if _, exists := environment[name]; exists || seenLocals[name] {
 			return functionBlockIssue(function.name.pos, "函数内唯一的局部变量名", name, "避免局部变量重名，也不得与参数或常量重名")
@@ -2460,11 +2232,7 @@ func validateRuntimeStatementFunction(function functionDecl, constants map[strin
 				return &issue{code: "S-4106", expected: "受支持的局部变量初值效果", actual: "含未支持的效果", suggestion: "通过函数返回表达式或受支持的运行时语句求值", pos: item.value.pos}
 			}
 			if isTextReturnCall(item.value) {
-				// Nested owned-text returns are rejected after runtime validation.
-				// Keep enough type metadata to validate the remaining statements
-				// without assigning codegen semantics to an unsupported copy.
-				environment[item.name.text] = constantValue{kind: "运行时字符串"}
-				writable[item.name.text] = true
+				environment[item.name.text] = constantValue{kind: "运行时字符串"}; writable[item.name.text] = true
 				break
 			}
 			if runtimeStatementLocalType(function, item.name.text) == "运行时结果" {
@@ -2475,8 +2243,7 @@ func validateRuntimeStatementFunction(function functionDecl, constants map[strin
 				if kind != "运行时结果" {
 					return functionBlockIssue(item.value.pos, "函数结果局部初值", kind, "使用返回结果的调用初始化结果局部")
 				}
-				environment[item.name.text] = constantValue{kind: "运行时结果", resultPayload: runtimeResultPayload(item.value, environment)}
-				writable[item.name.text] = true
+				environment[item.name.text] = constantValue{kind: "运行时结果", resultPayload: runtimeResultPayload(item.value, environment)}; writable[item.name.text] = true
 				break
 			}
 			kind, problem := constantType(item.value, environment)
@@ -2487,15 +2254,13 @@ func validateRuntimeStatementFunction(function functionDecl, constants map[strin
 				if kind != "运行时字符串" || !isRuntimeTextDurableCopyValue(item.value, environment) {
 					return functionBlockIssue(item.value.pos, "函数文本局部的独立副本", kind, "使用文本参数、文本局部、textConcat 或 substring 结果初始化文本局部")
 				}
-				environment[item.name.text] = constantValue{kind: "运行时字符串"}
-				writable[item.name.text] = true
+				environment[item.name.text] = constantValue{kind: "运行时字符串"}; writable[item.name.text] = true
 				break
 			}
 			if kind != "整数" && kind != "运行时整数" {
 				return functionBlockIssue(item.value.pos, "整数函数局部初值", kind, "运行时函数顶层局部可保存整数或文本参数的独立副本")
 			}
-			environment[item.name.text] = constantValue{kind: "运行时整数"}
-			writable[item.name.text] = true
+			environment[item.name.text] = constantValue{kind: "运行时整数"}; writable[item.name.text] = true
 		case "赋值":
 			if !writable[item.name.text] {
 				return functionBlockIssue(item.name.pos, "已声明的函数参数或局部变量", item.name.text, "先声明整数局部变量，再进行赋值")
@@ -2585,10 +2350,6 @@ func validateRuntimeStatementFunction(function functionDecl, constants map[strin
 	}
 	return functionBlockIssue(function.name.pos, "函数块末尾返回整数状态", "缺少返回", "在凡循环之后返回结果")
 }
-
-// runtimeStatementsAlwaysReturn reports whether a statement list ends in a
-// return on every path, allowing 若/否 branches that each return to terminate a
-// runtime function body.
 func runtimeStatementsAlwaysReturn(items []statement) bool {
 	if len(items) == 0 {
 		return false
@@ -2605,7 +2366,6 @@ func runtimeStatementsAlwaysReturn(items []statement) bool {
 	}
 	return false
 }
-
 func validateRuntimeLoopBody(items []statement, environment map[string]constantValue, writable map[string]bool, functions map[string]functionDecl, rootEffects map[string]bool, function functionDecl, loopDepth int, allowResultReturn bool) *issue {
 	for index, item := range items {
 		for _, input := range []value{item.value, item.condition} {
@@ -2636,8 +2396,7 @@ func validateRuntimeLoopBody(items []statement, environment map[string]constantV
 			if kind != "整数" && kind != "运行时整数" {
 				return functionBlockIssue(item.value.pos, "整数循环体局部初值", kind, "循环体局部变量当前只保存整数状态")
 			}
-			environment[item.name.text] = constantValue{kind: "运行时整数"}
-			writable[item.name.text] = true
+			environment[item.name.text] = constantValue{kind: "运行时整数"}; writable[item.name.text] = true
 		case "赋值":
 			if !writable[item.name.text] {
 				return functionBlockIssue(item.name.pos, "已声明的函数参数或局部变量", item.name.text, "循环体只能更新已声明整数状态")
@@ -2710,23 +2469,19 @@ func validateRuntimeLoopBody(items []statement, environment map[string]constantV
 	}
 	return nil
 }
-
 func functionLocalNames(statements []statement) []string {
-	names := []string{}
-	var visit func([]statement)
+	names := []string{}; var visit func([]statement)
 	visit = func(items []statement) {
 		for _, item := range items {
 			if item.kind == "变量" {
 				names = append(names, item.name.text)
 			}
-			visit(item.body)
-			visit(item.otherwise)
+			visit(item.body); visit(item.otherwise)
 		}
 	}
 	visit(statements)
 	return names
 }
-
 func copyWritableVariables(source map[string]bool) map[string]bool {
 	copy := make(map[string]bool, len(source))
 	for name, writable := range source {
@@ -2734,12 +2489,9 @@ func copyWritableVariables(source map[string]bool) map[string]bool {
 	}
 	return copy
 }
-
 func validateConsoleProgram(root value, constants map[string]constantValue, statements []statement) *issue {
-	variables := map[string]bool{}
-	environment := copyConstantEnvironment(constants)
-	validationEnvironment := copyConstantEnvironment(constants)
-	slotCount := 0
+	variables := map[string]bool{}; environment := copyConstantEnvironment(constants)
+	validationEnvironment := copyConstantEnvironment(constants); slotCount := 0
 	for _, item := range statements {
 		if item.kind != "变量" {
 			continue
@@ -2773,23 +2525,19 @@ func validateConsoleProgram(root value, constants map[string]constantValue, stat
 			return &issue{code: "S-3040", expected: "不超过 502 个整数栈槽", actual: "变量与数组元素超过当前原生栈帧容量", suggestion: "缩小数组或拆分程序状态", pos: item.name.pos}
 		}
 	}
-	var problem *issue
-	annotateResultStateCallsInStatements(statements, environment)
+	var problem *issue; annotateResultStateCallsInStatements(statements, environment)
 	var registerResultVariables func([]statement)
 	registerResultVariables = func(items []statement) {
 		for index := range items {
 			if items[index].kind == "变量" {
 				if kind, problem := constantType(items[index].value, environment); problem == nil && kind == "运行时结果" {
-					environment[items[index].name.text] = constantValue{kind: kind, resultPayload: runtimeResultPayload(items[index].value, environment)}
-					annotateResultStateCallsInStatements(items[index].body, environment)
+					environment[items[index].name.text] = constantValue{kind: kind, resultPayload: runtimeResultPayload(items[index].value, environment)}; annotateResultStateCallsInStatements(items[index].body, environment)
 				}
 			}
-			registerResultVariables(items[index].body)
-			registerResultVariables(items[index].otherwise)
+			registerResultVariables(items[index].body); registerResultVariables(items[index].otherwise)
 		}
 	}
-	registerResultVariables(statements)
-	environment, problem = validateConsoleStatements(statements, variables, validationEnvironment, true, 0)
+	registerResultVariables(statements); environment, problem = validateConsoleStatements(statements, variables, validationEnvironment, true, 0)
 	if problem != nil {
 		return problem
 	}
@@ -2825,8 +2573,7 @@ func validateConsoleProgram(root value, constants map[string]constantValue, stat
 		if seenOutput {
 			return &issue{code: "S-3002", expected: "唯一字段", actual: "输出", suggestion: "删除重复输出字段", pos: item.name.pos}
 		}
-		seenOutput = true
-		kind, problem := constantType(item.value, environment)
+		seenOutput = true; kind, problem := constantType(item.value, environment)
 		if problem != nil {
 			return problem
 		}
@@ -2841,16 +2588,14 @@ func validateConsoleProgram(root value, constants map[string]constantValue, stat
 				return problem
 			}
 		case "运行时字符串":
-			if isRuntimeTextInput(item.value) || isRuntimeFileRead(item.value) || item.value.kind == "调用" && (item.value.runtimeFunctionText || item.value.text == "argumentText" && len(item.value.args) == 1) {
+			if isRuntimeTextInput(item.value) || isRuntimeFileRead(item.value) || isRuntimeEnvironmentRead(item.value) || isRuntimeEnvironmentNames(item.value) || item.value.kind == "调用" && (item.value.runtimeFunctionText || item.value.text == "argumentText" && len(item.value.args) == 1) {
 				break
 			}
 			if item.value.kind == "调用" && (item.value.text == "substring" || item.value.text == "textConcat" || item.value.text == "arrayGet") {
 				break
 			}
-			if item.value.kind == "调用" && item.value.text == "结果值" && len(item.value.args) == 1 && item.value.args[0].kind == "引用" {
-				if isTextResultPayload(environment[item.value.args[0].text].resultPayload) {
-					break
-				}
+			if isTextResultValue(item.value, environment) {
+				break
 			}
 			if item.value.kind == "引用" {
 				variable, exists := environment[item.value.text]
@@ -2869,8 +2614,7 @@ func validateConsoleProgram(root value, constants map[string]constantValue, stat
 	return nil
 }
 func validateConsoleCapabilities(root value, statements []statement, constants map[string]constantValue) *issue {
-	declared := map[string]bool{}
-	seenDeclaration := false
+	declared := map[string]bool{}; seenDeclaration := false
 	for _, item := range root.fields {
 		if item.name.text != "能力" {
 			continue
@@ -2878,8 +2622,7 @@ func validateConsoleCapabilities(root value, statements []statement, constants m
 		if seenDeclaration {
 			return &issue{code: "S-4104", expected: "唯一能力字段", actual: "重复能力字段", suggestion: "将能力合并到一个字符串数组中", pos: item.name.pos}
 		}
-		seenDeclaration = true
-		kind, problem := constantType(item.value, constants)
+		seenDeclaration = true; kind, problem := constantType(item.value, constants)
 		if problem != nil {
 			return problem
 		}
@@ -2919,10 +2662,8 @@ func validateConsoleCapabilities(root value, statements []statement, constants m
 	}
 	stack := append([]statement(nil), statements...)
 	for len(stack) > 0 {
-		last := len(stack) - 1
-		item := stack[last]
-		stack = stack[:last]
-		stack = append(stack, item.body...)
+		last := len(stack) - 1; item := stack[last]
+		stack = stack[:last]; stack = append(stack, item.body...)
 		stack = append(stack, item.otherwise...)
 		if problem := collectInputCapabilities(item.condition, required); problem != nil {
 			return problem
@@ -2946,15 +2687,17 @@ func collectInputCapabilities(input value, required map[string]sourcePosition) *
 			switch current.text {
 			case "readInteger", "readText":
 				capability = "stdin"
-			case "readFile", "readModule", "readModuleResult":
+			case "readFile", "readModule", "readModuleResult", "fileSize", "exists", "isDirectory":
 				capability = "filesystem.read"
-			case "writeFile", "writeByteArray":
+			case "writeFile", "appendFile", "writeByteArray", "removeFile", "renameFile", "replaceFile", "createDirectory", "removeDirectory", "setFileMode", "changeFileMode":
 				capability = "filesystem.write"
 			case "arrayPush", "arraySet":
 				capability = "array.write"
 			case "映射置":
 				capability = "map.write"
 			case "argumentCount", "argumentText":
+				capability = "args"
+			case "readEnvironment", "environmentNames":
 				capability = "args"
 			}
 			if capability != "" {
@@ -3006,11 +2749,9 @@ func validateConsoleStatements(statements []statement, variables map[string]bool
 			if conditionKind != "布尔值" && conditionKind != "运行时布尔值" {
 				return nil, &issue{code: "S-3015", expected: "整数比较布尔条件", actual: conditionKind, suggestion: "使用整数比较符或 equals/notEquals 作为条件", pos: item.condition.pos}
 			}
-			bodyLoopDepth := loopDepth
-			bodyEnvironment := copyConstantEnvironment(environment)
+			bodyLoopDepth := loopDepth; bodyEnvironment := copyConstantEnvironment(environment)
 			if item.kind == "凡" {
 				bodyLoopDepth++
-				// The body may be reached again with any loop-carried slot updated.
 				markConsoleVariablesRuntime(assignedConsoleVariables(item.body), bodyEnvironment)
 			}
 			thenEnvironment, problem := validateConsoleStatements(item.body, variables, bodyEnvironment, false, bodyLoopDepth)
@@ -3033,8 +2774,7 @@ func validateConsoleStatements(statements []statement, variables map[string]bool
 						environment = elseEnvironment
 					}
 				} else {
-					markConsoleVariablesRuntime(assignedConsoleVariables(item.body), environment)
-					markConsoleVariablesRuntime(assignedConsoleVariables(item.otherwise), environment)
+					markConsoleVariablesRuntime(assignedConsoleVariables(item.body), environment); markConsoleVariablesRuntime(assignedConsoleVariables(item.otherwise), environment)
 				}
 				continue
 			}
@@ -3063,8 +2803,7 @@ func assignConsoleInteger(item statement, environment map[string]constantValue, 
 		if expected == "整数赋值" && environment[item.name.text].kind != "运行时结果" {
 			return &issue{code: "S-3023", expected: "运行时结果变量赋值", actual: kind, suggestion: "将结果值赋给结果变量", pos: item.value.pos}
 		}
-		payload := environment[item.name.text].resultPayload
-		incoming := runtimeResultPayload(item.value, environment)
+		payload := environment[item.name.text].resultPayload; incoming := runtimeResultPayload(item.value, environment)
 		if incoming != "" && payload != "" && incoming != payload {
 			return &issue{code: "S-3023", expected: payload + "载荷结果变量赋值", actual: incoming + "载荷结果", suggestion: "保持结果变量的成功载荷类型不变", pos: item.value.pos}
 		}
@@ -3078,7 +2817,7 @@ func assignConsoleInteger(item statement, environment map[string]constantValue, 
 		return &issue{code: "S-3023", expected: "运行时结果变量赋值", actual: kind, suggestion: "使用成功或失败生成结果值", pos: item.value.pos}
 	}
 	if kind == "运行时字符串" {
-		if !isRuntimeTextValue(item.value) && !isRuntimeFileRead(item.value) && !isRuntimeArgumentText(item.value) && !isTextResultValue(item.value, environment) && !isStoredTextReturnCall(item.value) {
+		if !isRuntimeTextValue(item.value) && !isRuntimeFileRead(item.value) && !isRuntimeArgumentText(item.value) && !isRuntimeEnvironmentRead(item.value) && !isRuntimeEnvironmentNames(item.value) && !isTextResultValue(item.value, environment) && !isStoredTextReturnCall(item.value) {
 			return &issue{code: "S-3044", expected: "有界运行时文本表达式、文件读取、参数文本或文本结果值", actual: "运行时文本表达式", suggestion: "使用 readText（）、readFile（静态路径）、argumentText（下标）、textConcat、有界 substring 或文本结果值初始化或更新文本变量", pos: item.value.pos}
 		}
 		if expected == "整数赋值" && environment[item.name.text].kind != "运行时字符串" {
@@ -3225,8 +2964,7 @@ func runtimeResultPayload(input value, environment map[string]constantValue) str
 		return environment[input.text].resultPayload
 	}
 	if input.kind == "调用" && input.text == "ifElse" && len(input.args) == 3 {
-		whenTrue := runtimeResultPayload(input.args[1], environment)
-		whenFalse := runtimeResultPayload(input.args[2], environment)
+		whenTrue := runtimeResultPayload(input.args[1], environment); whenFalse := runtimeResultPayload(input.args[2], environment)
 		if whenTrue == "" {
 			return whenFalse
 		}
@@ -3345,8 +3083,7 @@ func markConsoleVariablesRuntime(names map[string]bool, environment map[string]c
 func copyConstantEnvironment(constants map[string]constantValue) map[string]constantValue {
 	environment := make(map[string]constantValue, len(constants))
 	for name, constant := range constants {
-		constant.array = append([]constantValue(nil), constant.array...)
-		environment[name] = constant
+		constant.array = append([]constantValue(nil), constant.array...); environment[name] = constant
 	}
 	return environment
 }
@@ -3361,23 +3098,57 @@ func isResultOperand(input value) bool {
 	if input.kind != "调用" {
 		return false
 	}
+	if input.text == "成功" || input.text == "失败" {
+		return true
+	}
 	return input.runtimeFunction && input.runtimeFunctionResult || isModuleReadResult(input) ||
 		input.text == "ifElse" && len(input.args) == 3 &&
 			(isResultOperand(input.args[1]) || isResultOperand(input.args[2]))
 }
-
+func validateFilePathArgument(input value, constants map[string]constantValue, code, expected, suggestion string) *issue {
+	pathType, problem := constantType(input, constants)
+	if problem != nil {
+		return problem
+	}
+	if pathType != "字符串" && !isRuntimeArgumentText(input) {
+		return &issue{code: code, expected: expected, actual: pathType, suggestion: suggestion, pos: input.pos}
+	}
+	if pathType == "字符串" {
+		path, problem := evaluateString(input, 0, constants)
+		if problem != nil {
+			return problem
+		}
+		if path == "" || strings.IndexByte(path, 0) >= 0 {
+			return &issue{code: code, expected: "非空且不含 NUL 的文件路径", actual: path, suggestion: "使用进程当前目录可解析的普通文本路径", pos: input.pos}
+		}
+	}
+	return nil
+}
+func validateEnvironmentNameArgument(input value, constants map[string]constantValue) *issue {
+	nameType, problem := constantType(input, constants)
+	if problem != nil {
+		return problem
+	}
+	if nameType != "字符串" {
+		return &issue{code: "S-3083", expected: "编译期文本名称", actual: nameType, suggestion: "当前环境变量查询仅接受非空静态文本名称", pos: input.pos}
+	}
+	name, problem := evaluateString(input, 0, constants)
+	if problem != nil {
+		return problem
+	}
+	if name == "" || strings.IndexByte(name, 0) >= 0 || strings.IndexByte(name, '=') >= 0 {
+		return &issue{code: "S-3083", expected: "非空且不含 NUL 与等号的文本名称", actual: name, suggestion: "使用普通环境变量名称", pos: input.pos}
+	}
+	return nil
+}
 func constantType(input value, constants map[string]constantValue) (string, *issue) {
 	type typeFrame struct {
-		current value
-		visited bool
+		current value; visited bool
 	}
-	frames := []typeFrame{{current: input}}
-	types := []string{}
+	frames := []typeFrame{{current: input}}; types := []string{}
 	for len(frames) > 0 {
-		index := len(frames) - 1
-		frame := frames[index]
-		frames = frames[:index]
-		current := frame.current
+		index := len(frames) - 1; frame := frames[index]
+		frames = frames[:index]; current := frame.current
 		switch current.kind {
 		case "字符串":
 			types = append(types, "字符串")
@@ -3405,8 +3176,7 @@ func constantType(input value, constants map[string]constantValue) (string, *iss
 				continue
 			}
 			if current.operator == "negate" {
-				operand := types[len(types)-1]
-				types = types[:len(types)-1]
+				operand := types[len(types)-1]; types = types[:len(types)-1]
 				if operand == "运行时整数" {
 					types = append(types, "运行时整数")
 					continue
@@ -3417,8 +3187,7 @@ func constantType(input value, constants map[string]constantValue) (string, *iss
 				types = append(types, "整数")
 				continue
 			}
-			right := types[len(types)-1]
-			left := types[len(types)-2]
+			right := types[len(types)-1]; left := types[len(types)-2]
 			types = types[:len(types)-2]
 			if left == "运行时整数" || right == "运行时整数" {
 				if (left != "整数" && left != "运行时整数") || (right != "整数" && right != "运行时整数") {
@@ -3454,8 +3223,7 @@ func constantType(input value, constants map[string]constantValue) (string, *iss
 			if problem != nil {
 				return "", problem
 			}
-			leftText := left == "字符串" || left == "运行时字符串"
-			rightText := right == "字符串" || right == "运行时字符串"
+			leftText := left == "字符串" || left == "运行时字符串"; rightText := right == "字符串" || right == "运行时字符串"
 			if leftText && rightText &&
 				(current.operator == "<" || current.operator == "<=" || current.operator == ">" || current.operator == ">=") {
 				if left == "运行时字符串" && !runtimeTextComparisonOperand(*current.left) || right == "运行时字符串" && !runtimeTextComparisonOperand(*current.right) {
@@ -3572,8 +3340,6 @@ func constantType(input value, constants map[string]constantValue) (string, *iss
 				}
 				if current.text == "成功" {
 					if argumentType == "运行时字符串" && (isRuntimeTextValue(current.args[0]) || isRuntimeArgumentText(current.args[0]) || current.args[0].kind == "调用" && current.args[0].text == "arrayGet" && len(current.args[0].args) == 2 && current.args[0].args[0].kind == "引用") {
-						// Direct input, bounded concatenation and substring values are copied
-						// into an owned result buffer before the result is stored.
 					} else if argumentType != "整数" && argumentType != "运行时整数" && argumentType != "字符串" {
 						return "", &issue{code: "S-3023", expected: "整数、编译期文本或有界运行时文本成功值", actual: argumentType, suggestion: "成功结果支持整数、编译期文本、readText（）、textConcat（）或 substring（）载荷", pos: current.args[0].pos}
 					}
@@ -3593,11 +3359,10 @@ func constantType(input value, constants map[string]constantValue) (string, *iss
 				}
 				kind = "运行时结果"
 			case "是否失败":
-				if len(current.args) != 1 || current.args[0].kind != "引用" {
-					return "", &issue{code: "S-3013", expected: "1 个结果变量引用", actual: strconv.Itoa(len(current.args)) + " 个参数", suggestion: "先声明结果变量，再查询其状态", pos: current.pos}
+				if len(current.args) != 1 || !isResultOperand(current.args[0]) {
+					return "", &issue{code: "S-3013", expected: "1 个结果变量或返回结果的调用", actual: strconv.Itoa(len(current.args)) + " 个参数", suggestion: "查询结果变量，或直接查询返回结果的调用", pos: current.pos}
 				}
-				kind = "运行时布尔值"
-				argumentType, problem := constantType(current.args[0], constants)
+				kind = "运行时布尔值"; argumentType, problem := constantType(current.args[0], constants)
 				if problem != nil {
 					return "", problem
 				}
@@ -3605,8 +3370,8 @@ func constantType(input value, constants map[string]constantValue) (string, *iss
 					return "", &issue{code: "S-3015", expected: "结果变量", actual: argumentType, suggestion: "使用成功或失败生成的结果值", pos: current.args[0].pos}
 				}
 			case "结果值", "错误码":
-				if len(current.args) != 1 || current.args[0].kind != "引用" {
-					return "", &issue{code: "S-3013", expected: "1 个结果变量引用", actual: strconv.Itoa(len(current.args)) + " 个参数", suggestion: "先声明结果变量，再读取其内容", pos: current.pos}
+				if len(current.args) != 1 || !isResultOperand(current.args[0]) {
+					return "", &issue{code: "S-3013", expected: "1 个结果变量或返回结果的调用", actual: strconv.Itoa(len(current.args)) + " 个参数", suggestion: "读取结果变量，或直接读取返回结果的调用", pos: current.pos}
 				}
 				argumentType, problem := constantType(current.args[0], constants)
 				if problem != nil {
@@ -3751,21 +3516,8 @@ func constantType(input value, constants map[string]constantValue) (string, *iss
 				if len(current.args) != 1 {
 					return "", &issue{code: "S-3070", expected: "readFile（静态文本或参数文本路径）", actual: strconv.Itoa(len(current.args)) + " 个参数", suggestion: "提供一个不含 NUL 的编译期路径或 argumentText（下标）", pos: current.pos}
 				}
-				pathType, problem := constantType(current.args[0], constants)
-				if problem != nil {
+				if problem := validateFilePathArgument(current.args[0], constants, "S-3070", "编译期文本或 argumentText（下标）路径", "当前文件读取接受静态路径或命令行参数文本"); problem != nil {
 					return "", problem
-				}
-				if pathType != "字符串" && !isRuntimeArgumentText(current.args[0]) {
-					return "", &issue{code: "S-3070", expected: "编译期文本或 argumentText（下标）路径", actual: pathType, suggestion: "当前文件读取接受静态路径或命令行参数文本", pos: current.args[0].pos}
-				}
-				if pathType == "字符串" {
-					path, problem := evaluateString(current.args[0], 0, constants)
-					if problem != nil {
-						return "", problem
-					}
-					if path == "" || strings.IndexByte(path, 0) >= 0 {
-						return "", &issue{code: "S-3070", expected: "非空且不含 NUL 的文件路径", actual: path, suggestion: "使用进程当前目录可解析的普通文本路径", pos: current.args[0].pos}
-					}
 				}
 				kind = "运行时字符串"
 			case "readModule", "readModuleResult":
@@ -3776,25 +3528,12 @@ func constantType(input value, constants map[string]constantValue) (string, *iss
 				if isModuleReadResult(current) {
 					kind = "运行时结果"
 				}
-			case "writeFile", "writeByteArray":
+			case "writeFile", "appendFile", "writeByteArray":
 				if len(current.args) != 2 {
 					return "", &issue{code: "S-3071", expected: current.text + "（静态或参数文本路径，内容）", actual: strconv.Itoa(len(current.args)) + " 个参数", suggestion: "提供静态或参数文本路径和要写入的内容", pos: current.pos}
 				}
-				pathType, problem := constantType(current.args[0], constants)
-				if problem != nil {
+				if problem := validateFilePathArgument(current.args[0], constants, "S-3071", "编译期文本或 argumentText（下标）路径", "当前文件写入接受静态路径或命令行参数文本"); problem != nil {
 					return "", problem
-				}
-				if pathType != "字符串" && !isRuntimeArgumentText(current.args[0]) {
-					return "", &issue{code: "S-3071", expected: "编译期文本或 argumentText（下标）路径", actual: pathType, suggestion: "当前文件写入接受静态路径或命令行参数文本", pos: current.args[0].pos}
-				}
-				if pathType == "字符串" {
-					path, problem := evaluateString(current.args[0], 0, constants)
-					if problem != nil {
-						return "", problem
-					}
-					if path == "" || strings.IndexByte(path, 0) >= 0 {
-						return "", &issue{code: "S-3071", expected: "非空且不含 NUL 的文件路径", actual: path, suggestion: "使用进程当前目录可解析的普通文本路径", pos: current.args[0].pos}
-					}
 				}
 				textType, problem := constantType(current.args[1], constants)
 				if problem != nil {
@@ -3809,6 +3548,98 @@ func constantType(input value, constants map[string]constantValue) (string, *iss
 				}
 				if textType != "字符串" && textType != "运行时字符串" {
 					return "", &issue{code: "S-3071", expected: "文本写入内容", actual: textType, suggestion: "第二个参数使用静态文本或有界运行时文本表达式", pos: current.args[1].pos}
+				}
+				kind = "运行时整数"
+			case "fileSize":
+				if len(current.args) != 1 {
+					return "", &issue{code: "S-3080", expected: "fileSize（静态文本或参数文本路径）", actual: strconv.Itoa(len(current.args)) + " 个参数", suggestion: "提供一个已存在文件的路径", pos: current.pos}
+				}
+				if problem := validateFilePathArgument(current.args[0], constants, "S-3080", "编译期文本或 argumentText（下标）路径", "当前文件元数据查询接受静态路径或命令行参数文本"); problem != nil {
+					return "", problem
+				}
+				kind = "运行时整数"
+			case "exists":
+				if len(current.args) != 1 {
+					return "", &issue{code: "S-3081", expected: "exists（静态文本或参数文本路径）", actual: strconv.Itoa(len(current.args)) + " 个参数", suggestion: "提供一个待查询的文件或目录路径", pos: current.pos}
+				}
+				if problem := validateFilePathArgument(current.args[0], constants, "S-3081", "编译期文本或 argumentText（下标）路径", "当前存在性查询接受静态路径或命令行参数文本"); problem != nil {
+					return "", problem
+				}
+				kind = "运行时整数"
+			case "isDirectory":
+				if len(current.args) != 1 {
+					return "", &issue{code: "S-3081", expected: "isDirectory（静态文本或参数文本路径）", actual: strconv.Itoa(len(current.args)) + " 个参数", suggestion: "提供一个待查询的文件或目录路径", pos: current.pos}
+				}
+				if problem := validateFilePathArgument(current.args[0], constants, "S-3081", "编译期文本或 argumentText（下标）路径", "当前目录类型查询接受静态路径或命令行参数文本"); problem != nil {
+					return "", problem
+				}
+				kind = "运行时整数"
+			case "readEnvironment":
+				if len(current.args) != 1 {
+					return "", &issue{code: "S-3083", expected: "readEnvironment（静态文本名称）", actual: strconv.Itoa(len(current.args)) + " 个参数", suggestion: "提供一个非空环境变量名称", pos: current.pos}
+				}
+				if problem := validateEnvironmentNameArgument(current.args[0], constants); problem != nil {
+					return "", problem
+				}
+				kind = "运行时字符串"
+			case "environmentNames":
+				if len(current.args) != 0 {
+					return "", &issue{code: "S-3083", expected: "environmentNames（）", actual: strconv.Itoa(len(current.args)) + " 个参数", suggestion: "不提供参数，返回按字节顺序排序并逐行输出的环境变量名称文本", pos: current.pos}
+				}
+				kind = "运行时字符串"
+			case "removeFile":
+				if len(current.args) != 1 {
+					return "", &issue{code: "S-3075", expected: "removeFile（静态或参数文本路径）", actual: strconv.Itoa(len(current.args)) + " 个参数", suggestion: "提供要删除的非空文件路径", pos: current.pos}
+				}
+				if problem := validateFilePathArgument(current.args[0], constants, "S-3075", "编译期文本或 argumentText（下标）路径", "当前文件删除接受静态路径或命令行参数文本"); problem != nil {
+					return "", problem
+				}
+				kind = "运行时整数"
+			case "renameFile":
+				if len(current.args) != 2 {
+					return "", &issue{code: "S-3076", expected: "renameFile（源路径，目标路径）", actual: strconv.Itoa(len(current.args)) + " 个参数", suggestion: "提供非空的源路径和目标路径", pos: current.pos}
+				}
+				for _, argument := range current.args {
+					if problem := validateFilePathArgument(argument, constants, "S-3076", "编译期文本或 argumentText（下标）路径", "文件重命名接受静态路径或命令行参数文本"); problem != nil {
+						return "", problem
+					}
+				}
+				kind = "运行时整数"
+			case "replaceFile":
+				if len(current.args) != 2 { return "", &issue{code: "S-3082", expected: "replaceFile（源路径，目标路径）", actual: strconv.Itoa(len(current.args)) + " 个参数", suggestion: "提供非空的源路径和目标路径", pos: current.pos} }
+				for _, argument := range current.args { if problem := validateFilePathArgument(argument, constants, "S-3082", "编译期文本或 argumentText（下标）路径", "文件原子替换接受静态路径或命令行参数文本"); problem != nil { return "", problem } }
+				kind = "运行时整数"
+			case "createDirectory", "removeDirectory":
+				if len(current.args) != 1 {
+					return "", &issue{code: map[bool]string{true: "S-3077", false: "S-3078"}[current.text == "createDirectory"], expected: current.text + "（静态或参数文本路径）", actual: strconv.Itoa(len(current.args)) + " 个参数", suggestion: "提供非空目录路径", pos: current.pos}
+				}
+				code := map[bool]string{true: "S-3077", false: "S-3078"}[current.text == "createDirectory"]
+				if problem := validateFilePathArgument(current.args[0], constants, code, "编译期文本或 argumentText（下标）路径", "当前目录操作接受静态路径或命令行参数文本"); problem != nil {
+					return "", problem
+				}
+				kind = "运行时整数"
+			case "setFileMode", "changeFileMode":
+				if len(current.args) != 2 {
+					return "", &issue{code: "S-3079", expected: "setFileMode（静态或参数文本路径，八进制权限）", actual: strconv.Itoa(len(current.args)) + " 个参数", suggestion: "提供路径和 0 至 511 的权限整数", pos: current.pos}
+				}
+				if problem := validateFilePathArgument(current.args[0], constants, "S-3079", "编译期文本或 argumentText（下标）路径", "当前权限设置接受静态路径或命令行参数文本"); problem != nil {
+					return "", problem
+				}
+				modeType, problem := constantType(current.args[1], constants)
+				if problem != nil {
+					return "", problem
+				}
+				if modeType != "整数" && modeType != "运行时整数" {
+					return "", &issue{code: "S-3079", expected: "八进制权限整数", actual: modeType, suggestion: "使用 0 至 511 的整数权限", pos: current.args[1].pos}
+				}
+				if modeType == "整数" {
+					mode, problem := integerValue(current.args[1], constants)
+					if problem != nil {
+						return "", problem
+					}
+					if mode < 0 || mode > 511 {
+						return "", &issue{code: "S-3079", expected: "0 至 511 的权限整数", actual: strconv.FormatInt(mode, 10), suggestion: "使用 0 至 0777 的权限位", pos: current.args[1].pos}
+					}
 				}
 				kind = "运行时整数"
 			case "argumentCount":
@@ -3859,7 +3690,7 @@ func constantType(input value, constants map[string]constantValue) (string, *iss
 				}
 				if textKind == "字符串" {
 					kind = "整数"
-				} else if textKind == "运行时字符串" && (current.args[0].kind == "引用" || isRuntimeTextValue(current.args[0]) || isRuntimeArgumentText(current.args[0]) || current.args[0].kind == "调用" && current.args[0].text == "arrayGet" || isTextResultValue(current.args[0], constants)) {
+				} else if textKind == "运行时字符串" && (current.args[0].kind == "引用" || isRuntimeTextValue(current.args[0]) || isRuntimeArgumentText(current.args[0]) || current.args[0].kind == "调用" && current.args[0].text == "readEnvironment" || current.args[0].kind == "调用" && current.args[0].text == "arrayGet" || isTextResultValue(current.args[0], constants)) {
 					kind = "运行时整数"
 				} else {
 					return "", &issue{code: "S-3044", expected: "编译期字符串或受支持的运行时文本值", actual: textKind, suggestion: "使用文本变量、readText（）、textConcat（）或 substring（）结果", pos: current.args[0].pos}
@@ -4021,12 +3852,10 @@ func runtimeTextConcatType(call value, constants map[string]constantValue) (stri
 func runtimeTextConcatDepth(input value) uint32 {
 	maximum := uint32(0)
 	pending := []struct {
-		expression value
-		depth      uint32
+		expression value; depth      uint32
 	}{{expression: input}}
 	for len(pending) > 0 {
-		current := pending[len(pending)-1]
-		pending = pending[:len(pending)-1]
+		current := pending[len(pending)-1]; pending = pending[:len(pending)-1]
 		if current.expression.kind == "调用" && current.expression.text == "textConcat" {
 			current.depth++
 			if current.depth > maximum {
@@ -4035,26 +3864,22 @@ func runtimeTextConcatDepth(input value) uint32 {
 		}
 		for _, argument := range current.expression.args {
 			pending = append(pending, struct {
-				expression value
-				depth      uint32
+				expression value; depth      uint32
 			}{argument, current.depth})
 		}
 		if current.expression.left != nil {
 			pending = append(pending, struct {
-				expression value
-				depth      uint32
+				expression value; depth      uint32
 			}{*current.expression.left, current.depth})
 		}
 		if current.expression.right != nil {
 			pending = append(pending, struct {
-				expression value
-				depth      uint32
+				expression value; depth      uint32
 			}{*current.expression.right, current.depth})
 		}
 		for _, item := range current.expression.fields {
 			pending = append(pending, struct {
-				expression value
-				depth      uint32
+				expression value; depth      uint32
 			}{item.value, current.depth})
 		}
 	}
@@ -4082,8 +3907,7 @@ func runtimeTextSubstringType(call value, constants map[string]constantValue) (s
 			return "", &issue{code: "S-3013", expected: "运行时变量与静态文本组成的单层 textConcat 源", actual: "嵌套切片拼接", suggestion: "先将切片或拼接结果写入变量，再执行下一步操作", pos: operand.pos}
 		}
 	}
-	indices := [2]int64{}
-	staticIndex := [2]bool{}
+	indices := [2]int64{}; staticIndex := [2]bool{}
 	for index, argument := range call.args[1:] {
 		kind, typeProblem := constantType(argument, constants)
 		if typeProblem != nil {
@@ -4120,8 +3944,7 @@ func booleanCallType(call value, constants map[string]constantValue) (string, *i
 	if problem != nil {
 		return "", problem
 	}
-	leftIsText := left == "字符串" || left == "运行时字符串"
-	rightIsText := right == "字符串" || right == "运行时字符串"
+	leftIsText := left == "字符串" || left == "运行时字符串"; rightIsText := right == "字符串" || right == "运行时字符串"
 	if leftIsText && rightIsText {
 		if left == "运行时字符串" && !runtimeTextComparisonOperand(call.args[0]) || right == "运行时字符串" && !runtimeTextComparisonOperand(call.args[1]) {
 			return "", &issue{code: "S-3015", expected: "受支持的运行时文本操作数或编译期字符串", actual: "运行时文本表达式", suggestion: "使用文本变量、readText、textConcat、substring 或文本数组元素", pos: call.pos}
@@ -4144,11 +3967,10 @@ func runtimeTextComparisonOperand(input value) bool {
 		(input.text == "readText" || input.text == "textConcat" || input.text == "substring" || input.text == "arrayGet" || input.text == "结果值" && len(input.args) == 1 && input.args[0].kind == "引用")
 }
 func isTextResultValue(input value, constants map[string]constantValue) bool {
-	if input.kind != "调用" || input.text != "结果值" || len(input.args) != 1 || input.args[0].kind != "引用" {
+	if input.kind != "调用" || input.text != "结果值" || len(input.args) != 1 || !isResultOperand(input.args[0]) {
 		return false
 	}
-	constant, exists := constants[input.args[0].text]
-	return exists && constant.kind == "运行时结果" && isTextResultPayload(constant.resultPayload)
+	return isTextResultPayload(runtimeResultPayload(input.args[0], constants))
 }
 func ifElseType(call value, constants map[string]constantValue) (string, *issue) {
 	if len(call.args) != 3 {
@@ -4182,8 +4004,7 @@ func ifElseType(call value, constants map[string]constantValue) (string, *issue)
 		return "整数", nil
 	}
 	if whenTrue == "运行时结果" && whenFalse == "运行时结果" {
-		truePayload := runtimeResultPayload(call.args[1], constants)
-		falsePayload := runtimeResultPayload(call.args[2], constants)
+		truePayload := runtimeResultPayload(call.args[1], constants); falsePayload := runtimeResultPayload(call.args[2], constants)
 		if truePayload != "" && falsePayload != "" && truePayload != falsePayload {
 			return "", &issue{code: "S-3023", expected: "相同的成功载荷类型", actual: truePayload + " 与 " + falsePayload, suggestion: "让 ifElse 两个分支返回相同类型的成功载荷", pos: call.pos}
 		}
@@ -4299,11 +4120,9 @@ func evaluateString(input value, depth int, constants map[string]constantValue) 
 	if depth > 64 {
 		return "", &issue{code: "S-3014", expected: "不超过 64 层的字符串调用", actual: "调用嵌套过深", suggestion: "拆分嵌套的字符串表达式", pos: input.pos}
 	}
-	stack := []value{input}
-	var output strings.Builder
+	stack := []value{input}; var output strings.Builder
 	for len(stack) > 0 {
-		index := len(stack) - 1
-		current := stack[index]
+		index := len(stack) - 1; current := stack[index]
 		stack = stack[:index]
 		if current.kind == "字符串" {
 			output.WriteString(current.text)
@@ -4370,8 +4189,7 @@ func evaluateSubstring(call value, depth int, constants map[string]constantValue
 	if problem != nil {
 		return "", problem
 	}
-	runes := []rune(source)
-	length := int64(len(runes))
+	runes := []rune(source); length := int64(len(runes))
 	if start < 0 || end < start || end > length {
 		return "", &issue{code: "S-3013", expected: "0 ≤ 起点 ≤ 终点 ≤ 字符串码位数", actual: strconv.FormatInt(start, 10) + ".." + strconv.FormatInt(end, 10) + " / " + strconv.FormatInt(length, 10), suggestion: "将索引调整到字符串的零起始码位范围内", pos: call.pos}
 	}
@@ -4498,16 +4316,12 @@ func compareStringValues(operator string, order int) bool {
 }
 func integerValue(input value, constants map[string]constantValue) (int64, *issue) {
 	type integerFrame struct {
-		current value
-		visited bool
+		current value; visited bool
 	}
-	frames := []integerFrame{{current: input}}
-	values := []int64{}
+	frames := []integerFrame{{current: input}}; values := []int64{}
 	for len(frames) > 0 {
-		index := len(frames) - 1
-		frame := frames[index]
-		frames = frames[:index]
-		current := frame.current
+		index := len(frames) - 1; frame := frames[index]
+		frames = frames[:index]; current := frame.current
 		if current.kind == "整数" {
 			number, err := strconv.ParseInt(current.text, 10, 64)
 			if err != nil {
@@ -4543,16 +4357,14 @@ func integerValue(input value, constants map[string]constantValue) (int64, *issu
 				continue
 			}
 			if current.operator == "negate" {
-				operand := values[len(values)-1]
-				values = values[:len(values)-1]
+				operand := values[len(values)-1]; values = values[:len(values)-1]
 				if operand == -1<<63 {
 					return 0, &issue{code: "S-3018", expected: "范围内的有符号 64 位整数结果", actual: "-(-9223372036854775808)", suggestion: "避免对最小有符号整数取负", pos: current.pos}
 				}
 				values = append(values, -operand)
 				continue
 			}
-			right := values[len(values)-1]
-			left := values[len(values)-2]
+			right := values[len(values)-1]; left := values[len(values)-2]
 			values = values[:len(values)-2]
 			if current.operator == "<<" || current.operator == ">>" {
 				if right < 0 || right >= 64 {
@@ -4637,10 +4449,8 @@ func integerValue(input value, constants map[string]constantValue) (int64, *issu
 				frames = append(frames, integerFrame{current: current, visited: true}, integerFrame{current: current.args[1]}, integerFrame{current: current.args[0]})
 				continue
 			}
-			right := values[len(values)-1]
-			left := values[len(values)-2]
-			values = values[:len(values)-2]
-			result := int64(0)
+			right := values[len(values)-1]; left := values[len(values)-2]
+			values = values[:len(values)-2]; result := int64(0)
 			switch current.text {
 			case "bitAnd":
 				result = left & right
@@ -4657,8 +4467,7 @@ func integerValue(input value, constants map[string]constantValue) (int64, *issu
 	return values[0], nil
 }
 func checkedIntegerArithmetic(operator string, left, right int64) (int64, bool) {
-	maxInt64 := int64(1<<63 - 1)
-	minInt64 := int64(-1 << 63)
+	maxInt64 := int64(1<<63 - 1); minInt64 := int64(-1 << 63)
 	switch operator {
 	case "+":
 		if right > 0 && left > maxInt64-right || right < 0 && left < minInt64-right {
@@ -4729,16 +4538,10 @@ func compareIntegerValues(operator string, left, right int64) bool {
 		return false
 	}
 }
-
 func allowsRuntimeTextReturnCall(item statement) bool {
 	return (item.kind == "变量" || item.kind == "赋值") &&
 		(isTextReturnCall(item.value) || runtimeTextReturnCallAsBorrowedTextArgument(item.value))
 }
-
-// Only consumers whose native operand path immediately accepts an owned
-// descriptor are safe to borrow; concatenation copies bytes and must first
-// store the return in a variable.
-
 func isRuntimeTextReturnBorrowConsumer(input value) bool {
 	if input.kind != "调用" {
 		return false
@@ -4749,13 +4552,10 @@ func isRuntimeTextReturnBorrowConsumer(input value) bool {
 	}
 	return false
 }
-
 func runtimeTextReturnCallAsBorrowedTextArgument(input value) bool {
 	if input.kind != "调用" {
 		return false
 	}
-	// A borrowed comparison can appear as an ifElse condition; the integer
-	// branches must not carry another owned descriptor.
 	if input.text == "ifElse" && len(input.args) == 3 {
 		condition := input.args[0]
 		if containsRuntimeTextReturnCall(condition) {

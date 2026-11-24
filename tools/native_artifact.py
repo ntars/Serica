@@ -29,6 +29,7 @@ def verify_native_console_artifact(
     required_instructions: tuple[str, ...] = (),
     require_runtime_input: bool = False,
     required_imports: tuple[str, ...] = (),
+    forbidden_imports: tuple[str, ...] = (),
 ) -> None:
     """Verify a native CLI artifact has only the expected system runtime calls."""
     checks = [
@@ -70,6 +71,10 @@ def verify_native_console_artifact(
     if require_runtime_input:
         expected_imports.add("_read")
     expected_imports.update(required_imports)
+    if any(name in imports for name in forbidden_imports):
+        raise RuntimeError(
+            f"原生控制台产物包含禁用导入符号：{[name for name in forbidden_imports if name in imports]!r}"
+        )
     if imports != expected_imports:
         raise RuntimeError(
             f"原生控制台产物导入符号不符：期望 {sorted(expected_imports)!r}，"

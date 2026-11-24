@@ -1,6 +1,6 @@
 # 行简发布说明（开发者预览）
 
-当前版本 `v0.1.0-dev.2` 是行简的**开发者预览分发包**，不是正式语言版本。发布包提供可直接执行的种子编译器 `bin/serica`、可复现的源码、示例、验收清单和校验和；它不提供图形化安装器、`.app` 胶囊、系统级安装路径或已公证签名。
+当前版本 `v0.1.0-dev.9` 是行简的**开发者预览分发包**，不是正式语言版本。发布包提供可直接执行的种子编译器 `bin/serica`、可复现的源码、示例、验收清单和校验和；它不提供图形化安装器、`.app` 胶囊、系统级安装路径或已公证签名。
 
 ## 包内容
 
@@ -21,10 +21,10 @@
 
 ## 安装
 
-1. 下载 `serica-v0.1.0-dev.2-macos-arm64.tar.gz` 与对应的 `SHA256SUMS.archives`，并放在同一目录。
+1. 下载 `serica-v0.1.0-dev.9-macos-arm64.tar.gz` 与对应的 `SHA256SUMS.archives`，并放在同一目录。
 2. 校验压缩包：`shasum -a 256 -c SHA256SUMS.archives`。
-3. 解压：`tar -xzf serica-v0.1.0-dev.2-macos-arm64.tar.gz`。
-4. 进入目录后校验逐文件摘要：`cd serica-v0.1.0-dev.2-macos-arm64 && shasum -a 256 -c SHA256SUMS`。
+3. 解压：`tar -xzf serica-v0.1.0-dev.9-macos-arm64.tar.gz`。
+4. 进入目录后校验逐文件摘要：`cd serica-v0.1.0-dev.9-macos-arm64 && shasum -a 256 -c SHA256SUMS`。
 5. 运行包内自检：`make verify`。
 6. 可执行程序位于 `bin/serica`；无需写入 `/usr/local/bin`。
 
@@ -63,6 +63,7 @@ printf '行简\n' | ./bin/console
 - 产物只针对 macOS arm64 验证；其他平台不可用。
 - 产物使用 ad-hoc 签名，不构成 Apple 公证或可信分发凭据。
 - 语言处于 pre-alpha，P1b 阶段门未通过，不适于编写生产软件。
+- 文件写入支持 `writeFile` 覆盖、`appendFile` 追加、`removeFile` 删除、`renameFile` 重命名和 `replaceFile` 原子替换；通用文件句柄、目录/元数据、原子替换边界已由 D-0169 提供，通用文件句柄与进程 IO 仍未实现。
 - 本包不含安装器、自动更新、GUI 编辑器或标准库。
 
 详细限制见 `README.md`、`README_EN.md`、`SECURITY.md` 与 `ACCEPTANCE.md`。

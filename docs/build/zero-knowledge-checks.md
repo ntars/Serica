@@ -19,10 +19,10 @@
 | P0b 窗口实际交互 | 运行 `build/p0b-window`，查看中文字形并用键盘编辑文本 | 可编辑；交互证据按机器、OS 和日期记录；不可据此扩大平台声明 |
 | P0b 正例/字段诊断及 P1b 语法保持在种子边界之外 | `make test-p0b-scope` | P0b 正例与缺字段诊断通过；5 个代表性 P1b 形式被 stage0 拒绝 |
 | P0b 同路径重复构建 | 首次构建后复制产物到仓库外；对相同路径重建，再 `cmp` 两个文件 | 字节相同；2026-11-20 记录 SHA-256 `40513babb5cc02d69e49ebdbb6e73ab0c571d5802d3d44137fee290d7d9f878f` |
-| 活动 Go 种子行数 | `python3 tools/check_seed_subset.py` | 当前合计 11979 行，≤12000；原型归档排除 |
+| 活动 Go 种子行数 | `python3 tools/check_seed_subset.py` | 当前合计 11860 行，≤12000；原型归档排除，检查器已由 D-0158 迁至 Python |
 | 行简原生工具自编 | `make serica-tools` | 生成 `build/serica-native-tools/analyze` 与 `emit-console`，分析器载荷与种子工具逐字节一致；签名 Mach-O 不据路径相关签名宣称字节一致 |
 | 当前自举状态 | `make stage1`、`make stage2`、`make stage3`、`make verify` | 目标尚未实现；不得将缺失命令标为通过，stage2/stage3 四段比较仍是 P3b 门 |
 
 **P1b 状态：** 当前 `stage0` 已实现常量、表达式、静态模块、运行时整数与布尔、动态整数/布尔/文本数组、有界 UTF-8 文本、参数与受限文件 IO、整数键值哈希映射、有界结果值、表达式与块体函数，以及整数和受支持的文本结果函数运行时 ABI；`make test-p1b-runtime`、`make test-p1b-native-emit` 与全部 P1b 前端子门在 macOS arm64 实际通过。P1b 阶段门仍未通过，因为通用容器与通用结果载荷、文本结果逃逸、完整跨函数错误恢复和通用文件/进程 IO 仍缺失；P2b 行简自编编译器尚未开始。
 
-禁止用全仓库 grep 统计代码区标点、字符串或注释；需区分代码与内容时，只用词法器区间。`make seed-audit` 按手册 §3.7 审计 Go 子集、接口、泛型、goroutine、channel、反射、`init`、包级变量初始化、cgo、`defer`/`goto`/`select`、`unsafe` 与第三方包，并核验 12000 行预算和逐行归因。2026-11-24 实测 C-1 为 4856/11417（42.5%），条件已触发并记录 D-0009/D-0059 复核；该值按归因表中带 `【AST】` 的行段计算。
+禁止用全仓库 grep 统计代码区标点、字符串或注释；需区分代码与内容时，只用词法器区间。`make seed-audit` 按手册 §3.7 审计 Go 子集、接口、泛型、goroutine、channel、反射、`init`、包级变量初始化、cgo、`defer`/`goto`/`select`、`unsafe` 与第三方包，并核验 12000 行预算和逐行归因。2026-11-24 实测 C-1 为 4794/11702（41.0%），条件已触发并记录 D-0009/D-0059 复核；该值按归因表中带 `【AST】` 的行段计算。

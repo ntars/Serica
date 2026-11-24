@@ -15,7 +15,7 @@
 | 章节路径 | 对应代码目录 | 验收命令 | 阶段 |
 |---|---|---|---|
 | Serica开发手册.md · 第 3 章 stage0 种子编译器 | `bootstrap/` | `make seed-audit`、`make stage0`、`make test-p0b-scope` | 增长 |
-| Serica开发手册.md · 第 4 章 验收工具链 | `tools/`、`bootstrap/tools/` | `make doctor`、`./tools/check-independence source`、`make license` | 增长 |
+| Serica开发手册.md · 第 4 章 验收工具链 | `tools/`（Python 检查器与验收脚本） | `make doctor`、`./tools/check-independence source`、`make license` | 增长 |
 | Serica开发手册.md · 第 5 章 阶段门测试体系 | `Makefile`、`compiler/`、`tools/test_*.py`、`examples/` | `make test-p0b-scope test-p1b-static test-p1b-modules test-p1b-runtime test-p1b-scan test-p1b-lex test-p1b-parse test-p1b-program test-p1b-bind test-p1b-import-paths test-p1b-module-read test-p1b-module-graph test-p1b-module-bind test-p1b-module-effect test-p1b-module-type test-p1b-module-const test-p1b-module-abi test-p1b-native-emit` | 增长 |
 | Serica开发手册.md · 第 6 章 仓库治理与许可合规 | 根目录许可与登记文件、`docs/build/` | `make license`、`./tools/check-independence source`、`make seed-audit` | 维护 |
 | Serica开发手册.md · M 发行章 | 无（未到发行阶段） | 无（无任务卡） | 绿地（未启动） |
@@ -62,7 +62,7 @@
 | 编译入口 | `build/stage0/serica`（子命令 `lex`、`check`、`build`） | 仓库现状 `tools/build-stage0` |
 | 构建系统 | GNU Make（`Makefile`，共 26 个目标，见第 5 章清单） | 仓库现状 |
 | 验收脚本运行时 | Python 3（系统 `python3`，现状 3.13.12），不建仓库内虚拟环境 | 原手册附录 G.1；仓库现状 `tools/` |
-| Go 构建环境变量 | `GO111MODULE=off`、`GOPROXY=off`、`CGO_ENABLED=0`（构建 stage0 与 punct-scan 时） | 仓库现状 `tools/build-stage0`、`tools/doctor` |
+| Go 构建环境变量 | `GO111MODULE=off`、`GOPROXY=off`、`CGO_ENABLED=0`（构建 stage0 时） | 仓库现状 `tools/build-stage0`、`tools/doctor` |
 | 语言版本号 | 尚无已发布语言版本；阶段标记 `P0b` 至 `P6b` 不是版本号 | 仓库 `CHANGELOG.md` |
 | 当前阶段 | pre-alpha；P0b 已通过，P1b 子门进行中，完整阶段门未通过 | 仓库 `docs/roadmap/p0b-p6b.md` |
 
@@ -70,12 +70,11 @@
 
 ```text
 Serica/
-├─ bootstrap/               Apache-2.0  Go 种子编译器（stage0）与 Go 检查工具
+├─ bootstrap/               Apache-2.0  Go 种子编译器（stage0）
 │  ├─ *.go                  活动种子源码，含 text_bytes.go 文本字节与 module_read.go 受限模块读取
-│  ├─ tools/                punct_scan.go（标点扫描）、check_independence.go（源码级独立性）
 │  └─ archive/prototype-3.8/  3.8 选型原型冻结归档（196 行，不计入活动行数）
 ├─ tools/                   构建与验收工具链：doctor、build-stage0、build-serica-native、run-prototype、check-independence（shell 包装）、
-│                           check_seed_subset.py、test_p0b_scope.py、test_p1b_static.py、test_modules.py、
+│                           punct_scan.py、check_independence.py、check_seed_subset.py、test_p0b_scope.py、test_p1b_static.py、test_modules.py、
 │                           test_p1b_runtime.py、test_p1b_scan.py、test_p1b_lex.py、test_p1b_parse.py、
 │                           test_p1b_program.py、test_p1b_bind.py、test_p1b_import_paths.py、test_p1b_module_read.py、test_p1b_module_graph.py、test_p1b_module_bind.py、test_p1b_module_effect.py、test_p1b_module_type.py、
 │                           test_p1b_module_const.py、test_p1b_module_abi.py、test_p1b_native_emit.py、native_artifact.py
@@ -162,8 +161,8 @@ Go 种子代码（`bootstrap/` 内）：
 | C-1 | 种子语言切换触发条件：种子达 3000 行且 ast 标签覆盖代码占比超 40%（口径：AST 构造、遍历、模式分派、符号表）时应换 OCaml | `make seed-audit` 输出 |
 | 归因表 | 种子每一行对应「编译某段行简代码所需最小能力」的登记表 | `docs/build/seed-attribution.md` |
 | 能力声明 | 程序根与函数用 `能力` 字段显式声明 stdout、stdin、filesystem.read、filesystem.write、array.write、map.write、args 七种副作用，未声明即编译失败 | `bootstrap/semantic.go` |
-| NFC | Unicode 组合规范形式，本项目唯一允许的形式 | `bootstrap/tools/punct_scan.go` |
-| NFKC | 兼容分解形式，会把全角标点折叠成半角，本项目在任何环节禁用 | `bootstrap/tools/punct_scan.go` |
+| NFC | Unicode 组合规范形式，本项目唯一允许的形式 | `tools/punct_scan.py` |
+| NFKC | 兼容分解形式，会把全角标点折叠成半角，本项目在任何环节禁用 | `tools/punct_scan.py` |
 | punct-scan | 标点扫描器：断言 NFC 幂等、代码区半角标点计数、禁用字符计数三项 | `build/punct-scan` |
 | 一级证据 | 哈希、行数、命令输出、grep 计数四类可独立复现的客观事实；叙述式结论不接受 | 原手册 v3.8 第十条 |
 | 零知识检查 | 不懂语言也能执行的检查命令清单，每条含命令与期望输出 | `docs/build/zero-knowledge-checks.md` |
@@ -217,7 +216,7 @@ build/stage0/serica build <文件.serica> -o <输出路径>  # 产出 macOS arm6
 
 - 源码状态由 `docs/build/seed-attribution.md` 承载：种子每行实现行对应一条归因记录。
 - 行数预算：活动种子源码上限 12000 行（临时预算），由 `make seed-audit` 断言。**v3.8 手册记载上限 5000 行（§2.3、§3.7），仓库现状经 D-0053（5500）、D-0061（6500）、D-0087（8000）、D-0101（12000）记录扩额，`bootstrap/README.md` 现行规定为 12000 行，以现状为准**。
-- 当前实测基线（2026-11-24，D-0155）为活动 Go 种子 11979/12000 行，C-1 按当前归因表为 4856/11417（42.5%），条件已触发；D-0009/D-0059 复核记录保留。行简模块闭包使用 D-0122 的受限读取桥，Mach-O 序列化沿用 D-0131 的原始字节写入桥。两个桥随 P3b 种子删除。完整回归命令见 PART-0501。
+- 当前实测基线（2026-11-24，D-0162）为活动 Go 种子 11946/12000 行，C-1 按当前归因表为 4861/11703（41.5%），条件已触发；D-0009/D-0059 复核记录保留。行简模块闭包使用 D-0122 的受限读取桥，Mach-O 序列化沿用 D-0131 的原始字节写入桥。两个桥随 P3b 种子删除。完整回归命令见 PART-0501。
 - 构建产物落在 `build/`，不入库。
 
 ### 3.6 依赖关系
@@ -233,14 +232,14 @@ build/stage0/serica build <文件.serica> -o <输出路径>  # 产出 macOS arm6
 **前置条件**：当前工作树包含 D-0139 代码、测试与事实文档。
 
 **当前一级证据**：
-- `python3 tools/check_seed_subset.py`：12 个活动源码文件，11979/12000 行，归因完整。
-- C-1 AST 归因：4856/11417（42.5%），条件已触发；D-0009/D-0059 复核记录通过。
+- `python3 tools/check_seed_subset.py`：10 个活动源码文件，11946/12000 行，归因完整。
+- C-1 AST 归因：4861/11703（41.5%），条件已触发；D-0009/D-0059 复核记录通过。
 - D-0139 决策、`DECISIONS.json`、`CHANGELOG.md`、README、模块档位、零知识检查与路线图均已同步。
 
 **步骤**：
 1. 运行 `python3 tools/check_seed_subset.py`，核对行数、归因完整性和 C-1 输出。
 2. 抽查 `docs/build/seed-attribution.md` 的 D-0131 条目，确认字节写入的能力、类型、范围检查和映射生命周期均有归因。
-3. 抽查 `DECISIONS.json` 最后一条为 D-0156，且 `source` 指向 `docs/decisions/0156-developer-preview-dev2.md`。
+3. 抽查 `DECISIONS.json` 最后一条为 D-0161，且 `source` 指向 `docs/decisions/0161-developer-preview-dev4.md`。
 4. 若后续新增种子行导致归因失败，只补真实能力归因并同步文档，不删除仍被验收门使用的功能。
 
 **验收命令**：
@@ -249,7 +248,7 @@ python3 tools/check_seed_subset.py
 python3 -m json.tool DECISIONS.json >/dev/null
 git diff --check
 ```
-**期望结果**：三条命令退出码均为 0；种子输出含 `11979 行，归因完整` 与 `C-1 4856/11417（42.5%）`。
+**期望结果**：三条命令退出码均为 0；种子输出含 `11946 行，归因完整` 与 `C-1 4861/11703（41.5%）`。
 
 **失败处理**：
 - 若只报新增行未归因：先确认对应能力与有效决策编号，再扩展归因区间。
@@ -325,14 +324,14 @@ make seed-audit && ./tools/check-independence source
 
 ### 4.1 模块职责
 
-本模块维护两类验收工具：Go 实现的仓库内检查器（punct-scan 标点扫描、check_independence 源码级独立性）与 shell/Python 实现的环境与流程工具（doctor 环境自检、build-stage0 构建包装、check-independence shell 包装、check_seed_subset.py 种子审计）。本模块不做：阶段门测试断言（第 5 章）、许可文本维护（第 6 章）。
+本模块维护 shell/Python 实现的验收工具：doctor 环境自检、build-stage0 构建包装、check-independence 包装与 Python 标准库检查器（punct-scan 标点扫描、check_independence 源码级独立性）、check_seed_subset.py 种子审计。本模块不做：阶段门测试断言（第 5 章）、许可文本维护（第 6 章）。
 
 ### 4.2 依赖的开源方案
 
 | 名称 | 用途 | 采纳记录编号 |
 |---|---|---|
-| Go 工具链 | 编译 punct_scan 与 check_independence | 0.5 节第 1 行 |
-| Python 3 | 运行 seed-audit 脚本与 doctor 的缓存路径检查 | 0.5 节第 6 行 |
+| Go 工具链 | 编译种子 stage0 | 0.5 节第 1 行 |
+| Python 3 | 运行 punct-scan、独立性检查、seed-audit 与验收脚本 | 0.5 节第 6 行 |
 | Xcode Command Line Tools | doctor 检查 SDK 存在性 | 0.5 节第 2 行 |
 
 ### 4.3 文件清单
@@ -342,9 +341,9 @@ make seed-audit && ./tools/check-independence source
 | `tools/doctor` | 修改 | 环境自检：Go 版本、SDK、CJK 字体、依赖目录、缓存位置、punct-scan 构建 |
 | `tools/build-stage0` | 修改 | 构建 stage0 到 `build/stage0/serica` 的固定包装 |
 | `tools/run-prototype` | 修改 | 3.8 原型的运行包装（`make prototype`） |
-| `tools/check-independence` | 修改 | shell 包装：定位 Go 后 `go run` Go 检查器 |
-| `bootstrap/tools/check_independence.go` | 修改 | 源码级独立性检查：跨语言构建描述文件与依赖副本目录 |
-| `bootstrap/tools/punct_scan.go` | 修改 | NFC 幂等、代码区半角标点计数、禁用字符计数 |
+| `tools/check-independence` | 修改 | shell 包装：调用 Python 源码级独立性检查器 |
+| `tools/check_independence.py` | 修改 | 源码级独立性检查：跨语言构建描述文件、依赖副本、缓存与版权归属 |
+| `tools/punct_scan.py` | 修改 | NFC 幂等、代码区半角标点计数、禁用字符计数 |
 | `tools/check_seed_subset.py` | 修改 | Go 子集白名单、行数预算、逐行归因、C-1 占比审计 |
 
 ### 4.4 接口契约
@@ -355,7 +354,7 @@ tools/check-independence source                # 输出「源码级：通过」�
 build/punct-scan <文件.serica> [更多文件]       # 输出「NFC=true 半角标点=0 禁用字符=0」
 ```
 
-`check-independence` 现仅支持 `source` 一个子命令。**v3.8 手册附录 K.10 记载七个子命令（source、link、symbol、build、env、allowlist、all），仓库现状 `bootstrap/tools/check_independence.go` 只实现 `source`，以现状为准**；链接级与符号级检查现阶段由 P0b 手工命令（`otool -L`、`nm -u`、`codesign --verify --strict`）覆盖，见 `docs/build/zero-knowledge-checks.md`。
+`check-independence` 现仅支持 `source` 一个子命令。**v3.8 手册附录 K.10 记载七个子命令（source、link、symbol、build、env、allowlist、all），仓库现状 `tools/check_independence.py` 只实现 `source`，以现状为准**；链接级与符号级检查现阶段由 P0b 手工命令（`otool -L`、`nm -u`、`codesign --verify --strict`）覆盖，见 `docs/build/zero-knowledge-checks.md`。
 
 ### 4.5 数据与状态
 
@@ -421,7 +420,7 @@ build/punct-scan examples/p0b-window.serica examples/p1b-modules.serica examples
 **前置条件**：PART-0402 已完成。
 
 **步骤**：
-1. 读取 `bootstrap/tools/check_independence.go`，确认其检查范围：跨语言构建描述文件（`go.mod`、`go.sum`、`Cargo.toml`、`package.json`、`requirements.txt`、`CMakeLists.txt`）与依赖副本目录（`vendor`、`node_modules`、`.toolchain`、`toolchains`、`sdk`、`.venv`）。
+1. 读取 `tools/check_independence.py`，确认其检查范围：跨语言构建描述文件（`go.mod`、`go.sum`、`Cargo.toml`、`package.json`、`requirements.txt`、`CMakeLists.txt`）、依赖副本目录（`vendor`、`node_modules`、`.toolchain`、`toolchains`、`sdk`、`.venv`）、Go/Python 缓存与 `.go`/`.serica`/`.py` 版权归属。
 2. 在仓库根运行 `./tools/check-independence source`。
 3. 交付自检：确认脚本对 `bootstrap/` 内的 Go 构建形态豁免正确（种子语言在 `bootstrap/` 内是允许的唯一例外，原手册 v3.8 第三条）。
 
@@ -446,7 +445,7 @@ build/punct-scan examples/p0b-window.serica examples/p1b-modules.serica examples
 
 ### 4.9 设计备注（不注入本地模型）
 
-- **check-independence 实现语言冲突**：v3.8 手册附录 K.10 记载「实现语言：行简自身；P4b 之前可用种子语言写」，仓库现状是 POSIX shell 包装（`tools/check-independence`，10 行）加 Go 单文件（`bootstrap/tools/check_independence.go`，102 行）经 `go run` 执行，且只实现了七个子命令中的 `source`，以现状为准。这与 `docs/build/module-tier-map.md` 的登记一致（`[C]` 档）。
+- **check-independence 实现语言冲突**：v3.8 手册附录 K.10 记载「实现语言：行简自身；P4b 之前可用种子语言写」，仓库现状是 POSIX shell 包装（`tools/check-independence`）加 Python 标准库单文件（`tools/check_independence.py`），由 D-0158 迁出 Go 种子额度，且只实现了七个子命令中的 `source`，以现状为准。这与 `docs/build/module-tier-map.md` 的登记一致（`[C]` 档）。
 - **doctor 的失败传导**：`doctor` 目标依赖 `seed-audit`，故种子归因未补齐时 doctor 必然失败——这是有意设计（先查种子边界再查环境），不是缺陷。
 - **事实**：以上命令于 2026-11-21 实测；`make seed-audit`、`make doctor`、`make license` 与 `./tools/check-independence source` 均通过。`tools/native_artifact.py` 是运行时测试共享模块。
 
@@ -521,7 +520,7 @@ Makefile 的 26 个目标为 `doctor`、`prototype`、`stage0`、`native-tools`�
 env GO=/Users/ntars/.local/go1.27.4/bin/go make -j1 stage0 test-p0b-scope test-p1b-static test-p1b-modules test-p1b-runtime test-p1b-scan test-p1b-lex test-p1b-parse test-p1b-program test-p1b-bind test-p1b-import-paths test-p1b-module-read test-p1b-module-graph test-p1b-module-bind test-p1b-module-effect test-p1b-module-type test-p1b-module-const test-p1b-module-abi test-p1b-native-emit doctor license seed-audit
 ./tools/check-independence source
 ```
-**期望结果**：两条命令均退出 0。运行时子门通过 174 个整数形态、5 个文本所有权返回产物、149 个成功文本输入、306 个编译诊断和 118 个运行时拒绝样例。程序解析子门通过 4 棵完整树、75 个节点、15 个诊断及当前 14 份编译器源码。单文件绑定子门通过 26 个绑定、19 个诊断、2 条待链接引用及当前 14 份编译器源码。导入路径子门通过 30 条路径记录、18 个拒绝场景和 2 个原生参照产物。模块读取子门通过 5 个读取正例、25 个运行时拒绝及 6 类编译诊断。模块依赖图子门通过共享图、72 层导入、当前 11 文件编译器闭包、10 个位置诊断及 3 种读取失败。跨文件绑定子门通过 11 个查询、6 个绑定诊断、4 个读取位置诊断和大文本读取恢复。能力子门通过 7 种能力、4 个正例图、13 个位置诊断及编译器自检。类型子门通过 26 个类型查询、20 个位置诊断、3 个原生参照产物及编译器自检。静态求值子门通过 10 个窗口文本、9 个边界值、5 个运行参照产物、19 个位置诊断、跨文件常量及编译器自检。 静态调用新增 5 个运行参照产物、6 个调用位置诊断、5 个能力位置诊断、7 种计算得出的能力及 45 层共享实参。 纯块降级新增 3 个运行参照产物及 11 个位置诊断。 ABI 子门通过 6 个原生参照产物、4 种返回约定、8 个位置诊断、混合 8 寄存器和 81 个运行时示例。静态原生发射实测 9 个签名运行产物、8 个 stage0 参照、72801 字节多页输出和 8 个拒绝场景，含同路径重建与失败保留旧产物。动态原生发射新增 10 个签名运行产物和对应的 stage0 参照，覆盖 47 次输入和退出状态对照。数组发射实测 5 个 stage0 对照产物、17 次执行对照、1 个局部数组产物独立运行 5 次和 4 个编译拒绝。UTF-8 输入验收覆盖 7 个 stage0 对照产物、37 次对照执行、1 个独立临时描述符产物和 3 个编译拒绝。只读文本与借用调用覆盖 6 个签名产物、16 次 stage0 对照、3 个源码拒绝及 3 个载荷拒绝。命令行与文件读取覆盖 6 个签名产物、29 次 stage0 对照、7 个源码拒绝及 4 个载荷拒绝。项目限界模块读取覆盖 7 个签名产物、60 次 stage0 对照和 4 个源码拒绝。字节写入与动态文本比较通过 7 个签名产物、23 次 stage0 对照、5 个源码拒绝和 4 个载荷拒绝。动态文本数组与编译器自编复验覆盖 5 个数组签名产物、10 次 stage0 对照、4 个源码拒绝及两套工具载荷与未签名 Mach-O 逐字节一致。
+**期望结果**：两条命令均退出 0。运行时子门通过 204 个整数形态、27 个函数结果边界、43 个运行时文本结果产物、159 个成功文本输入、339 个编译诊断和 123 个运行时拒绝样例。程序解析子门通过 4 棵完整树、75 个节点、15 个诊断及当前 14 份编译器源码。单文件绑定子门通过 26 个绑定、19 个诊断、2 条待链接引用及当前 14 份编译器源码。导入路径子门通过 30 条路径记录、18 个拒绝场景和 2 个原生参照产物。模块读取子门通过 5 个读取正例、25 个运行时拒绝及 6 类编译诊断。模块依赖图子门通过共享图、72 层导入、当前 11 文件编译器闭包、10 个位置诊断及 3 种读取失败。跨文件绑定子门通过 11 个查询、6 个绑定诊断、4 个读取位置诊断和大文本读取恢复。能力子门通过 7 种能力、4 个正例图、26 个位置诊断及编译器自检。类型子门通过 29 个类型查询、28 个位置诊断、3 个原生参照产物及编译器自检。静态求值子门通过 10 个窗口文本、9 个边界值、5 个运行参照产物、19 个位置诊断、跨文件常量及编译器自检。 静态调用新增 5 个运行参照产物、6 个调用位置诊断、5 个能力位置诊断、7 种计算得出的能力及 45 层共享实参。 纯块降级新增 3 个运行参照产物及 11 个位置诊断。 ABI 子门通过 6 个原生参照产物、4 种返回约定、8 个位置诊断、混合 8 寄存器和 82 个运行时示例。静态原生发射实测 9 个签名运行产物、8 个 stage0 参照、72801 字节多页输出和 8 个拒绝场景，含同路径重建与失败保留旧产物。动态原生发射新增 10 个签名运行产物和对应的 stage0 参照，覆盖 47 次输入和退出状态对照。数组发射实测 5 个 stage0 对照产物、17 次执行对照、1 个局部数组产物独立运行 5 次和 4 个编译拒绝。UTF-8 输入验收覆盖 7 个 stage0 对照产物、37 次对照执行、1 个独立临时描述符产物和 3 个编译拒绝。只读文本与借用调用覆盖 6 个签名产物、16 次 stage0 对照、3 个源码拒绝及 3 个载荷拒绝。命令行与文件读取覆盖 6 个签名产物、29 次 stage0 对照、7 个源码拒绝及 4 个载荷拒绝。项目限界模块读取覆盖 7 个签名产物、60 次 stage0 对照和 4 个源码拒绝。字节写入与动态文本比较通过 7 个签名产物、23 次 stage0 对照、5 个源码拒绝和 4 个载荷拒绝。动态文本数组与编译器自编复验覆盖 5 个数组签名产物、10 次 stage0 对照、4 个源码拒绝及两套工具载荷与未签名 Mach-O 逐字节一致。
 
 **实测记录**：2026-11-22 在 macOS arm64 串行执行全部 26 个 `make` 目标并运行 `./tools/check-independence source`，均退出 0。因执行环境默认 Go 缓存在仓库外不可写，复跑使用 `/private/tmp` 下的 `GOCACHE`、`GOMODCACHE` 与 `GOPATH`；`make doctor` 的缓存位置检查仍通过。种子审计、许可、环境自检和源码级独立性检查均通过。编译器闭包为 11 个文件、13 条依赖边、281 个跨文件绑定。[D-0139 复跑记录](decisions/0139-serica-text-arrays-self-emission.md)
 
@@ -910,13 +909,13 @@ D-0115 已固定无效果块函数的文本所有权返回 ABI：`x0=0`，`x1` �
 
 无效果块体函数可把返回运行时函数的结果保存在局部变量中，使用 `是否失败`、`错误码`、`结果值` 观察，再把成功载荷或失败状态作为本函数结果返回。实现保留结果局部的标签和值双槽，不进入会展开局部引用初始化表达式的 ordinary lowering；状态参数分类只以真实状态查询为证据，普通整数传入 `成功` 不会触发结果 ABI。[D-0146](decisions/0146-block-function-result-recovery.md)
 
-验收：`examples/p1b-function-result-recovery.serica` 在 macOS arm64 输入 `5` 输出 `6`，输入 `-1` 输出错误码整数 `31` 并正常退出。直接结果调用实参 `转发（内层（输入））` 也由真实 ARM64 产物验证：成功输出 `6`、失败观察为错误码 `31` 且正常退出，文本载荷实参仍由 S-3023 拒绝。D-0149 进一步闭合参数级结果状态观察：`转发（甲，源）` 混合普通整数和结果参数时保留真实 ARM64 调用帧，输入 `3` 输出 `9`、输入 `-1` 输出错误码组合 `36`；根级非引用状态查询仍由 `S-3013` 拒绝。D-0150 又开放无效果纯函数中的运行时文本结果引用转发、成功/失败结果分支选择和结果参数状态查询，嵌套结果消费仍保持拒绝。D-0151 进一步允许带 `stdin` 效果的语句体函数在局部构造整数成功或失败结果并返回，D-0153 开放同一 ABI 下的直接文本结果局部，D-0154 进一步开放由 `readText` 支撑的拼接与切片文本结果局部，D-0152 允许形参恰好使用一次时把直接效果调用作为纯函数实参，D-0155 开放运行时文本结果形参的四槽传递、观察、转发和返回。`make test-p1b-runtime`、`make test-p1b-bind`、`make test-p1b-module-abi`、全部 P1b/P0b 静态与模块子门、`make test-p1b-native-emit`、`make seed-audit`、`make license` 和源码独立性检查通过。种子 11979/12000 行、C-1 4856/11417（42.5%）。通用文本/容器结果载荷、完整效果函数运行时 ABI、完整 IO 与完整跨函数恢复仍未闭合；P1b 阶段门未通过。
+验收：`examples/p1b-function-result-recovery.serica` 在 macOS arm64 输入 `5` 输出 `6`，输入 `-1` 输出错误码整数 `31` 并正常退出。直接结果调用实参 `转发（内层（输入））` 也由真实 ARM64 产物验证：成功输出 `6`、失败观察为错误码 `31` 且正常退出，文本载荷实参仍由 S-3023 拒绝。D-0149 进一步闭合参数级结果状态观察：`转发（甲，源）` 混合普通整数和结果参数时保留真实 ARM64 调用帧，输入 `3` 输出 `9`、输入 `-1` 输出错误码组合 `36`；根级非引用状态查询仍由 `S-3013` 拒绝。D-0150 又开放无效果纯函数中的运行时文本结果引用转发、成功/失败结果分支选择和结果参数状态查询，嵌套结果消费仍保持拒绝。D-0151 进一步允许带 `stdin` 效果的语句体函数在局部构造整数成功或失败结果并返回，D-0153 开放同一 ABI 下的直接文本结果局部，D-0154 进一步开放由 `readText` 支撑的拼接与切片文本结果局部，D-0152 允许形参恰好使用一次时把直接效果调用作为纯函数实参，D-0155 开放运行时文本结果形参的四槽传递、观察、转发和返回，D-0157 开放单层直接结果观察并释放成功文本映射。`make test-p1b-runtime`、`make test-p1b-bind`、`make test-p1b-module-abi`、全部 P1b/P0b 静态与模块子门、`make test-p1b-native-emit`、`make seed-audit`、`make license` 和源码独立性检查通过。种子 11996/12000 行、C-1 4850/11615（41.8%）。通用文本/容器结果载荷、完整效果函数运行时 ABI、完整 IO 与完整跨函数恢复仍未闭合；P1b 阶段门未通过。
 
 ## PART-0534 · 纯函数内的运行时文本结果引用转发（D-0150 已验收）
 
 无效果纯函数可以原样转发运行时结果引用、在成功和失败结果分支间选择，或调用 `是否失败`/`错误码` 观察结果参数状态。有界 AST 替换保留结果描述符，因此无需特殊代码生成；此前把文本结果实参整体视为嵌套消费的 `S-3023` 已移除。[D-0150](decisions/0150-pure-function-text-result-reference-forwarding.md)
 
-验收：文本结果转发输出原载荷；分支开关 `0` 时选择失败路径并无 stdout 以 `29` 退出；失败结果引用转发输出错误码 `37`；文本结果参数状态查询输出 `0`。`make test-p1b-runtime` 在该增量时通过 181 个 arm64 整数形态产物、11 个函数结果边界产物、309 个编译诊断和 118 个运行时拒绝样例；D-0151/D-0152/D-0153/D-0154/D-0155 后当前基线为 197、25、315、118，种子 11979/12000 行、C-1 4856/11417（42.5%）。本卡不证明完整效果函数结果 ABI、嵌套结果消费、容器载荷或完整 P1b。
+验收：文本结果转发输出原载荷；分支开关 `0` 时选择失败路径并无 stdout 以 `29` 退出；失败结果引用转发输出错误码 `37`；文本结果参数状态查询输出 `0`。`make test-p1b-runtime` 在该增量时通过 181 个 arm64 整数形态产物、11 个函数结果边界产物、309 个编译诊断和 118 个运行时拒绝样例；D-0151–D-0157 后当前基线为 202、27、315、118，种子 11996/12000 行、C-1 4850/11615（41.8%）。本卡不证明完整效果函数结果 ABI、嵌套结果消费、容器载荷或完整 P1b。
 
 ## PART-0535 · 效果函数内结果局部与整数结果 ABI（D-0151 已验收）
 
@@ -924,7 +923,7 @@ D-0115 已固定无效果块函数的文本所有权返回 ABI：`x0=0`，`x1` �
 
 修复以 `blockFunctionConstructsResultLocal` 识别直接结果初值和结果型条件分支，只让这类函数继续使用既有运行时语句函数帧；不新增结果 ABI、不放宽文本或容器载荷。新增两个 macOS arm64 正例：开关为 `1` 时读取并输出 `42`、退出 `0`；开关为 `0` 时无 stdout、以 `8` 退出。
 
-验收时 `make test-p1b-runtime` 通过 183 个 arm64 整数形态产物、13 个函数结果边界产物、309 个编译诊断和 118 个运行时拒绝样例；D-0152/D-0153/D-0154/D-0155 后当前基线为 197、25、315、118。种子 11979/12000 行、C-1 4856/11417（42.5%）。本卡本身只开放整数结果局部；直接 `readText` 文本结果局部由后续 D-0153 接管，容器结果、任意结果参数转发和完整跨函数恢复仍不在范围。
+验收时 `make test-p1b-runtime` 通过 183 个 arm64 整数形态产物、13 个函数结果边界产物、309 个编译诊断和 118 个运行时拒绝样例；D-0152–D-0157 后当前基线为 202、27、315、118。种子 11996/12000 行、C-1 4850/11615（41.8%）。本卡本身只开放整数结果局部；直接 `readText` 文本结果局部由后续 D-0153 接管，容器结果、任意结果参数转发和完整跨函数恢复仍不在范围。
 
 ## PART-0536 · 单次引用的效果实参（D-0152 已验收）
 
@@ -932,7 +931,7 @@ D-0115 已固定无效果块函数的文本所有权返回 ABI：`x0=0`，`x1` �
 
 该规则不引入隐式临时变量或新的实参预先求值顺序；展开后的效果继续经过每层函数声明和程序根能力检查。行简模块静态求值前端也把引用布尔表改为真实计数，并采用零次优先、一次放行、多次拒绝的同一顺序；合法效果调用仍延迟到运行时。新增 `加一（readInteger（））`、`加一（1+readInteger（））` 与内层声明 `stdin` 的 `加一（读取（））` 参照，输入 `40`/`41` 均输出 `42`；重复引用反例继续拒绝。
 
-验收时 `make test-p1b-runtime` 通过 185 个 arm64 整数形态产物、13 个函数结果边界产物、309 个编译诊断和 118 个运行时拒绝样例；D-0153/D-0154/D-0155 后当前基线为 197、25、315、118。种子 11979/12000 行、C-1 4856/11417（42.5%）。本卡不保证按实参列表预先求值，也不开放重复效果、文本/容器实参或多效果实参的通用调用约定；P1b 阶段门未通过。
+验收时 `make test-p1b-runtime` 通过 185 个 arm64 整数形态产物、13 个函数结果边界产物、309 个编译诊断和 118 个运行时拒绝样例；D-0153–D-0157 后当前基线为 202、27、315、118。种子 11996/12000 行、C-1 4850/11615（41.8%）。本卡不保证按实参列表预先求值，也不开放重复效果、文本/容器实参或多效果实参的通用调用约定；P1b 阶段门未通过。
 
 ## PART-0537 · 效果函数文本结果局部（D-0153 已验收）
 
@@ -954,7 +953,49 @@ D-0115 已固定无效果块函数的文本所有权返回 ABI：`x0=0`，`x1` �
 
 带效果的运行时函数可接收、观察、转发并返回文本结果形参。文本结果按标签、值、UTF-8 指针和字节长度四槽布局；整数结果形参保持双槽。分类阶段扫描全部调用点，从实参推断结果形参成功载荷，若同一形参混用整数和文本载荷则以 `S-3062` 拒绝；内联结果操作数同步保存指针与长度，避免被调用函数收到空文本。[D-0155](decisions/0155-effectful-runtime-text-result-parameter-abi.md)
 
-验收：新增文本结果参数转发、失败码保留、拼接载荷、内联结果操作数、空文本和补充平面文本 6 个 macOS arm64 场景，成功产物各连续 8 次同路径构建并逐字节一致；混合整数/文本形参载荷报 `S-3062`，运行时文本结果传入整数形参报 `S-3023`。完整串行门通过 197 个 arm64 整数形态产物、25 个函数结果边界产物、315 个编译诊断和 118 个运行时拒绝样例。种子 11979/12000 行、C-1 4856/11417（42.5%）。文本结果逃逸到普通文本变量、容器载荷、任意效果调用求值顺序与完整跨函数恢复不在本卡范围；P1b 阶段门未通过。
+验收：新增文本结果参数转发、失败码保留、拼接载荷、内联结果操作数、空文本和补充平面文本 6 个 macOS arm64 场景，成功产物各连续 8 次同路径构建并逐字节一致；混合整数/文本形参载荷报 `S-3062`，运行时文本结果传入整数形参报 `S-3023`。完整串行门通过 197 个 arm64 整数形态产物、25 个函数结果边界产物、315 个编译诊断和 118 个运行时拒绝样例；D-0157 后当前基线为 202、27、315、118，种子 11996/12000 行、C-1 4850/11615（41.8%）。文本结果逃逸到普通文本变量、容器载荷、任意效果调用求值顺序与完整跨函数恢复不在本卡范围；P1b 阶段门未通过。
+
+## PART-0540 · 直接结果观察（D-0157 已验收）
+
+`是否失败`、`错误码` 和 `结果值` 可直接接收返回运行时结果的调用、`ifElse` 结果表达式、静态 `成功`/`失败` 和模块读取结果，不再要求先声明中转变量。[D-0157](decisions/0157-direct-result-observation.md)
+
+实现保证单层观察只求值一次；成功运行时文本载荷在根输出、状态、错误码和长度观察后释放，失败路径无 stdout 并保留错误码。同步修复文本结果返回描述符覆盖参数寄存器、直接状态条件码反向和结果观察临时帧栈不平衡。`结果值（readInteger（））`、`是否失败（1）` 等非结果操作数继续返回 `S-3013`。
+
+验收：`make test-p1b-runtime` 直接执行文本结果成功/失败、`𠮷野家` 长度 `3`、整数结果状态/错误码和静态结果；当前为 202 个整数形态产物、43 个运行时文本结果产物、27 个函数结果边界产物、315 个编译诊断和 118 个运行时拒绝样例。种子 11996/12000 行、C-1 4850/11615（41.8%）。重复共享所有权、嵌套消费、容器载荷与完整跨函数恢复不在本卡范围。
+
+## PART-0541 · 检查工具迁出 Go 种子额度（D-0158 已定案）
+
+`punct-scan` 与源码独立性检查从 `bootstrap/tools/*.go` 迁至 `tools/punct_scan.py` 与 `tools/check_independence.py`。`make doctor` 继续生成并调用 `build/punct-scan`，`tools/check-independence source` 保持原命令与输出；Python 版权归属纳入独立性检查。[D-0158](decisions/0158-checker-tool-migration.md)
+
+该迁移把非语言检查器移出已接近饱和的 Go 种子额度，为 D-0157 的原生发射留出空间；不改变语言语义或产物依赖，也不表示 P4b 工具链完成。验收：`make doctor`、`./tools/check-independence source`、`make seed-audit` 通过；活动种子 10 个文件、11996/12000 行，C-1 为 4850/11615（41.8%）。
+
+## PART-0542 · 追加文件写入（D-0160 已验收）
+
+`appendFile（路径，文本）` 在目标缺失时创建、已存在时保留原内容并追加 UTF-8 文本，返回本次实际写入字节数。静态与 `argumentText（下标）` 路径复用 `writeFile` 的路径边界，调用链须声明 `filesystem.write`，参数路径另须 `args`。[D-0160](decisions/0160-append-file-boundary.md)
+
+macOS arm64 的 `_open` 是可变参数接口，`O_CREAT` 权限模式须按平台 ABI 放在调用栈；只写 `x2` 会创建零权限文件，导致后续读取和再次写入被拒绝。后端按调用选择 `_creat`（覆盖）或 `_open`（追加），追加标志为 `O_WRONLY|O_CREAT|O_APPEND`，权限 `0644`；同一程序同时读取和追加时复用已导入的 `_open`。
+
+验收：已有文件 `开头` 追加 `尾` 后内容为 `开头尾` 并输出 `3`；缺失目标追加 `新` 后创建文件并输出 `3`；参数文本动态路径追加同样保留原内容并输出 `3`。覆盖写入产物继续只要求 `_creat` 与 `_close`，追加产物要求 `_open` 与 `_close`，缺少根能力由 `S-4102` 拒绝。完整源码门、原生发射、doctor、许可、种子审计与独立性检查通过；运行时门为 202 个整数形态产物、43 个运行时文本结果产物、27 个函数结果边界产物、317 个编译诊断和 118 个运行时拒绝样例；种子 11999/12000 行、C-1 4850/11618（41.7%）。本卡不证明通用文件句柄、目录/元数据、原子替换边界、进程 IO、通用结果/容器载荷或完整 P1b。
+
+## PART-0543 · 开发者预览 v0.1.0-dev.4 发布复验（D-0161 已定案）
+
+版本从 `v0.1.0-dev.3` 递增到 `v0.1.0-dev.4`，确保 D-0160 的追加文件写入和更新后的运行时计数不装入旧版本标识。发布流程沿用 D-0141/D-0142：生成源码运行时目录、逐文件 SHA-256、SBOM、归档与外部归档校验和，并执行 `tools/test_release.py`、解压后 `make verify` 和隔离 prefix 安装/卸载。[D-0161](decisions/0161-developer-preview-dev4.md)
+
+发布验收核对包内版本、文件集合、arm64 Mach-O、ad-hoc 签名、示例构建运行和安装脚本。归档 SHA-256 只写入 `dist/SHA256SUMS.archives`，不回写包内文档，避免自引用改变发布摘要。该版本仍是 pre-alpha 开发者预览；P1b 阶段门、P2b–P6b、多机验证、系统安装器、Apple 公证与正式法务复核均未完成。
+
+## PART-0544 · 文件删除、重命名与自编前端对齐（D-0162 已验收）
+
+`removeFile（路径）` 删除普通文件，`renameFile（源路径，目标路径）` 在同一文件系统内重命名；成功返回 `0`，失败不输出并退出 `1`。路径接受静态非空文本或 `argumentText（下标）`，两种调用都要求 `filesystem.write`，参数路径另要求 `args`。macOS arm64 后端分别导入 `_unlink` 与 `_rename`；类型诊断使用 `S-3075`、`S-3076`。[D-0162](decisions/0162-file-mutation-and-frontend-parity.md)
+
+行简自编前端同步登记 `appendFile=38`、`removeFile=39`、`renameFile=40`。效果表把三个编号映射到 `filesystem.write`，类型表补齐元数、路径文本检查和整数结果；模块效果门覆盖缺根能力与隐藏效果，模块类型门核对参数错误位置。
+
+验收：动态路径程序删除一个已有文件、把另一个源文件重命名为目标文件并输出 `0`；缺失删除目标与缺失重命名源均无 stdout 退出 `1`。产物要求 `_unlink` 与 `_rename`。完整运行时门为 204 个整数形态产物、43 个运行时文本结果产物、27 个函数结果边界产物、339 个编译诊断和 123 个运行时拒绝样例；种子 12000/12000 行、C-1 4927/11842（41.6%）。本卡不证明目录遍历、通用文件句柄、进程 IO 或 P1b 阶段门。
+
+## PART-0545 · 开发者预览 v0.1.0-dev.5 发布复验（D-0163 已定案）
+
+版本从 `v0.1.0-dev.4` 递增到 `v0.1.0-dev.5`，确保 D-0162 的文件删除、重命名、自编效果/类型登记和更新后的运行时计数装入独立开发者预览标识。发布流程继续使用 D-0141/D-0142 的源码运行时目录、逐文件摘要、SBOM、归档摘要、发布验收、解压后自检和隔离 prefix 安装/卸载。[D-0163](decisions/0163-developer-preview-dev5.md)
+
+归档 SHA-256 只写入 `dist/SHA256SUMS.archives`，不回写包内文档。该版本仍是 pre-alpha 开发者预览；P1b 阶段门、P2b–P6b、多机验证、系统安装器、Apple 公证与正式法务复核均未完成。
 
 ## PART-0530 · 行简动态文本数组与编译器原生构建（D-0139 已验收）
 
@@ -1111,11 +1152,25 @@ make seed-audit && make license && ./tools/check-independence source
 
 本项目处于 pre-alpha，P1b 阶段门未通过，无任何已发布语言版本（`CHANGELOG.md` 明示）。按模板第十节，发行任务卡（一键构建脚本、CI 矩阵、checksum、签名公证）在 P5b 三平台复现门通过前**不填写**；对外发布动作必须经用户确认后才可填卡。当前唯一约束：不得把 `[C]`、`[B]` 档产物称为完成品或对外发布（原手册 v3.8 §4.1）。
 
+## D-0172 目录类型元数据查询边界（2026-11-24）
+
+- **目标与语言面**：新增 `isDirectory（静态文本或 argumentText 路径）`，目录返回 `1`，文件或缺失返回 `0`。静态与参数路径均要求 `filesystem.read`，参数路径另要求 `args`；非法参数为 `S-3081`，缺能力为 `S-4102`，隐蔽效果为 `S-4106`。不开放目录遍历、符号链接元数据或通用文件句柄。
+- **实现与根因**：mac64 后端以 `_open`/`_fstat`/`_close` 读取 Darwin `st_mode` 的 `S_IFDIR` 位；单一位测试替代错误的高/低字节分支比较，并让缺失路径统一跳到返回 `0` 的收束点。同步修复前端能力收集漏报 `filesystem.read`。
+- **验收**：`make test-p1b-runtime` 覆盖目录/文件/缺失、静态路径、导入白名单和三类诊断；模块效果门与类型门同步覆盖能力、类型和 `S-3081` 位置诊断。全量门及行简原生发射门通过，活动种子 11860/12000 行、C-1 4794/11702（41.0%）；P1b 阶段门仍未通过。[D-0172](decisions/0172-directory-type-metadata.md)
+
+
 ## W. 官网文案章节（状态说明）
 
 仓库现状无 `website/` 目录，官网未启动。按模板第十一节，该章节在官网立项时由云端单独产出并标注【不注入本地模型】；当前不适用。
 
 ---
+
+## D-0171 环境变量读取边界（2026-11-24）
+
+- **目标与语言面**：新增 `readEnvironment（静态文本名称）`，名称在编译期固定、非空且不含 NUL/等号；要求 `args` 能力，非法名称 `S-3083`、缺能力 `S-4102`、跨函数隐蔽效果 `S-4106`。不开放动态名称、枚举、写入或子进程。
+- **实现与根因**：macOS arm64 借用 `_getenv` 返回的只读 UTF-8 文本；UTF-8 校验暂存寄存器与长度寄存器分离，直接输出和借用变量均按精确长度写出再追加规范换行，避免读取借用指针之后的环境字节。
+- **验收**：`make test-p1b-runtime` 覆盖中文值直接输出、`textLength`、缺失/空值与三类诊断反例，产物仅导入 `_exit`/`_getenv`/`_write`；模块效果与类型门覆盖能力、类型和产物参照。全量门及行简原生发射门通过，活动种子 11798/12000 行、C-1 4786/11641（41.1%）；P1b 阶段门仍未通过。[D-0171](decisions/0171-environment-read-boundary.md)
+
 
 ## N. 变更记录
 
