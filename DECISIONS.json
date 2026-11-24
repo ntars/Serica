@@ -1447,7 +1447,14 @@
       "check": "make test-p1b-runtime 通过，新增三个诊断反例覆盖任意运行时文本、argumentText 名称和隐藏效果；make seed-audit 报 12188/12200 行、归因完整，C-1 4834/12016（40.2%）；test-p1b-static、test-p1b-modules、test-p1b-module-effect、test-p1b-module-type、test-p1b-native-emit、test-p0b-scope 通过。P1b 阶段门仍未通过。",
       "status": "settled",
       "source": "docs/decisions/0185-environment-name-static-boundary.md"
+    },
+    {
+      "id": "D-0186",
+      "title": "整数映射删除桶槽写回根因修复",
+      "decision": "删映射键 的碰撞链断链改为写回桶槽地址本身（x3+0），不再写 x3+16 破坏相邻桶；后继仍从节点 +16 读取，墓哨节点后继为 -1 时跳过不断链。只支持有符号 64 位整数键，删除后长度减一。",
+      "check": "make test-p1b-runtime 通过 210 个 arm64 整数形态产物，其中 14 个映射产物覆盖存在键、缺失键、同键重复删除、碰撞链保持和扩容后删除；349 个编译诊断和 123 个运行时拒绝样例；make seed-audit 报 12189/12200 行、归因完整，C-1 4834/12016（40.2%）；test-p1b-static、test-p1b-modules、test-p1b-module-effect、test-p1b-module-type、test-p1b-native-emit、test-p0b-scope、ci-preflight 通过。P1b 阶段门仍未通过。",
+      "status": "settled",
+      "source": "docs/decisions/0186-map-delete-bucket-slot-root-cause.md"
     }
-
   ]
 }

@@ -4558,7 +4558,8 @@ func (c *windowCode) emitRuntimeMapDelete(input value, constants map[string]cons
 	tombstone := c.conditionalPlaceholder(0)
 	c.words = append(c.words, loadIntegerSlot(7, 31, 0), compareRegister(6, 7))
 	keyMismatch := c.conditionalPlaceholder(1)
-	c.words = append(c.words, loadIntegerSlot(6, 1, 16), storeIntegerSlot(6, 3, 16))
+	// x3 是桶槽地址（8 字节指针），断链应写回桶槽本身；写到 +16 会破坏相邻桶。
+	c.words = append(c.words, loadIntegerSlot(6, 1, 16), storeIntegerSlot(6, 3, 0))
 	c.words = append(c.words, storeIntegerSlot(2, 1, 0))
 	c.words = append(c.words, loadIntegerSlot(0, 19, mapSlot.length), subImmediate(0, 0, 1), storeIntegerSlot(0, 19, mapSlot.length))
 	done := c.unconditionalPlaceholder()
