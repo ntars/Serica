@@ -3140,6 +3140,7 @@ func validateFilePathArgument(input value, constants map[string]constantValue, c
 	return nil
 }
 func validateEnvironmentNameArgument(input value, constants map[string]constantValue) *issue {
+	if input.kind == "调用" && input.text == "argumentText" && len(input.args) == 1 { return &issue{code: "S-3083", expected: "编译期文本名称", actual: "运行时字符串", suggestion: "当前环境变量查询仅接受非空静态文本名称", pos: input.pos} }
 	nameType, problem := constantType(input, constants)
 	if problem != nil {
 		return problem

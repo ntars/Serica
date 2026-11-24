@@ -28,12 +28,12 @@
 | `bootstrap/semantic.go:2252-2642` | 【AST】运行时函数、块语句、循环体与局部变量验证 | D-0107–D-0111 运行时块控制 |
 | `bootstrap/semantic.go:2643-2884` | 控制台程序、能力声明与输入能力遍历 | D-0063 能力声明；args/文件边界 |
 | `bootstrap/semantic.go:2885-3103` | 【AST】控制台语句顺序、赋值与运行时变量分析 | D-0029–D-0037 变量与控制流 |
-| `bootstrap/semantic.go:3104-3273` | 【AST】结果、映射、数组、文本数组载荷与环境辅助 | D-0085–D-0093 结果载荷；D-0139 文本数组 |
+| `bootstrap/semantic.go:3104-3274` | 【AST】结果、映射、数组、文本数组载荷与环境辅助 | D-0085–D-0093 结果载荷；D-0139 文本数组；D-0177 环境变量名称静态文本约束 |
 | `bootstrap/semantic.go:3274-3894` | 【AST】常量类型求值与类型诊断 | D-0126 绑定类型形态；S-3xxx 诊断 |
 | `bootstrap/semantic.go:3895-4056` | 【AST】文本拼接/切片、布尔比较与条件结果类型 | D-0042–D-0057 文本表达式 |
 | `bootstrap/semantic.go:4057-4304` | 【AST】数组求值、字符串求值与编译期 ifElse | D-0022 常量数组；D-0017 字符串选择 |
 | `bootstrap/semantic.go:4305-4562` | 【AST】布尔、整数、溢出与排序求值 | D-0019/D-0021/D-0031/D-0034 整数语义 |
-| `bootstrap/semantic.go:4559-4611` | 【AST】文本返回调用借用参数判定 | D-0143 借用消费边界；D-0172 目录类型能力归属 |
+| `bootstrap/semantic.go:4559-4612` | 【AST】文本返回调用借用参数判定 | D-0143 借用消费边界；D-0172 目录类型能力归属 |
 | `bootstrap/macho.go:1-137` | Mach-O 段、加载命令、签名与 arm64 基础编码 | P0b 原生产物；不调用链接器 |
 | `bootstrap/console_macho.go:1-347` | 运行时表达式/语句判定、文件/参数/文本与结果形状识别 | D-0034–D-0041 控制台代码生成 |
 | `bootstrap/console_macho.go:348-378` | 条件真假分支与循环回跳补丁 | D-0037 控制流 |

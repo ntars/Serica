@@ -6236,6 +6236,22 @@ def main() -> int:
                 "S-3083",
             ),
             (
+                "environment-dynamic-arbitrary-text",
+                "程序=【能力=array（『stdout』，『args』），输出=readEnvironment（textConcat（『PA』，『TH』））】。\n",
+                "S-3083",
+            ),
+            (
+                "environment-dynamic-argument-text-name",
+                "程序=【能力=array（『stdout』），输出=readEnvironment（argumentText（1））】。\n",
+                "S-3083",
+            ),
+            (
+                "environment-dynamic-hidden-effect",
+                "函数 取环境变量（）能力=array（『args』）=readEnvironment（argumentText（1））。\n"
+                "程序=【能力=array（『stdout』），输出=取环境变量（）】。\n",
+                "S-4106",
+            ),
+            (
                 "environment-hidden-effect",
                 "函数 取环境变量（）能力=array（『args』）=readEnvironment（『PATH』）。\n"
                 "程序=【能力=array（『stdout』），输出=取环境变量（）】。\n",

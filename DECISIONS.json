@@ -1439,6 +1439,14 @@
       "check": "make test-p1b-runtime 通过 209 个 arm64 产物，其中 13 个映射用例覆盖删除存在键、缺失键、删除后复用、碰撞链保持和扩容后删除；make seed-audit、test-p1b-static、test-p1b-modules、test-p1b-module-effect、test-p1b-module-type、test-p1b-native-emit 通过。P1b 阶段门仍未通过。",
       "status": "settled",
       "source": "docs/decisions/0184-map-delete.md"
+    },
+    {
+      "id": "D-0185",
+      "title": "环境变量名称静态文本边界",
+      "decision": "readEnvironment 的名称参数继续保持编译期静态文本：argumentText 和任意运行时字符串均在 check 阶段以 S-3083 拒绝；不引入依赖 memset/getenv 的动态 C 字符串后端，避免未证明的寄存器与栈槽ABI。新增正反例锁定该边界。",
+      "check": "make test-p1b-runtime 通过，新增三个诊断反例覆盖任意运行时文本、argumentText 名称和隐藏效果；make seed-audit 报 12188/12200 行、归因完整，C-1 4834/12016（40.2%）；test-p1b-static、test-p1b-modules、test-p1b-module-effect、test-p1b-module-type、test-p1b-native-emit、test-p0b-scope 通过。P1b 阶段门仍未通过。",
+      "status": "settled",
+      "source": "docs/decisions/0185-environment-name-static-boundary.md"
     }
 
   ]
