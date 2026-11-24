@@ -291,8 +291,8 @@ DYNAMIC_CASES = [
 MAP_CASES = [
     ("collision update and dynamic key", RUNTIME_HASH_MAP_FIXTURE, "1\n7\n8\n14\n", "2001408\n"),
     ("twenty-one entries behind sixty-four buckets", "变量 表=映射（）。\n变量 索引=0。\n凡（索引<20）【赋值 表=映射置（表，索引，索引*索引）。赋值 索引=索引+1。】。\n赋值 表=映射置（表，65，777）。\n程序=【能力=array（『stdout』，『map.write』），输出=映射长（表）*1000000+映射取（表，14，0）*100+映射取（表，99，-1）】。\n", "", "21019599\n"),
-    ("two hundred entries grow and rehash", MAP_GROWTH_SOURCE, "", "20000001199\n"),
-    ("overwrite after growth preserves length", MAP_GROWTH_SOURCE.replace("赋值 索引=索引+1。】。", "赋值 索引=索引+1。】。\n赋值 表=映射置（表，100，-7）。"), "", "20100000499\n"),
+    ("two hundred entries grow and rehash", MAP_GROWTH_SOURCE, "", "20010001199\n"),
+    ("overwrite after growth preserves length", MAP_GROWTH_SOURCE.replace("赋值 索引=索引+1。】。", "赋值 索引=索引+1。】。\n赋值 表=映射置（表，100，-7）。"), "", "20110000499\n"),
     (
         "function map write propagation",
         "函数 写入（表）能力=array（『map.write』）=映射置（表，1，7）。\n"
@@ -312,7 +312,9 @@ MAP_CASES = [
     ("delete same key twice is idempotent", "变量 表=映射（）。\n赋值 表=映射置（表，1，10）。\n删映射键（表，1）。\n删映射键（表，1）。\n程序=【能力=array（『stdout』，『map.write』），输出=映射长（表）*10+ifElse（映射有（表，1），1，0）】。\n", "", "0\n"),
     ("delete preserves collision chain", "变量 表=映射（）。\n赋值 表=映射置（表，1，11）。\n赋值 表=映射置（表，2，22）。\n赋值 表=映射置（表，65，65）。\n赋值 表=映射置（表，129，129）。\n删映射键（表，65）。\n程序=【能力=array（『stdout』，『map.write』），输出=映射长（表）*1000000+映射取（表，1，0）*10000+映射取（表，65，0）*100+映射取（表，129，0）】。\n", "", "3110129\n"),
     ("delete after growth", "变量 表=映射（）。\n变量 索引=0。\n凡（索引<40）【赋值 表=映射置（表，索引，索引*2）。赋值 索引=索引+1。】。\n删映射键（表，20）。\n程序=【能力=array（『stdout』，『map.write』），输出=映射长（表）*1000000+映射取（表，20，-1）*10000+映射取（表，39，0）*100+映射取（表，0，0）】。\n", "", "38997800\n"),
-    ("large map rehash preserves all keys", "变量 表=映射（）。\n变量 索引=0。\n凡（索引<2000）【赋值 表=映射置（表，索引，索引*2）。赋值 索引=索引+1。】。\n程序=【能力=array（『stdout』，『map.write』），输出=映射长（表）*100000+映射取（表，1999，0）】。\n", "", "200003998\n"),
+    ("large map rehash preserves sampled keys", "变量 表=映射（）。\n变量 索引=0。\n凡（索引<2000）【赋值 表=映射置（表，索引，索引*2）。赋值 索引=索引+1。】。\n程序=【能力=array（『stdout』，『map.write』），输出=映射长（表）*100000+映射取（表，0，-1）*10000+映射取（表，1，-1）*1000+映射取（表，1000，-1）*10+映射取（表，1999，-1）】。\n", "", "200002988\n"),
+    ("large map rehash preserves all keys by sum", "变量 表=映射（）。\n变量 索引=0。\n凡（索引<2000）【赋值 表=映射置（表，索引，索引*2）。赋值 索引=索引+1。】。\n变量 合计=0。\n变量 复查=0。\n凡（复查<2000）【赋值 合计=合计+映射取（表，复查，0）。赋值 复查=复查+1。】。\n程序=【能力=array（『stdout』，『map.write』），输出=合计】。\n", "", "1643310\n"),
+    ("large map rehash preserves tail keys", "变量 表=映射（）。\n变量 索引=0。\n凡（索引<2000）【赋值 表=映射置（表，索引，索引*2）。赋值 索引=索引+1。】。\n程序=【能力=array（『stdout』，『map.write』），输出=映射长（表）*100000+映射取（表，1999，0）】。\n", "", "200003998\n"),
 ]
 RESULT_FAILURE_CASES = [
     ("static failed result value", "变量 结果=失败（7）。\n程序=【输出=结果值（结果）】。\n", "", 7),
@@ -985,6 +987,26 @@ OWNED_TEXT_RETURN_STORAGE_CASES = [
         "程序=【能力=array（『stdout』，『stdin』），输出=ifElse（equals（欢迎（输入），『行简』），1，0）】。\n",
         "行简\n",
         "1\n",
+        0,
+    ),
+    (
+        "owned text return borrowed equality in ifElse result",
+        "函数 欢迎（来源）【变量 副本=来源。返回 副本。】。\n"
+        "变量 输入=readText（）。\n"
+        "变量 副本=欢迎（输入）。\n"
+        "程序=【能力=array（『stdout』，『stdin』），输出=ifElse（equals（副本，『行简』），textLength（副本），0）】。\n",
+        "行简\n",
+        "2\n",
+        0,
+    ),
+    (
+        "owned text return borrowed inequality in ifElse result",
+        "函数 欢迎（来源）【变量 副本=来源。返回 副本。】。\n"
+        "变量 输入=readText（）。\n"
+        "变量 副本=欢迎（输入）。\n"
+        "程序=【能力=array（『stdout』，『stdin』），输出=ifElse（notEquals（副本，『其他』），textLength（副本），0）】。\n",
+        "行简\n",
+        "2\n",
         0,
     ),
     (

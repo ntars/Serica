@@ -1463,6 +1463,14 @@
       "check": "make test-p1b-runtime 通过 211 个 arm64 整数形态产物，其中 15 个映射产物新增 2000 键扩容回归；349 个编译诊断、123 个运行时拒绝样例；make seed-audit 报 12196/12200 行、归因完整、C-1 4834/12022（40.2%）；其余源码前端/模块/原生门、doctor/license/ci-preflight 通过。P1b 阶段门仍未通过。",
       "status": "settled",
       "source": "docs/decisions/0187-map-grow-rehash-old-bucket-root-cause.md"
+    },
+    {
+      "id": "D-0188",
+      "title": "映射扩容空桶探测与写入帧边界",
+      "decision": "保留 D-0187 旧桶指针/容量保存与空槽跳过意图；空槽探测必须读取 sp+72 保存的旧桶数组并按 8 字节指针槽寻址，不再误读新表；映射写入帧扩到 96 字节，覆盖扩容例程写入 sp+80 的旧容量槽。哈希常量、节点布局、扩容阈值与负载因子不变。",
+      "check": "make test-p1b-runtime 通过 212 个 arm64 整数形态产物，其中 16 个映射用例含 2000 键扩容后采样键 0/1/1000/1999 查询、200 键覆盖与尾键、删除与碰撞链；349 个编译诊断、123 个运行时拒绝样例。增量探针覆盖 48/100/200/512/1000/1536/1600/2000 键映射长度与采样键查询。P1b 阶段门仍未通过。",
+      "status": "settled",
+      "source": "docs/decisions/0188-map-rehash-scratch-clobber.md"
     }
   ]
 }

@@ -4440,10 +4440,10 @@ func (c *windowCode) emitRuntimeMapGrow(name string) error {
 	outer := len(c.words)
 	c.words = append(c.words, loadIntegerSlot(1, 31, 56), compareRegister(7, 1))
 	outerDone := c.conditionalPlaceholder(10) // b.ge
-	c.words = append(c.words, loadIntegerSlot(1, 31, 80), subImmediate(1, 1, 1), andRegister(1, 6, 1), loadIntegerSlot(0, 19, mapSlot.data), addRegisterShifted(0, 0, 1, 3), loadIntegerSlot(0, 0, 0), compareImmediate(0, 0))
+	// 旧桶数组是 8 字节指针槽；空槽说明没有待迁移节点。原实现用新表基址和
+	// 新容量掩码探测，导致扩容时错误跳过几乎所有旧桶。
+	c.words = append(c.words, loadIntegerSlot(1, 31, 80), subImmediate(1, 1, 1), andRegister(1, 7, 1), loadIntegerSlot(0, 31, 72), addRegisterShifted(0, 0, 1, 3), loadIntegerSlot(0, 0, 0), compareImmediate(0, 0))
 	emptyOldBucket := c.conditionalPlaceholder(0)
-	c.words = append(c.words, loadIntegerSlot(0, 31, 80), logicalShiftLeft(0, 0, 3), loadIntegerSlot(1, 31, 72), addRegister(0, 0, 1), addRegister(0, 0, 0))
-	emptySkip := c.unconditionalPlaceholder()
 	c.words = append(c.words, loadIntegerSlot(3, 31, 72), addRegisterShifted(3, 3, 7, 3), loadIntegerSlot(4, 3, 0))
 	inner := len(c.words)
 	c.words = append(c.words, compareImmediate(4, 0))
@@ -4455,11 +4455,13 @@ func (c *windowCode) emitRuntimeMapGrow(name string) error {
 	c.words = append(c.words, multiplyRegister(0, 0, 2), loadIntegerSlot(1, 31, 64), subImmediate(1, 1, 1), andRegister(0, 0, 1), loadIntegerSlot(3, 19, mapSlot.data), addRegisterShifted(3, 3, 0, 3), loadIntegerSlot(6, 3, 0), storeIntegerSlot(6, 4, 16), storeIntegerSlot(4, 3, 0))
 	c.movRegister(4, 5)
 	c.words = append(c.words, branch(inner-len(c.words)))
-	c.patchConditional(innerDone, len(c.words))
+	// 空旧桶和走完碰撞链都必须进入下一桶；不能跳到重散列收束点，否则
+	// 第一个空桶会提前结束整个旧表遍历，后续键全部丢失。
+	nextBucket := len(c.words)
 	c.words = append(c.words, addImmediate(7, 7, 1), branch(outer-len(c.words)))
+	c.patchConditional(innerDone, len(c.words))
+	c.patchConditional(emptyOldBucket, nextBucket)
 	c.patchConditional(outerDone, len(c.words))
-	c.words[emptySkip] = branch(len(c.words) - emptySkip)
-	c.patchConditional(emptyOldBucket, len(c.words))
 	c.words = append(c.words, loadIntegerSlot(0, 31, 48), loadIntegerSlot(1, 31, 56), logicalShiftLeft(1, 1, 3))
 	c.call(c.arrayUnmapIndex)
 	c.words = append(c.words, compareImmediate(0, 0))
@@ -4476,7 +4478,7 @@ func (c *windowCode) emitRuntimeMapSet(input value, constants map[string]constan
 	if !exists {
 		return fmt.Errorf("原生映射写入无法解析变量：%s", name)
 	}
-	c.words = append(c.words, subImmediate(31, 31, 80))
+	c.words = append(c.words, subImmediate(31, 31, 96))
 	if err := c.emitRuntimeInteger(input.args[1], constants, slots); err != nil {
 		return err
 	}
@@ -4530,7 +4532,7 @@ func (c *windowCode) emitRuntimeMapSet(input value, constants map[string]constan
 	c.words = append(c.words, multiplyRegister(2, 0, 1), loadIntegerSlot(1, 19, mapSlot.capacity), subImmediate(1, 1, 1), andRegister(2, 2, 1), loadIntegerSlot(1, 19, mapSlot.data), addRegisterShifted(1, 1, 2, 3), loadIntegerSlot(3, 1, 0), loadIntegerSlot(0, 31, 48), storeIntegerSlot(3, 0, 16), storeIntegerSlot(0, 1, 0), loadIntegerSlot(1, 19, mapSlot.length), addImmediate(1, 1, 1), storeIntegerSlot(1, 19, mapSlot.length))
 	c.patchConditional(found, foundBlock)
 	c.words[foundDone] = branch(len(c.words) - foundDone)
-	c.words = append(c.words, addImmediate(31, 31, 80))
+	c.words = append(c.words, addImmediate(31, 31, 96))
 	return nil
 }
 func (c *windowCode) emitRuntimeMapDelete(input value, constants map[string]constantValue, slots map[string]uint32) error {

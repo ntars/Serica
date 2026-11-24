@@ -1059,7 +1059,7 @@ func validateRuntimeTextReturnCalls(program *program) *issue {
 		if field.name.text == "输出" && call.kind == "调用" && call.runtimeFunction && call.runtimeFunctionText && !valuesContainRuntimeTextReturnCall(call.args) {
 			continue
 		}
-		if field.name.text == "输出" && runtimeTextReturnCallAsBorrowedTextArgument(field.value) {
+		if field.name.text == "输出" && isTextReturnBorrowConsumer(field.value) && runtimeTextReturnCallAsBorrowedTextArgument(field.value) {
 			continue
 		}
 		if !runtimeTextReturnCallAsBorrowedTextArgument(field.value) && containsRuntimeTextReturnCall(field.value) {
@@ -4577,7 +4577,7 @@ func allowsRuntimeTextReturnCall(item statement) bool {
 	return (item.kind == "变量" || item.kind == "赋值") &&
 		(isTextReturnCall(item.value) || runtimeTextReturnCallAsBorrowedTextArgument(item.value))
 }
-func isRuntimeTextReturnBorrowConsumer(input value) bool {
+func isTextReturnBorrowConsumer(input value) bool {
 	if input.kind != "调用" {
 		return false
 	}
@@ -4594,7 +4594,7 @@ func runtimeTextReturnCallAsBorrowedTextArgument(input value) bool {
 	if input.text == "ifElse" && len(input.args) == 3 {
 		condition := input.args[0]
 		if containsRuntimeTextReturnCall(condition) {
-			if !(condition.kind == "调用" && isRuntimeTextReturnBorrowConsumer(condition) && runtimeTextReturnCallAsBorrowedTextArgument(condition)) {
+			if !(condition.kind == "调用" && isTextReturnBorrowConsumer(condition) && runtimeTextReturnCallAsBorrowedTextArgument(condition)) {
 				return false
 			}
 		}
