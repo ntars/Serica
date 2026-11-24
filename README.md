@@ -417,7 +417,7 @@ Serica/
 | 问题描述 | 影响范围 | 临时规避方案 | 跟踪链接 |
 | --- | --- | --- | --- |
 | `serica lex` 未接入通用 NFC 校验，示例靠 `punct-scan` 单独检查 | 词法层 | 提交前跑 `build/punct-scan <源码>` | P1b 后续任务 |
-| GitHub Actions 已配置 `zero`、`independence` 与 macOS `shell` 门；CI 远端结果、窗口交互、安装器、签名公证和多机验证仍未证明 | 合并前的自动把关 | CI 运行 `python3 tools/ci-preflight.py` 及完整 `make` 门；本地继续跑 `make doctor`、`build/punct-scan`、`./tools/check-independence source` | 后续核验远端运行记录与平台交互 |
+| GitHub Actions 已配置 `zero`、`independence` 与 macOS `shell` 门；远端运行因 HTTPS 推送凭据无效尚未证明，窗口交互、安装器、签名公证和多机验证仍未证明 | 合并前的自动把关 | CI 运行 `python3 tools/ci-preflight.py` 及完整 `make` 门；本地继续跑 `make doctor`、`build/punct-scan`、`./tools/check-independence source` | 后续核验远端运行记录与平台交互 |
 | 窗口关闭回调、系统中文输入法、其他 macOS 版本未核验 | 产物可用性 | 只在当前机器验证过的场景使用 | 平台交互矩阵 |
 | 未做第二台物理机器复验 | 可复现性结论强度 | 视为单机结论 | P3b |
 

@@ -1415,6 +1415,14 @@
       "check": "zero、independence、shell 三个 job 均在 push、pull_request、workflow_dispatch 上触发；本地 python3 tools/ci-preflight.py、make license、git diff --check 通过，远端 CI 运行结果仍需实际运行记录证明。",
       "status": "settled",
       "source": "docs/decisions/0181-ci-independence-job.md"
+    },
+    {
+      "id": "D-0182",
+      "title": "远端 CI 运行凭据阻塞",
+      "decision": "本地已提交 codex/serica-ci-and-doc-sync 并配置 zero、independence、shell 三个 GitHub Actions job；git push 返回 Invalid username or token，远端分支和工作流运行未创建。不把本地命令序列写成远端 CI 已通过；提供可用 HTTPS 凭据或 SSH 权限后推送该分支并读取三个 job 结果。窗口交互、签名公证和多机验证继续分别验收。",
+      "check": "git push -u origin codex/serica-ci-and-doc-sync 返回认证失败；本地 ci-preflight、license、全量源码门通过。远端运行记录尚未取得。",
+      "status": "pending",
+      "source": "docs/decisions/0182-remote-ci-credential-blocker.md"
     }
   ]
 }

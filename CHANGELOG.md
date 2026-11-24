@@ -2,6 +2,7 @@
 
 ### 新增/修复
 
+- 记录远端 CI 阻塞：本地工作流与门通过，但 HTTPS 推送凭据被拒，未生成远端运行记录。
 - 扩展 GitHub Actions：新增 Linux `independence` job，自动检查源码独立性与许可原文。
 - 扩展 GitHub Actions：macOS arm64 job 校验 Go 1.27.4 下载摘要，并运行 doctor、许可、种子审计、CI 前置检查和全部 P0b/P1b 原生门。
 - 增加 GitHub Actions `zero` 前置工作流和 `tools/ci-preflight.py`，在 Linux 上核验决策记录、种子边界与源码独立性；本地可用 `make ci-preflight` 复跑。

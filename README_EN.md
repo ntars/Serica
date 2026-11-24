@@ -418,7 +418,7 @@ Explicitly unsupported: iOS JIT, 32-bit desktops, Windows 7/8, Android 7 and old
 | Issue | Scope | Workaround | Tracking |
 | --- | --- | --- | --- |
 | `serica lex` does not run the general NFC check; examples are covered separately by `punct-scan` | Lexer | Run `build/punct-scan <source>` before committing | Follow-up P1b task |
-| GitHub Actions now defines `zero`, `independence` and macOS `shell` gates; remote CI results, window interaction, installers, signing/notarization and multi-machine validation remain unproven | Automated gating before merge | CI runs `python3 tools/ci-preflight.py` and the full `make` suite; run `make doctor`, `build/punct-scan` and `./tools/check-independence source` locally | Verify remote runs and platform interaction later |
+| GitHub Actions now defines `zero`, `independence` and macOS `shell` gates; remote CI runs remain unproven because HTTPS push credentials were rejected, and window interaction, installers, signing/notarization and multi-machine validation remain unproven | Automated gating before merge | CI runs `python3 tools/ci-preflight.py` and the full `make` suite; run `make doctor`, `build/punct-scan` and `./tools/check-independence source` locally | Verify remote runs and platform interaction later |
 | Window close callbacks, the system Chinese input method and other macOS versions are unverified | Artifact usability | Use only what has been verified on this machine | Platform interaction matrix |
 | No re-verification on a second physical machine | Strength of the reproducibility claim | Treat it as a single-machine result | P3b |
 
