@@ -1423,6 +1423,14 @@
       "check": "git push -u origin codex/serica-ci-and-doc-sync 返回认证失败；本地 ci-preflight、license、全量源码门通过。远端运行记录尚未取得。",
       "status": "pending",
       "source": "docs/decisions/0182-remote-ci-credential-blocker.md"
+    },
+    {
+      "id": "D-0183",
+      "title": "开发者预览 v0.1.0-dev.16 发布复验",
+      "decision": "将 CI 前置检查、三个 GitHub Actions job、远端凭据阻塞记录与中英文文档同步纳入当前开发者预览版本，重新生成发布目录、压缩包、逐文件 SHA-256、SBOM 和归档 SHA-256，并复跑发布包、隔离 prefix 安装与卸载；包格式和平台边界沿用 D-0141/D-0142。",
+      "check": "本地完整源码门、CI 前置检查、许可检查、make release、make test-release 与 tools/test_install.py 通过；远端 CI 运行因推送凭据被拒仍未证明。P1b 阶段门仍未闭合，不是正式版本、安装器或已公证分发。",
+      "status": "settled",
+      "source": "docs/decisions/0183-developer-preview-dev16.md"
     }
   ]
 }

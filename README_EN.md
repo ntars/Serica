@@ -35,7 +35,7 @@ A Chinese-first programming language is not a new idea, and the hard part is not
 
 The design priorities are ordered and must not be rearranged: multi-device sync, capability-based side effects, single-threaded UI with message passing, interface-as-data, and full Chinese expression. Chinese is the medium, not the selling point; the difference has to land in *the cost of building a multi-device sync app*.
 
-The repository is at pre-alpha: the stage0 seed compiler can compile a restricted source program into a macOS arm64 Mach-O, and the artifact opens a native window that displays and edits Chinese text. The language itself is far from formed, and this repository **cannot be used to write any production software** today. The current product landing is the [v0.1.0-dev.14 developer-preview source-and-runtime bundle](RELEASE.md): it can be extracted, verified, built and run, and supports optional local prefix install/uninstall, but it is not a system installer, app bundle, or notarized distribution.
+The repository is at pre-alpha: the stage0 seed compiler can compile a restricted source program into a macOS arm64 Mach-O, and the artifact opens a native window that displays and edits Chinese text. The language itself is far from formed, and this repository **cannot be used to write any production software** today. The current product landing is the [v0.1.0-dev.16 developer-preview source-and-runtime bundle](RELEASE.md): it can be extracted, verified, built and run, and supports optional local prefix install/uninstall, but it is not a system installer, app bundle, or notarized distribution.
 
 **Where it fits**
 
@@ -441,7 +441,7 @@ The root program accepts one `窗口` or one `程序` binding. Compile-time cons
 
 ## Changelog
 
-Version changes follow semantic versioning and the Keep a Changelog structure; the full record is in [CHANGELOG.md](CHANGELOG.md). No formal language version has been released yet; `v0.1.0-dev.14` is only a developer-preview distribution, see [RELEASE.md](RELEASE.md) and [ACCEPTANCE.md](ACCEPTANCE.md).
+Version changes follow semantic versioning and the Keep a Changelog structure; the full record is in [CHANGELOG.md](CHANGELOG.md). No formal language version has been released yet; `v0.1.0-dev.16` is only a developer-preview distribution, see [RELEASE.md](RELEASE.md) and [ACCEPTANCE.md](ACCEPTANCE.md).
 
 ## Roadmap
 

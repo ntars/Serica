@@ -33,7 +33,7 @@
 
 设计原点按优先级排列，不得颠倒：多端同步、能力式副作用、单线程 UI 与消息传递、界面即数据、全中文表达。全中文是表达媒介，不作为差异卖点；差异必须落在「多端同步应用的开发成本」上。
 
-当前仓库处于 pre-alpha：种子编译器 stage0 已能把受限源程序编译成 macOS arm64 Mach-O，产物打开原生窗口并显示、编辑中文。语言本身远未成形，这个仓库现在**不能用来写任何生产软件**。当前产品落地形态是 [v0.1.0-dev.14 开发者预览源码运行时包](RELEASE.md)：可解压、校验、构建并运行示例，支持可选本地 prefix 安装/卸载，但不是系统安装器、`.app` 或已公证分发。
+当前仓库处于 pre-alpha：种子编译器 stage0 已能把受限源程序编译成 macOS arm64 Mach-O，产物打开原生窗口并显示、编辑中文。语言本身远未成形，这个仓库现在**不能用来写任何生产软件**。当前产品落地形态是 [v0.1.0-dev.16 开发者预览源码运行时包](RELEASE.md)：可解压、校验、构建并运行示例，支持可选本地 prefix 安装/卸载，但不是系统安装器、`.app` 或已公证分发。
 
 **适用场景**
 
@@ -440,7 +440,7 @@ Serica/
 
 ## 更新日志
 
-版本变更遵循语义化版本与 Keep a Changelog 结构，完整记录见 [CHANGELOG.md](CHANGELOG.md)。当前尚无正式语言版本；`v0.1.0-dev.14` 仅为开发者预览分发包，见 [RELEASE.md](RELEASE.md) 与 [ACCEPTANCE.md](ACCEPTANCE.md)。
+版本变更遵循语义化版本与 Keep a Changelog 结构，完整记录见 [CHANGELOG.md](CHANGELOG.md)。当前尚无正式语言版本；`v0.1.0-dev.16` 仅为开发者预览分发包，见 [RELEASE.md](RELEASE.md) 与 [ACCEPTANCE.md](ACCEPTANCE.md)。
 
 ## 后续路线图
 
