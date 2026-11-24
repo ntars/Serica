@@ -120,7 +120,7 @@ import sys
 root, version = pathlib.Path(sys.argv[1]), sys.argv[2]
 artifacts = []
 for path in sorted(root.rglob("*")):
-    if path.is_file() and path.name != "SHA256SUMS":
+    if path.is_file() and path.name != "SHA256SUMS" and not path.name.endswith(".uploading.cfg"):
         digest = hashlib.sha256(path.read_bytes()).hexdigest()
         artifacts.append({
             "path": path.relative_to(root).as_posix(),
@@ -158,7 +158,7 @@ sbom_path = root / "sbom.json"
 checksum_path = root / "SHA256SUMS"
 artifacts = []
 for path in sorted(root.rglob("*")):
-    if path.is_file() and path not in (sbom_path, checksum_path):
+    if path.is_file() and path not in (sbom_path, checksum_path) and not path.name.endswith(".uploading.cfg"):
         artifacts.append({
             "path": path.relative_to(root).as_posix(),
             "sha256": hashlib.sha256(path.read_bytes()).hexdigest(),

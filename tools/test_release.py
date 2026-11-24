@@ -75,7 +75,8 @@ def verify(release: pathlib.Path) -> dict:
         checksums[name.strip()] = value
     entries = sorted(path.relative_to(release).as_posix()
                      for path in release.rglob("*")
-                     if path.is_file() and path.name != "SHA256SUMS")
+                     if path.is_file() and path.name != "SHA256SUMS"
+                     and not path.name.endswith(".uploading.cfg"))
     if not entries or set(checksums) != set(entries):
         raise RuntimeError("SHA256SUMS 与发布目录文件集合不一致")
     generated = ("bin/console", "bin/window")

@@ -4459,7 +4459,7 @@ func (c *windowCode) emitRuntimeMapGrow(name string) error {
 	// 第一个空桶会提前结束整个旧表遍历，后续键全部丢失。
 	nextBucket := len(c.words)
 	c.words = append(c.words, addImmediate(7, 7, 1), branch(outer-len(c.words)))
-	c.patchConditional(innerDone, len(c.words))
+	c.patchConditional(innerDone, nextBucket)
 	c.patchConditional(emptyOldBucket, nextBucket)
 	c.patchConditional(outerDone, len(c.words))
 	c.words = append(c.words, loadIntegerSlot(0, 31, 48), loadIntegerSlot(1, 31, 56), logicalShiftLeft(1, 1, 3))

@@ -1471,6 +1471,14 @@
       "check": "make test-p1b-runtime 通过 212 个 arm64 整数形态产物，其中 16 个映射用例含 2000 键扩容后采样键 0/1/1000/1999 查询、200 键覆盖与尾键、删除与碰撞链；349 个编译诊断、123 个运行时拒绝样例。增量探针覆盖 48/100/200/512/1000/1536/1600/2000 键映射长度与采样键查询。P1b 阶段门仍未通过。",
       "status": "settled",
       "source": "docs/decisions/0188-map-rehash-scratch-clobber.md"
+    },
+    {
+      "id": "D-0189",
+      "title": "映射扩容碰撞链尾提前收束根因修复",
+      "decision": "emitRuntimeMapGrow 的碰撞链尾必须跳到 nextBucket 继续遍历旧桶；只有外层计数耗尽才进入重散列收束与旧表释放。保留 D-0187/D-0188 的旧桶保存、旧桶探测和 96 字节写入帧，不改变哈希常量、节点布局、扩容阈值与整数键边界。",
+      "check": "make test-p1b-runtime 通过 213 个 arm64 整数形态产物，其中 17 个映射用例；2000 键真实全量求和为 1644968；349 个编译诊断、123 个运行时拒绝样例。10/48/2000 键增量探针与 12198/12200 行种子审计通过。源码、模块、原生发射、doctor、license 与 ci-preflight 全门复跑通过。P1b 阶段门仍未通过。",
+      "status": "settled",
+      "source": "docs/decisions/0189-map-rehash-chain-tail-root-cause.md"
     }
   ]
 }
