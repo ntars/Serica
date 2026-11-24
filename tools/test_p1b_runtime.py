@@ -291,8 +291,8 @@ DYNAMIC_CASES = [
 MAP_CASES = [
     ("collision update and dynamic key", RUNTIME_HASH_MAP_FIXTURE, "1\n7\n8\n14\n", "2001408\n"),
     ("twenty-one entries behind sixty-four buckets", "变量 表=映射（）。\n变量 索引=0。\n凡（索引<20）【赋值 表=映射置（表，索引，索引*索引）。赋值 索引=索引+1。】。\n赋值 表=映射置（表，65，777）。\n程序=【能力=array（『stdout』，『map.write』），输出=映射长（表）*1000000+映射取（表，14，0）*100+映射取（表，99，-1）】。\n", "", "21019599\n"),
-    ("two hundred entries grow and rehash", MAP_GROWTH_SOURCE, "", "20010111199\n"),
-    ("overwrite after growth preserves length", MAP_GROWTH_SOURCE.replace("赋值 索引=索引+1。】。", "赋值 索引=索引+1。】。\n赋值 表=映射置（表，100，-7）。"), "", "20010000499\n"),
+    ("two hundred entries grow and rehash", MAP_GROWTH_SOURCE, "", "20000001199\n"),
+    ("overwrite after growth preserves length", MAP_GROWTH_SOURCE.replace("赋值 索引=索引+1。】。", "赋值 索引=索引+1。】。\n赋值 表=映射置（表，100，-7）。"), "", "20100000499\n"),
     (
         "function map write propagation",
         "函数 写入（表）能力=array（『map.write』）=映射置（表，1，7）。\n"
@@ -312,6 +312,7 @@ MAP_CASES = [
     ("delete same key twice is idempotent", "变量 表=映射（）。\n赋值 表=映射置（表，1，10）。\n删映射键（表，1）。\n删映射键（表，1）。\n程序=【能力=array（『stdout』，『map.write』），输出=映射长（表）*10+ifElse（映射有（表，1），1，0）】。\n", "", "0\n"),
     ("delete preserves collision chain", "变量 表=映射（）。\n赋值 表=映射置（表，1，11）。\n赋值 表=映射置（表，2，22）。\n赋值 表=映射置（表，65，65）。\n赋值 表=映射置（表，129，129）。\n删映射键（表，65）。\n程序=【能力=array（『stdout』，『map.write』），输出=映射长（表）*1000000+映射取（表，1，0）*10000+映射取（表，65，0）*100+映射取（表，129，0）】。\n", "", "3110129\n"),
     ("delete after growth", "变量 表=映射（）。\n变量 索引=0。\n凡（索引<40）【赋值 表=映射置（表，索引，索引*2）。赋值 索引=索引+1。】。\n删映射键（表，20）。\n程序=【能力=array（『stdout』，『map.write』），输出=映射长（表）*1000000+映射取（表，20，-1）*10000+映射取（表，39，0）*100+映射取（表，0，0）】。\n", "", "38997800\n"),
+    ("large map rehash preserves all keys", "变量 表=映射（）。\n变量 索引=0。\n凡（索引<2000）【赋值 表=映射置（表，索引，索引*2）。赋值 索引=索引+1。】。\n程序=【能力=array（『stdout』，『map.write』），输出=映射长（表）*100000+映射取（表，1999，0）】。\n", "", "200003998\n"),
 ]
 RESULT_FAILURE_CASES = [
     ("static failed result value", "变量 结果=失败（7）。\n程序=【输出=结果值（结果）】。\n", "", 7),

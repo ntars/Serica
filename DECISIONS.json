@@ -1455,6 +1455,14 @@
       "check": "make test-p1b-runtime 通过 210 个 arm64 整数形态产物，其中 14 个映射产物覆盖存在键、缺失键、同键重复删除、碰撞链保持和扩容后删除；349 个编译诊断和 123 个运行时拒绝样例；make seed-audit 报 12189/12200 行、归因完整，C-1 4834/12016（40.2%）；test-p1b-static、test-p1b-modules、test-p1b-module-effect、test-p1b-module-type、test-p1b-native-emit、test-p0b-scope、ci-preflight 通过。P1b 阶段门仍未通过。",
       "status": "settled",
       "source": "docs/decisions/0186-map-delete-bucket-slot-root-cause.md"
+    },
+    {
+      "id": "D-0187",
+      "title": "映射扩容重散列保留旧桶指针",
+      "decision": "emitRuntimeMapGrow 在调用 mmap 前把旧桶数组指针和旧容量保存到 sp+72/sp+80，重散列遍历旧桶而非被 x2 覆盖的新映射地址；跳过已被先前碰撞链清空的旧桶槽，避免重复插入和加载因子误判。只改扩容发射，不改变整数键边界和 3/4 负载策略。",
+      "check": "make test-p1b-runtime 通过 211 个 arm64 整数形态产物，其中 15 个映射产物新增 2000 键扩容回归；349 个编译诊断、123 个运行时拒绝样例；make seed-audit 报 12196/12200 行、归因完整、C-1 4834/12022（40.2%）；其余源码前端/模块/原生门、doctor/license/ci-preflight 通过。P1b 阶段门仍未通过。",
+      "status": "settled",
+      "source": "docs/decisions/0187-map-grow-rehash-old-bucket-root-cause.md"
     }
   ]
 }

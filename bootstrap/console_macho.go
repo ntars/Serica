@@ -4426,7 +4426,7 @@ func (c *windowCode) emitRuntimeMapGrow(name string) error {
 	if !exists {
 		return fmt.Errorf("无法扩容映射变量：%s", name)
 	}
-	c.words = append(c.words, loadIntegerSlot(1, 19, mapSlot.capacity), loadIntegerSlot(2, 19, mapSlot.data))
+	c.words = append(c.words, loadIntegerSlot(1, 19, mapSlot.capacity), loadIntegerSlot(2, 19, mapSlot.data), storeIntegerSlot(2, 31, 72), storeIntegerSlot(1, 31, 80))
 	if err := c.emitRegisterImmediate(3, 1<<24); err != nil {
 		return err
 	}
@@ -4440,7 +4440,11 @@ func (c *windowCode) emitRuntimeMapGrow(name string) error {
 	outer := len(c.words)
 	c.words = append(c.words, loadIntegerSlot(1, 31, 56), compareRegister(7, 1))
 	outerDone := c.conditionalPlaceholder(10) // b.ge
-	c.words = append(c.words, loadIntegerSlot(3, 31, 48), addRegisterShifted(3, 3, 7, 3), loadIntegerSlot(4, 3, 0))
+	c.words = append(c.words, loadIntegerSlot(1, 31, 80), subImmediate(1, 1, 1), andRegister(1, 6, 1), loadIntegerSlot(0, 19, mapSlot.data), addRegisterShifted(0, 0, 1, 3), loadIntegerSlot(0, 0, 0), compareImmediate(0, 0))
+	emptyOldBucket := c.conditionalPlaceholder(0)
+	c.words = append(c.words, loadIntegerSlot(0, 31, 80), logicalShiftLeft(0, 0, 3), loadIntegerSlot(1, 31, 72), addRegister(0, 0, 1), addRegister(0, 0, 0))
+	emptySkip := c.unconditionalPlaceholder()
+	c.words = append(c.words, loadIntegerSlot(3, 31, 72), addRegisterShifted(3, 3, 7, 3), loadIntegerSlot(4, 3, 0))
 	inner := len(c.words)
 	c.words = append(c.words, compareImmediate(4, 0))
 	innerDone := c.conditionalPlaceholder(0) // b.eq
@@ -4454,6 +4458,8 @@ func (c *windowCode) emitRuntimeMapGrow(name string) error {
 	c.patchConditional(innerDone, len(c.words))
 	c.words = append(c.words, addImmediate(7, 7, 1), branch(outer-len(c.words)))
 	c.patchConditional(outerDone, len(c.words))
+	c.words[emptySkip] = branch(len(c.words) - emptySkip)
+	c.patchConditional(emptyOldBucket, len(c.words))
 	c.words = append(c.words, loadIntegerSlot(0, 31, 48), loadIntegerSlot(1, 31, 56), logicalShiftLeft(1, 1, 3))
 	c.call(c.arrayUnmapIndex)
 	c.words = append(c.words, compareImmediate(0, 0))
