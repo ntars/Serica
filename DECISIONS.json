@@ -1343,6 +1343,78 @@
       "check": "运行时门新增目录/文件/缺失、静态路径、导入白名单和三类诊断反例；模块效果门覆盖共享 filesystem.read 能力图，模块类型门新增 S-3081 位置诊断。全量门通过，活动种子 11860/12000 行、C-1 4794/11702（41.0%）。P1b 阶段门仍未通过。",
       "status": "settled",
       "source": "docs/decisions/0172-directory-type-metadata.md"
+    },
+    {
+      "id": "D-0173",
+      "title": "临时自举桥行数预算扩至 12200",
+      "decision": "按所有者对临时种子预算可随必要实现扩额的一贯授权，将活动 Go 种子上限由 12000 行提高至 12200 行。调整只覆盖临时自举桥的机器行数上限，不放宽 Go 子集、逐行归因、许可证、依赖、源码/产物独立性、平台符号、C-1 复核和 P3b 整体删除硬门；后续接近上限仍须优先压缩或重构并另立决策。",
+      "check": "python3 tools/check_seed_subset.py 与 make seed-audit 对 10 个活动源码文件、12077 行报通过且归因完整；全量源码门与 P1b 原生运行时门复跑通过。本决定不代表 P1b、P2b 或自举不动点完成。",
+      "status": "settled",
+      "source": "docs/decisions/0173-bootstrap-budget-12200.md"
+    },
+    {
+      "id": "D-0174",
+      "title": "开发者预览 v0.1.0-dev.10 发布复验",
+      "decision": "在 D-0173 的种子预算调整与环境变量名称枚举测试边界修正后，将开发者预览版本从 v0.1.0-dev.9 递增至 v0.1.0-dev.10，重新生成发布目录、压缩包、逐文件 SHA-256、SBOM 和归档 SHA-256，并复跑发布包、隔离 prefix 安装与卸载；包格式和平台边界沿用 D-0141/D-0142。",
+      "check": "22 个源码/构建/文档硬门串行通过；make release 与 make test-release 通过；活动种子 12077/12200 行、归因完整，C-1 4799/11906（40.3%）。版本递增不改变 P1b 未通过、未公证、未多机验证和未法务复核的事实。",
+      "status": "settled",
+      "source": "docs/decisions/0174-developer-preview-dev10.md"
+    },
+    {
+      "id": "D-0175",
+      "title": "开发者预览 v0.1.0-dev.11 发布复验",
+      "decision": "在环境变量名称枚举测试边界修正与临时自举桥死代码清理后，将开发者预览版本从 v0.1.0-dev.10 递增至 v0.1.0-dev.11，重新生成发布目录、压缩包、逐文件 SHA-256、SBOM 和归档 SHA-256，并复跑发布包、隔离 prefix 安装与卸载；包格式和平台边界沿用 D-0141/D-0142。",
+      "check": "22 个源码/构建/文档硬门串行通过；make release、make test-release 与 tools/test_install.py 通过；活动种子 12077/12200 行、归因完整，C-1 4799/11906（40.3%）。版本递增不改变 P1b 未通过、未公证、未多机验证和未法务复核的事实。",
+      "status": "settled",
+      "source": "docs/decisions/0175-developer-preview-dev11.md"
+    },
+    {
+      "id": "D-0176",
+      "title": "开发者预览 v0.1.0-dev.12 发布复验",
+      "decision": "在环境变量名称枚举测试改为按实际 _environ 顺序验收后，将开发者预览版本从 v0.1.0-dev.11 递增至 v0.1.0-dev.12，重新生成发布目录、压缩包、逐文件 SHA-256、SBOM 和归档 SHA-256，并复跑发布包、隔离 prefix 安装与卸载；包格式和平台边界沿用 D-0141/D-0142。",
+      "check": "22 个源码/构建/文档硬门串行通过；make release、make test-release 与 tools/test_install.py 通过；活动种子 12077/12200 行、归因完整，C-1 4799/11906（40.3%）。版本递增不改变 P1b 未通过、未公证、未多机验证和未法务复核的事实。",
+      "status": "settled",
+      "source": "docs/decisions/0176-developer-preview-dev12.md"
+    },
+    {
+      "id": "D-0177",
+      "title": "开发者预览 v0.1.0-dev.13 发布复验",
+      "decision": "在同步中英文首页和发布说明的当前版本、种子行数与文件/环境边界后，将开发者预览版本从 v0.1.0-dev.12 递增至 v0.1.0-dev.13，重新生成发布目录、压缩包、逐文件 SHA-256、SBOM 和归档 SHA-256，并复跑发布包、隔离 prefix 安装与卸载；包格式和平台边界沿用 D-0141/D-0142。",
+      "check": "22 个源码/构建/文档硬门串行通过；make release、make test-release 与 tools/test_install.py 通过；活动种子 12077/12200 行、归因完整，C-1 4799/11906（40.3%）。版本递增不改变 P1b 未通过、未公证、未多机验证和未法务复核的事实。",
+      "status": "settled",
+      "source": "docs/decisions/0177-developer-preview-dev13.md"
+    },
+    {
+      "id": "D-0178",
+      "title": "开发者预览 v0.1.0-dev.14 发布复验",
+      "decision": "在修正中英文首页种子徽标、临时上限和审计样例并同步发布说明后，将开发者预览版本从 v0.1.0-dev.13 递增至 v0.1.0-dev.14，重新生成发布目录、压缩包、逐文件 SHA-256、SBOM 和归档 SHA-256，并复跑发布包、隔离 prefix 安装与卸载；包格式和平台边界沿用 D-0141/D-0142。",
+      "check": "22 个源码/构建/文档硬门串行通过；make release、make test-release 与 tools/test_install.py 通过；活动种子 12077/12200 行、归因完整，C-1 4799/11906（40.3%）。版本递增不改变 P1b 未通过、未公证、未多机验证和未法务复核的事实。",
+      "status": "settled",
+      "source": "docs/decisions/0178-developer-preview-dev14.md"
+    },
+    {
+      "id": "D-0179",
+      "title": "CI zero 前置检查工作流",
+      "decision": "新增 .github/workflows/preflight.yml 与 tools/ci-preflight.py：GitHub Actions 在 Linux 上校验 DECISIONS.json 编号与记录文件、种子子集机器边界和源码独立性；新增 make ci-preflight 供本地复跑。该 job 只覆盖跨平台零知识前置检查，不替代 macOS 原生门、窗口交互、签名公证或多机验证。",
+      "check": "python3 tools/ci-preflight.py 通过；python3 tools/check_seed_subset.py 报 10 个活动源码文件、12077 行、归因完整；./tools/check-independence source 通过；README 中英文风险表同步说明剩余 CI 缺口。",
+      "status": "settled",
+      "source": "docs/decisions/0179-ci-zero-preflight.md"
+    },
+    {
+      "id": "D-0180",
+      "title": "CI 原生门工作流",
+      "decision": "扩展 .github/workflows/preflight.yml：除 Linux 的 zero 前置检查外，在 macOS arm64 运行 shell 门。工作流下载并校验 DEPENDENCIES.md 登记的 Go go1.27.4 tarball 摘要，然后串行执行 doctor、许可、种子审计、CI 前置检查、stage0 与全部 P0b/P1b 静态、模块、运行时和原生发射门。本门不替代窗口交互、真实安装器、签名公证、多机验证或正式法务复核。",
+      "check": "工作流 YAML 中 zero 与 shell 两个 job 均在 push、pull_request、workflow_dispatch 上触发；shell job 固定 go1.27.4，逐字校验 91a44a2b8a716600ad94a4f143e156116620db8828086a6e3602291be9bd0bb4 后构建；本地同一命令序列通过，CI 远端执行仍需工作流实际运行记录证明。",
+      "status": "settled",
+      "source": "docs/decisions/0180-ci-native-gates.md"
+    },
+    {
+      "id": "D-0181",
+      "title": "CI independence 工作流",
+      "decision": "在 .github/workflows/preflight.yml 增加 independence job：Linux 上运行 python3 tools/check_independence.py source 与 make license，使源码独立性和许可原文检查进入自动门；窗口交互、签名公证和多机验证继续单列。",
+      "check": "zero、independence、shell 三个 job 均在 push、pull_request、workflow_dispatch 上触发；本地 python3 tools/ci-preflight.py、make license、git diff --check 通过，远端 CI 运行结果仍需实际运行记录证明。",
+      "status": "settled",
+      "source": "docs/decisions/0181-ci-independence-job.md"
     }
   ]
 }

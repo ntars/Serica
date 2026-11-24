@@ -2,9 +2,10 @@
 # Copyright (c) 2026 行简（Serica）贡献者
 GO ?= go
 
-.PHONY: doctor prototype stage0 native-tools serica-tools license clean seed-audit test-p0b-scope test-p1b-static test-p1b-modules test-p1b-runtime test-p1b-scan test-p1b-lex test-p1b-parse test-p1b-program test-p1b-bind test-p1b-import-paths test-p1b-module-read test-p1b-module-graph test-p1b-module-bind test-p1b-module-effect test-p1b-module-type test-p1b-module-const test-p1b-module-abi test-p1b-native-emit release test-release
+.PHONY: doctor ci-preflight prototype stage0 native-tools serica-tools license clean seed-audit test-p0b-scope test-p1b-static test-p1b-modules test-p1b-runtime test-p1b-scan test-p1b-lex test-p1b-parse test-p1b-program test-p1b-bind test-p1b-import-paths test-p1b-module-read test-p1b-module-graph test-p1b-module-bind test-p1b-module-effect test-p1b-module-type test-p1b-module-const test-p1b-module-abi test-p1b-native-emit release test-release
 
 doctor: seed-audit ; @GO="$(GO)" ./tools/doctor
+ci-preflight: ; @python3 tools/ci-preflight.py
 prototype: ; @GO="$(GO)" ./tools/run-prototype
 stage0: ; @GO="$(GO)" ./tools/build-stage0
 native-tools: stage0

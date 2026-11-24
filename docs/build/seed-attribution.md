@@ -3,7 +3,7 @@
 
 # 种子逐行归因
 
-范围：活动 Go 种子仅包含 `bootstrap/*.go`；冻结选型原型 `bootstrap/archive/prototype-3.8/` 不属于活动种子。源码检查工具已迁至 `tools/*.py`，不再占用 Go 种子额度。当前合计 12000 行以内，低于 D-0101 的 12000 行上限。`【AST】` 只标记语法树、绑定、类型与函数 lowering 的判定行，用于 C-1 阈值复核。
+范围：活动 Go 种子仅包含 `bootstrap/*.go`；冻结选型原型 `bootstrap/archive/prototype-3.8/` 不属于活动种子。源码检查工具已迁至 `tools/*.py`，不再占用 Go 种子额度。当前合计 12077 行，低于 D-0173 的 12200 行上限；此前 D-0101 的 12000 行上限已由 D-0173 替代。`【AST】` 只标记语法树、绑定、类型与函数 lowering 的判定行，用于 C-1 阈值复核。
 
 | 文件与行 | 能力 | 对应需求 |
 |---|---|---|
@@ -47,7 +47,7 @@
 | `bootstrap/console_macho.go:2917-3115` | 整数比较、失败出口与整数读取 | D-0032/D-0040 |
 | `bootstrap/console_macho.go:3116-3628` | 文本读取、运行时输出、参数/文件 IO 与 UTF-8 校验 | D-0097–D-0105；D-0116；D-0164 目录边界 |
 | `bootstrap/console_macho.go:3629-4536` | 整数运算、哈希映射、文本长度、文本数组与动态内存管理 | D-0027/D-0034/D-0053/D-0062/D-0116；D-0140 调用方存储 |
-| `bootstrap/console_macho.go:4537-4953` | ARM64 指令编码辅助函数与运行时常量 | 原生发射基础设施；D-0153–D-0157 文本结果局部/形参帧与直接结果观察；D-0164 目录边界 |
+| `bootstrap/console_macho.go:4537-5036` | ARM64 指令编码辅助函数与运行时常量 | 原生发射基础设施；D-0153–D-0157 文本结果局部/形参帧与直接结果观察；D-0164 目录边界 |
 | `bootstrap/module_read.go:1-70` | 项目限界模块读取的参数验证与形态检查 | D-0122；S-3073 |
 | `bootstrap/module_read.go:71-220` | 目录描述符读取、失败恢复与可恢复结果发射 | D-0122；受限 native 读取桥 |
 | `bootstrap/module_read.go:221-329` | 模块路径字节、目录项核对与路径符号比较 | D-0124；读取失败源位置 |
@@ -60,7 +60,7 @@
 | `bootstrap/window_macho.go:29-115` | 映像布局、系统依赖、绑定与符号表 | P0b Mach-O 产物与平台白名单 |
 | `bootstrap/window_macho.go:116-225` | Mach-O 段布局、Objective-C 消息、AppKit 窗口、可编辑 NSTextView 与关闭代理 | P0b 最小运行时与交互验收；D-0138 TEXT 段写段 |
 | `bootstrap/window_macho.go:226-306` | 窗口内容装载、类/selector 调用、常量布局、NSRect ABI 和地址记录 | Apple arm64 参数传递；D-0138 导入槽寻修正 |
-| `bootstrap/window_macho.go:307-434` | 地址回填、dyld bind、Mach-O 表格和指令写出 | P0b 原生目标文件后端；D-0162 文件变更符号；D-0164 目录边界符号；D-0165 文件权限符号 |
+| `bootstrap/window_macho.go:307-455` | 地址回填、dyld bind、Mach-O 表格和指令写出 | P0b 原生目标文件后端；D-0162 文件变更符号；D-0164 目录边界符号；D-0165 文件权限符号；D-0166 环境变量名称枚举 |
 当前活动种子是临时自举桥：P0b 窗口与 P1b 前端、语义、运行时和原生控制台发射均在此实现。总数与 C-1 计数由 `python3 tools/check_seed_subset.py` 机器复核；`bootstrap/` 仍须在 P3b 自举不动点达成后整体删除。
 
 C-1 语言复核（临时桥超过 3000 行且 AST 归因占比达到阈值）：当前 4786/11641 行（41.1%）归于 AST/语义与队列调度，全部为 P1b 阶段门之前的临时自举桥代码。该比例仅说明当前 bootstrap 承担语言前端职责，不表示 P2b 行简自编编译器已完成；P3b 删除 bootstrap 前必须重新测量并证明行简编译器达到不动点。触发时按 D-0009/D-0059 的“C-1 复核（保留 Go 临时桥）”执行。

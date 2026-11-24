@@ -2302,12 +2302,15 @@ def main() -> int:
         except RuntimeError as failure:
             print(f"环境变量名称枚举产物：{failure}", file=sys.stderr)
             return 1
-        controlled_env = {"FOO": "bar", "PATH": "/usr/bin", "AAA": "1", "ZZZ": "2"}
+        # The dictionary order below is deliberately not lexical. The runtime
+        # enumerates names in actual _environ/platform order and does not promise
+        # sorting.
+        ordered_env = {"FOO": "bar", "PATH": "/usr/bin", "AAA": "1", "ZZZ": "2"}
+        expected_names = "".join(name + "\n" for name in ordered_env)
         executed = subprocess.run(
             [str(environment_names_output)], cwd=ROOT, text=True, capture_output=True,
-            check=False, env=controlled_env,
+            check=False, env=ordered_env,
         )
-        expected_names = "".join(name + "\n" for name in sorted(controlled_env))
         if executed.returncode != 0 or executed.stdout != expected_names or executed.stderr:
             sys.stderr.write(executed.stdout + executed.stderr)
             print(

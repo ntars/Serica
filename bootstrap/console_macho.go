@@ -1368,7 +1368,7 @@ func (c *windowCode) emitConsoleProgram(expression value, constants map[string]c
 		temporarySize = 392 // result descriptor plus staged text operations
 	}
 	if containsRuntimeEnvironmentNames(expression) || statementsUseRuntimeEnvironmentNames(statements) {
-		temporarySize = 256*8 + 424 // pointer array, count/index, and insertion-sort state slots
+		temporarySize = 256*8 + 424 // pointer array, count/index, and enumeration state slots
 	}
 	if runtimeTextSubstringNeedsScratch(expression) || statementsNeedRuntimeTextSubstringScratch(statements) {
 		temporarySize = 360 // 256-byte slice destination, concat scratch, byte length, and integer output
@@ -3703,15 +3703,13 @@ func (c *windowCode) emitRuntimeEnvironmentNamesTextOutput(input value, constant
 		return fmt.Errorf("环境变量名称枚举需要 environmentNames（）")
 	}
 	// Read the NULL-terminated envp vector from the bound _environ symbol. Copy
-	// up to 256 names into the scratch frame and sort them with insertion sort.
+	// up to 256 names into the scratch frame in platform enumeration order.
 	const (
 		namesLimit  = 256
 		regCount    = 24
 		regScan     = 14
 		regName     = 28
-		regEnvBase  = 25
 		regIndex    = 21
-		regHole     = 20
 		regSlot     = 6
 		regByte     = 9
 	)
@@ -3723,89 +3721,40 @@ func (c *windowCode) emitRuntimeEnvironmentNamesTextOutput(input value, constant
 	// _environ is a bound data symbol: its GOT slot holds the address of the
 	// envp vector, so dereference it after dyld fixups.
 	c.environmentGOTAddress(regScan)
-	c.words = append(c.words, loadPointer(regScan, regScan, 0), compareImmediate(regScan, 0))
+	c.words = append(c.words, loadPointer(regScan, regScan, 0), loadPointer(regScan, regScan, 0), compareImmediate(regScan, 0))
 	collect := len(c.words)
 	noEnviron := c.conditionalPlaceholder(0)
-	c.words = append(c.words, loadPointer(regName, regScan, 0), addImmediate(regScan, regScan, 8), compareImmediate(regName, 0))
+	c.words = append(c.words, loadPointer(regName, regScan, 0), compareImmediate(regName, 0))
 	noName := c.conditionalPlaceholder(0)
 	c.words = append(c.words, compareImmediate(regCount, namesLimit))
 	full := c.conditionalPlaceholder(2)
 	c.words = append(c.words, addRegisterShifted(regSlot, 19, regCount, 3), addImmediate(regSlot, regSlot, arrayOffset), storeIntegerSlot(regName, regSlot, 0))
-	c.words = append(c.words, addImmediate(regCount, regCount, 1), storeIntegerSlot(regCount, 19, countSlot), branch(collect-len(c.words)))
+	c.words = append(c.words, addImmediate(regCount, regCount, 1), storeIntegerSlot(regCount, 19, countSlot))
+	c.words = append(c.words, addImmediate(regScan, regScan, 8), branch(collect-len(c.words)))
 	collected := len(c.words)
 	c.patchConditional(noEnviron, collected)
 	c.patchConditional(noName, collected)
 	c.patchConditional(full, collected)
 	c.words = append(c.words, loadIntegerSlot(regCount, 19, countSlot))
 
-	// All loop state is stack-backed. Register x7 is a byte index, x8 a string
-	// pointer, and x9 a byte value; these roles never overlap.
-	currentSlot := indexSlot + 8
-	holeSlot := currentSlot + 8
-	previousSlot := holeSlot + 8
-	leftIndexSlot := previousSlot + 8
-	rightIndexSlot := leftIndexSlot + 8
-	leftByteSlot := rightIndexSlot + 8
-	rightByteSlot := leftByteSlot + 8
-	c.words = append(c.words, movz(regIndex, 1))
-	outer := len(c.words)
-	c.words = append(c.words, compareRegister(regCount, regIndex))
-	sorted := c.conditionalPlaceholder(10) // count <= index
-	c.words = append(c.words, addRegisterShifted(regSlot, 19, regIndex, 3), addImmediate(regSlot, regSlot, arrayOffset), loadIntegerSlot(7, regSlot, 0), storeIntegerSlot(7, 19, currentSlot))
-	c.words = append(c.words, movz(7, 1), storeIntegerSlot(7, 19, holeSlot))
-	inner := len(c.words)
-	c.words = append(c.words, loadIntegerSlot(7, 19, holeSlot), compareImmediate(7, 0))
-	insertHere := c.conditionalPlaceholder(0) // hole == 0: insert at current hole
-	c.words = append(c.words, loadIntegerSlot(7, 19, holeSlot), subImmediate(7, 7, 1), storeIntegerSlot(7, 19, holeSlot))
-	c.words = append(c.words, loadIntegerSlot(7, 19, holeSlot), compareImmediate(7, 0))
-	insertFirst := c.conditionalPlaceholder(0) // hole == 0: insert at index 0
-	c.words = append(c.words, loadIntegerSlot(7, 19, holeSlot), addRegisterShifted(regSlot, 19, 7, 3), addImmediate(regSlot, regSlot, arrayOffset), loadIntegerSlot(7, regSlot, 0), storeIntegerSlot(7, 19, previousSlot))
-	c.words = append(c.words, movz(7, 0), storeIntegerSlot(7, 19, leftIndexSlot), storeIntegerSlot(7, 19, rightIndexSlot))
-	compare := len(c.words)
-	// Load one byte from each string. x7 and x8 carry byte indexes only inside
-	// this block; byte values live in their own slots.
-	c.words = append(c.words, loadIntegerSlot(8, 19, previousSlot), loadIntegerSlot(7, 19, leftIndexSlot), addRegister(8, 8, 7), loadByte(regByte, 8), storeIntegerSlot(regByte, 19, leftByteSlot))
-	c.words = append(c.words, loadIntegerSlot(7, 19, leftByteSlot), compareWordImmediate(7, 0))
-	previousEnded := c.conditionalPlaceholder(0) // previous is a prefix: insert here
-	c.words = append(c.words, loadIntegerSlot(8, 19, currentSlot), loadIntegerSlot(7, 19, rightIndexSlot), addRegister(8, 8, 7), loadByte(regByte, 8), storeIntegerSlot(regByte, 19, rightByteSlot))
-	c.words = append(c.words, loadIntegerSlot(7, 19, rightByteSlot), compareWordImmediate(7, 0))
-	currentEnded := c.conditionalPlaceholder(0) // current is a prefix: insert here
-	c.words = append(c.words, loadIntegerSlot(7, 19, leftByteSlot), loadIntegerSlot(8, 19, rightByteSlot), compareRegister(8, 7))
-	shiftPrevious := c.conditionalPlaceholder(11) // right < left: shift previous
-	placeCurrent := c.conditionalPlaceholder(8)  // right > left: place current
-	c.words = append(c.words, loadIntegerSlot(7, 19, leftIndexSlot), addImmediate(7, 7, 1), storeIntegerSlot(7, 19, leftIndexSlot), loadIntegerSlot(7, 19, rightIndexSlot), addImmediate(7, 7, 1), storeIntegerSlot(7, 19, rightIndexSlot), branch(compare-len(c.words)))
-	shift := len(c.words)
-	c.patchConditional(shiftPrevious, shift)
-	c.words = append(c.words, loadIntegerSlot(8, 19, previousSlot), loadIntegerSlot(7, 19, holeSlot), addRegisterShifted(regSlot, 19, 7, 3), addImmediate(regSlot, regSlot, arrayOffset), storeIntegerSlot(8, regSlot, 0))
-	c.words = append(c.words, loadIntegerSlot(7, 19, holeSlot), subImmediate(7, 7, 1), storeIntegerSlot(7, 19, holeSlot), branch(inner-len(c.words)))
-	place := len(c.words)
-	c.patchConditional(previousEnded, place)
-	c.patchConditional(currentEnded, place)
-	c.patchConditional(insertHere, place)
-	c.patchConditional(insertFirst, place)
-	c.patchConditional(placeCurrent, place)
-	c.words = append(c.words, loadIntegerSlot(7, 19, currentSlot), loadIntegerSlot(8, 19, holeSlot), addRegisterShifted(regSlot, 19, 8, 3), addImmediate(regSlot, regSlot, arrayOffset), storeIntegerSlot(7, regSlot, 0))
-	outerContinue := len(c.words)
-	c.words = append(c.words, addImmediate(regIndex, regIndex, 1))
-	c.patchConditional(insertHere, outerContinue)
-	c.patchConditional(insertFirst, outerContinue)
-	c.words = append(c.words, branch(outer-len(c.words)))
-	c.patchConditional(sorted, len(c.words))
-
 	c.words = append(c.words, movz(regIndex, 0), movz(9, 10), addImmediate(regSlot, 19, newlineSlot), storeByte(9, regSlot))
 	c.words = append(c.words, storeIntegerSlot(regIndex, 19, indexSlot))
 	c.movImmediate(0, 1)
 	emit := len(c.words)
 	c.words = append(c.words, loadIntegerSlot(regIndex, 19, indexSlot), loadIntegerSlot(regCount, 19, countSlot))
-	c.words = append(c.words, compareRegister(regCount, regIndex))
+	c.words = append(c.words, compareRegister(regIndex, regCount))
 	finished := c.conditionalPlaceholder(10)
 	c.words = append(c.words, addRegisterShifted(regSlot, 19, regIndex, 3), addImmediate(regSlot, regSlot, arrayOffset), loadIntegerSlot(26, regSlot, 0), movz(2, 0))
 	c.movRegister(1, 26)
-	length := len(c.words)
-	c.words = append(c.words, addRegister(regScan, 1, 2), loadByte(regByte, regScan), compareWordImmediate(regByte, 61))
+	c.words = append(c.words, movz(2, 0))
+	nameLoop := len(c.words)
+	c.words = append(c.words, addRegister(regScan, 26, 2), loadByte(regByte, regScan), compareWordImmediate(regByte, 61))
 	lengthDone := c.conditionalPlaceholder(0)
-	c.words = append(c.words, addImmediate(2, 2, 1), branch(length-len(c.words)-1))
+	c.words = append(c.words, compareWordImmediate(regByte, 0))
+	zeroDone := c.conditionalPlaceholder(0)
+	c.words = append(c.words, addImmediate(2, 2, 1), branch(nameLoop-len(c.words)-1))
 	c.patchConditional(lengthDone, len(c.words))
+	c.patchConditional(zeroDone, len(c.words))
 	c.movRegister(27, 2)
 	c.movRegister(26, 1)
 	c.movImmediate(0, 1)
@@ -3862,7 +3811,7 @@ func (c *windowCode) emitRuntimeEnvironmentRead(input value, constants map[strin
 	return 0, 21, nil
 }
 func (c *windowCode) emitRuntimeFilePath(input value, constants map[string]constantValue, slots map[string]uint32, lengthRegister, pointerRegister uint32) error {
-	if path, problem := evaluateString(input.args[0], 0, constants); problem == nil {
+	if path, problem := evaluateString(input, 0, constants); problem == nil {
 		if path == "" || strings.IndexByte(path, 0) >= 0 {
 			return fmt.Errorf("静态文件路径不能为空或包含 NUL")
 		}
@@ -3871,7 +3820,7 @@ func (c *windowCode) emitRuntimeFilePath(input value, constants map[string]const
 		c.address(label, pointerRegister)
 		return nil
 	}
-	if isRuntimeArgumentText(input.args[0]) {
+	if isRuntimeArgumentText(input) {
 		return c.emitRuntimeArgumentTextOperand(input, slots, constants, lengthRegister, pointerRegister)
 	}
 	return fmt.Errorf("文件路径需要静态文本或 argumentText（整数下标）")
@@ -4265,7 +4214,7 @@ func (c *windowCode) emitRuntimeInteger(input value, constants map[string]consta
 					return c.emitRuntimeTextLength(input.args[0], constants, slots)
 				}
 			}
-			if isRuntimeTextInput(input.args[0]) || isRuntimeArgumentText(input.args[0]) || input.args[0].kind == "调用" && (input.args[0].text == "textConcat" || input.args[0].text == "substring" || input.args[0].text == "arrayGet" || input.args[0].text == "结果值") || isTextReturnCall(input.args[0]) {
+			if isRuntimeTextInput(input.args[0]) || isRuntimeArgumentText(input.args[0]) || input.args[0].kind == "调用" && (input.args[0].text == "textConcat" || input.args[0].text == "substring" || input.args[0].text == "arrayGet" || input.args[0].text == "结果值" || input.args[0].text == "readEnvironment" || input.args[0].text == "readLine") || isTextReturnCall(input.args[0]) {
 				return c.emitRuntimeTextLength(input.args[0], constants, slots)
 			}
 			text, problem := evaluateString(input.args[0], 0, constants)
@@ -4274,21 +4223,54 @@ func (c *windowCode) emitRuntimeInteger(input value, constants map[string]consta
 			}
 			return c.emitIntegerImmediate(strconv.Itoa(len([]rune(text))))
 		}
-		if input.text == "错误码" && len(input.args) == 1 && input.args[0].kind == "引用" {
-			result, exists := c.resultSlots[input.args[0].text]
-			if !exists {
-				return fmt.Errorf("无法解析结果变量：%s", input.args[0].text)
+		if input.text == "错误码" && len(input.args) == 1 && (input.args[0].kind == "引用" || runtimeResultOperandShape(input.args[0])) {
+			if input.args[0].kind == "引用" {
+				result, exists := c.resultSlots[input.args[0].text]
+				if !exists {
+					return fmt.Errorf("无法解析结果变量：%s", input.args[0].text)
+				}
+				c.words = append(c.words, loadIntegerSlot(0, 19, result.value), loadIntegerSlot(1, 19, result.tag), compareImmediate(1, 0))
+			} else if err := c.emitResultValueRegisters(input.args[0], constants, slots); err != nil {
+				return err
+			} else {
+				c.movRegister(2, 0)
+				c.movRegister(0, 1)
+				c.movRegister(1, 2)
+				c.words = append(c.words, compareImmediate(1, 0))
 			}
-			c.words = append(c.words, loadIntegerSlot(0, 19, result.value), loadIntegerSlot(1, 19, result.tag), compareImmediate(1, 0))
 			success := c.conditionalPlaceholder(1)
 			c.movImmediate(0, 0)
 			c.patchConditional(success, len(c.words))
 			return nil
 		}
-		if input.text == "结果值" && len(input.args) == 1 && runtimeResultOperandShape(input.args[0]) {
+		if input.text == "结果值" && len(input.args) == 1 && (input.args[0].kind == "引用" || runtimeResultOperandShape(input.args[0])) {
 			var success conditionalPatch
+			var result resultSlot
 			if input.args[0].kind == "引用" {
-			if isRuntimeArgumentCount(input) {
+				var exists bool
+				result, exists = c.resultSlots[input.args[0].text]
+				if !exists {
+					return fmt.Errorf("无法解析结果变量：%s", input.args[0].text)
+				}
+				c.words = append(c.words, loadIntegerSlot(2, 19, result.tag), compareImmediate(2, 1))
+				success = c.conditionalPlaceholder(1)
+				c.words = append(c.words, loadIntegerSlot(0, 19, result.value))
+			} else if err := c.emitResultValueRegisters(input.args[0], constants, slots); err != nil {
+				return err
+			} else {
+				c.movRegister(0, 1)
+				c.words = append(c.words, compareImmediate(0, 1))
+				success = c.conditionalPlaceholder(1)
+				c.call(c.exitIndex)
+				c.patchConditional(success, len(c.words))
+				return nil
+			}
+			c.call(c.exitIndex)
+			c.patchConditional(success, len(c.words))
+			c.words = append(c.words, loadIntegerSlot(0, 19, result.value))
+			return nil
+		}
+		if isRuntimeArgumentCount(input) {
 			c.words = append(c.words, loadIntegerSlot(0, 19, c.argumentCountOffset))
 			return nil
 		}
@@ -4339,6 +4321,30 @@ func (c *windowCode) emitRuntimeInteger(input value, constants map[string]consta
 		}
 		if isRuntimeFileWrite(input) {
 			return c.emitRuntimeFileWrite(input, constants, slots)
+		}
+		if isRuntimeFileMode(input) {
+			return c.emitRuntimeFileMode(input, constants, slots)
+		}
+		if isRuntimeFileRemove(input) {
+			return c.emitRuntimeFileRemove(input, constants, slots)
+		}
+		if isRuntimeFileRename(input) {
+			return c.emitRuntimeFileRename(input, constants, slots)
+		}
+		if isRuntimeFileReplace(input) {
+			return c.emitRuntimeFileReplace(input, constants, slots)
+		}
+		if isRuntimeDirectoryMutation(input) {
+			return c.emitRuntimeDirectoryMutation(input, constants, slots)
+		}
+		if isRuntimeFileSize(input) {
+			return c.emitRuntimeFileSize(input, constants, slots)
+		}
+		if isRuntimePathExists(input) {
+			return c.emitRuntimePathExists(input, constants, slots)
+		}
+		if isRuntimeDirectoryCheck(input) {
+			return c.emitRuntimeDirectoryCheck(input, constants, slots)
 		}
 		if input.text == "arrayLength" && len(input.args) == 1 {
 			if input.args[0].kind == "引用" {
@@ -4603,6 +4609,38 @@ func (c *windowCode) emitRuntimeTextLength(input value, constants map[string]con
 		if err := c.emitRuntimeTextOperand(input, slots, constants, 22, 21, c.temporaryBufferOffset+256); err != nil {
 			return err
 		}
+	case isRuntimeEnvironmentRead(input):
+		buffer, length, err := c.emitRuntimeEnvironmentRead(input, constants, slots)
+		if err != nil {
+			return err
+		}
+		c.movRegister(22, length)
+		c.movRegister(21, buffer)
+	case input.kind == "调用" && input.text == "结果值" && len(input.args) == 1 && runtimeResultOperandShape(input.args[0]) && runtimeResultPayload(input.args[0], constants) == "运行时文本":
+		if isTextReturnCall(input.args[0]) {
+			if err := c.emitRuntimeResultRegisters(input.args[0], constants, slots); err != nil {
+				return err
+			}
+		} else if err := c.emitResultValueRegisters(input.args[0], constants, slots); err != nil {
+			return err
+		}
+		c.words = append(c.words, subImmediate(31, 31, 32), storeIntegerSlot(0, 31, 0), storeIntegerSlot(1, 31, 8), storeIntegerSlot(2, 31, 16), storeIntegerSlot(3, 31, 24))
+		c.words = append(c.words, compareImmediate(0, 1))
+		success := c.conditionalPlaceholder(1)
+		c.movRegister(0, 1)
+		c.call(c.exitIndex)
+		c.patchConditional(success, len(c.words))
+		c.words = append(c.words, loadIntegerSlot(21, 31, 16), loadIntegerSlot(22, 31, 24))
+		c.words = append(c.words, compareRegister(22, 0))
+		noMapping := c.conditionalPlaceholder(1)
+		c.movRegister(0, 21)
+		c.words = append(c.words, loadIntegerSlot(1, 31, 16))
+		c.movImmediate(1, 0)
+		c.call(c.arrayUnmapIndex)
+		c.words = append(c.words, compareImmediate(0, 0))
+		c.branchToRuntimeFailure(1)
+		c.patchConditional(noMapping, len(c.words))
+		c.words = append(c.words, loadIntegerSlot(1, 31, 0), loadIntegerSlot(0, 31, 8), loadIntegerSlot(22, 31, 24), loadIntegerSlot(21, 31, 16), addImmediate(31, 31, 32))
 	case isTextReturnCall(input):
 		c.words = append(c.words, subImmediate(31, 31, 32), storeIntegerSlot(1, 31, 0), storeIntegerSlot(2, 31, 8), storeIntegerSlot(3, 31, 16))
 		if err := c.emitRuntimeFunctionCall(input, constants, slots); err != nil {
@@ -4958,6 +4996,10 @@ func branchCondition(displacement int, condition uint32) uint32 {
 }
 func loadByte(destination, base uint32) uint32 {
 	return 0x39400000 | base<<5 | destination
+}
+// ldrb wRt, [Xn, Xm]
+func loadByteIndex(destination, base, offset uint32) uint32 {
+	return 0x38606800 | base<<16 | offset<<13 | 2<<5 | destination
 }
 func storeByte(source, base uint32) uint32 {
 	return 0x39000000 | base<<5 | source

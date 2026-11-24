@@ -1133,7 +1133,7 @@ make seed-audit && make license && ./tools/check-independence source
 ### 6.9 设计备注（不注入本地模型）
 
 - **许可文件形态冲突**：v3.8 手册「许可与传播」落地文件清单记载 `LICENSE-APACHE`（指向 `LICENSES/Apache-2.0.txt` 的指针）；仓库现状已删除 `LICENSE-APACHE`，`LICENSE` 与 `LICENSE-MIT` 直接存放全文并新增 `make license` 逐字节校验（`CHANGELOG.md` 记载变更理由：托管平台与扫描工具需要识别具体许可而非 Other），以现状为准。
-- **reuse 工具缺口**：v3.8 手册五条硬规则第 5 条要求 CI 跑 `reuse lint`；仓库现状无 `.github/` 目录、未安装 reuse、Makefile 无对应目标。此项列入 0.5 节采纳记录「需评估」，是否补齐由用户裁决；裁决前不得声称许可校验完整。
+- **reuse 工具缺口**：v3.8 手册五条硬规则第 5 条要求 CI 跑 `reuse lint`；仓库现状 `.github/` 有 Issue/PR 模板与 `workflows/preflight.yml`，其中 `zero` 在 Linux 上运行前置检查、`independence` 在 Linux 上运行源码独立性、`shell` 在 macOS arm64 上运行全量源码门；未安装 reuse、Makefile 无 `reuse lint` 目标。此项列入 0.5 节采纳记录「需评估」，是否补齐由用户裁决；裁决前不得声称许可校验完整。
 - **事实**：`make license` 与 `check-independence source` 于 2026-11-21 实测通过。
 
 ### 6.10 维护期排查指引（症状 → 可能位置 → 验证命令）

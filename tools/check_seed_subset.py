@@ -13,7 +13,7 @@ import sys
 ROOT = pathlib.Path(__file__).resolve().parent.parent
 SEED = ROOT / "bootstrap"
 ATTRIBUTION = ROOT / "docs" / "build" / "seed-attribution.md"
-MAX_SEED_LINES = 12000
+MAX_SEED_LINES = 12200
 
 
 def scan_source(source: str):
