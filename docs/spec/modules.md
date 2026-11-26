@@ -88,4 +88,12 @@
 
 `writeFile` 以创建/截断模式覆盖目标；`appendFile` 在目标缺失时创建、存在时保留原内容并返回追加字节数。`removeFile` 删除一个路径，`renameFile` 把源路径改为目标路径，`createDirectory` 与 `removeDirectory` 分别创建和删除空目录，成功均返回 `0`、失败无输出退出 `1`。`setFileMode（路径，权限）` 与 `changeFileMode（路径，权限）` 分别通过 `chmod` 和打开后 `fchmod` 修改已有文件权限，接受 `0..511` 八进制位；成功返回 `0`，失败无输出退出 `1`。八者都接受静态路径或 `argumentText`，须声明 `filesystem.write`，参数路径另需 `args`。`fileSize（路径）` 返回已有文件的字节数，接受静态路径或 `argumentText`，须声明 `filesystem.read`，参数路径另需 `args`，失败无输出退出 `1`。追加实现使用 `_open` 与 `O_WRONLY|O_CREAT|O_APPEND`，权限模式按 macOS 可变参数 ABI 放在调用栈；删除、重命名、目录创建和目录删除分别使用 `_unlink`、`_rename`、`_mkdir`、`_rmdir`；权限设置分别使用 `_chmod` 和 `_open`/`_fchmod`/`_close`。[D-0160](../decisions/0160-append-file-boundary.md) [D-0162](../decisions/0162-file-mutation-and-frontend-parity.md) [D-0164](../decisions/0164-directory-boundary.md) [D-0165](../decisions/0165-file-mode-boundary.md) [D-0166](../decisions/0166-file-size-boundary.md) `exists（路径）` 返回路径存在时 `1`、缺失时 `0`，接受静态路径或 `argumentText`，须声明 `filesystem.read`，参数路径另需 `args`；后端使用 `_open`/`_fstat`/`_close`，只把缺失当作正常否定结果，其他系统错误无 stdout 退出 `1`。[D-0167](../decisions/0167-path-exists-boundary.md)`replaceFile（源路径，目标路径）` 以 POSIX rename 的语义把源路径原子替换到目标路径，目标已存在时原子覆盖；两条路径均可为静态路径或 `argumentText`，须声明 `filesystem.write`，参数路径另需 `args`。成功返回 `0`，失败无 stdout 退出 `1`；不提供跨卷复制、临时目录策略和目录替换。[D-0169](../decisions/0169-atomic-file-replacement.md)
 
+
+
+`writeText（文本）` 与 `writeError（文本）` 把 UTF-8 字节精确写入 stdout 或 stderr，分别要求 `stdout`、`stderr` 能力；两者返回实际写入字节数，短写通过循环累计，非法 UTF-8 在写出前失败。二者可以在顶层及已声明能力的效果函数中使用，但不把字符串自动附加换行。[D-0206](../decisions/0206-stdout-write-boundary.md) [D-0209](../decisions/0209-standard-error-write-boundary.md)
+
+`readEnvironment（名称）` 只读查询当前进程环境，要求 `args` 能力；名称可以是编译期非空文本，或直接 `argumentText（整数下标）` 及由该表达式初始化/赋值的文本变量。名称在调用 `_getenv` 前复制到 4 KiB 栈暂存区，以 NUL 终止，并拒绝空名称、内嵌 NUL、`=` 与非法下标；缺失或空值返回空文本。返回值按 NUL 扫描并校验 UTF-8 后以指针/长度描述符发布，不复制环境正文，也不改写或枚举环境。`environmentNames（）` 只读枚举进程中的名称，按底层环境顺序逐行输出，不接受参数；函数内使用上述能力须逐层声明并满足根能力复核。[D-0171](../decisions/0171-environment-read-boundary.md) [D-0192](../decisions/0192-dynamic-environment-names.md)
+
+`directoryNames（路径）` 直接作为控制台程序根输出，按底层目录项顺序逐行写出名称，排除 `.` 与 `..`；接受静态文本或 `argumentText` 路径，要求 `filesystem.read`，动态路径另需 `args`。空目录成功且无输出；打开、读取、关闭、UTF-8 或短写失败均无 stdout 并非零退出。该能力不承诺排序、递归、元数据或目录快照一致性，也不宣称 P1b 阶段门通过。[D-0226](../decisions/0226-directory-names-enumeration.md)
+
 动态文本数组构造、追加及替换保存独立 UTF-8 快照。索引返回只读文本描述符，可供本次表达式及借用调用使用。赋给普通文本变量时建立独立副本。拥有者退场时逐项清理，数组变更仍须具备 `array.write` 能力。[D-0139](../decisions/0139-serica-text-arrays-self-emission.md)

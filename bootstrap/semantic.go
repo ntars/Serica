@@ -109,7 +109,7 @@ func expandProgramFunctions(program *program, payloads map[string]constantValue)
 	}
 	for index := range program.functions {
 		function := program.functions[index]
-		if len(function.statements) == 0 || (len(function.effects) == 0 && (containsStatementKind(function.statements, "凡") || blockFunctionUsesRuntimeTextParameter(function) || blockFunctionObservesResultState(function) || blockFunctionReturnsRuntimeCall(function, functions))) || (len(function.effects) != 0 && (containsStatementKind(function.statements, "凡") || blockFunctionConstructsResultLocal(function))) {
+		if len(function.statements) == 0 || (len(function.effects) == 0 && (containsStatementKind(function.statements, "凡") || blockFunctionUsesRuntimeTextParameter(function) || blockFunctionObservesResultState(function) || blockFunctionReturnsRuntimeCall(function, functions))) || (len(function.effects) != 0 && (containsStatementKind(function.statements, "凡") || blockFunctionNeedsRuntimeState(function))) {
 			continue
 		}
 		environment := make(map[string]value, len(function.parameters))
@@ -129,10 +129,15 @@ func expandProgramFunctions(program *program, payloads map[string]constantValue)
 				return functionBlockIssue(item.value.pos, "已复制的局部文本", "未复制的文本返回值", "先声明文本局部变量并复制返回值，再在局部作用域使用")
 			}
 		}
+		for _, item := range function.statements {
+			if !allowsRuntimeTextReturnCall(item) && !runtimeTextReturnCallsAreBorrowedInStatement(item) && statementContainsRuntimeTextReturnCall(item) {
+				return runtimeTextReturnCallIssue(item.name.pos)
+			}
+		}
 		function.body = body; function.statements = nil
 		program.functions[index] = function; functions[function.name.text] = function
 	}
-	runtimeFunctions, runtimeFunctionNames := recursiveRuntimeFunctions(program.functions, functions); annotateRuntimeFunctionResults(runtimeFunctions)
+	runtimeFunctions, runtimeFunctionNames := recursiveRuntimeFunctions(program.functions, functions); annotateRuntimeFunctionResults(runtimeFunctions, functions)
 	annotateRuntimeResultPayloads(program, payloads)
 	for _, function := range runtimeFunctions {
 		if function.runtimeReturnsResult {
@@ -264,11 +269,11 @@ func blockFunctionObservesResultState(function functionDecl) bool {
 	})
 	return found
 }
-func blockFunctionConstructsResultLocal(function functionDecl) bool {
+func blockFunctionNeedsRuntimeState(function functionDecl) bool {
 	constructs := func(input value) bool {
 		found := false
 		walkValue(input, func(current value) bool {
-			if current.kind == "调用" && (current.text == "成功" || current.text == "失败") {
+			if current.kind == "调用" && (current.text == "成功" || current.text == "失败" || current.text == "writeText" || current.text == "writeError") {
 				found = true
 				return false
 			}
@@ -279,6 +284,7 @@ func blockFunctionConstructsResultLocal(function functionDecl) bool {
 	found := false
 	walkStatements(function.statements, func(item statement) bool {
 		found = found || item.kind == "变量" && constructs(item.value)
+		if item.kind == "返回" && item.value.kind == "引用" { for _, candidate := range function.statements { if candidate.kind == "变量" && candidate.name.text == item.value.text && isRuntimeTextInput(candidate.value) { found = true } } }
 		return !found
 	})
 	return found
@@ -579,7 +585,7 @@ func classifyRuntimeFunctionParameterTypes(program *program) *issue {
 		if function.body.kind != "" {
 			for _, parameterType := range types {
 				if parameterType == "运行时字符串" {
-					return &issue{code: "S-3062", expected: "表达式运行时函数的整数参数", actual: "文本参数", suggestion: "先在块体函数中使用文本参数长度桥；表达式运行时文本参数留待后续 ABI", pos: function.name.pos}
+					return &issue{code: "S-3062", expected: "运行时函数的整数参数", actual: "文本参数", suggestion: "先在块体函数中使用文本参数长度桥；表达式运行时文本参数属于尚未支持的 ABI", pos: function.name.pos}
 				}
 			}
 		}
@@ -653,7 +659,7 @@ func collectRuntimeIntegerParameterUses(items []statement, parameters, integerPa
 }
 func isRuntimeTextValueOperation(name string) bool {
 	switch name {
-	case "readText", "textLength", "textByteLength", "textByteAt", "textConcat", "substring", "equals", "notEquals", "argumentText", "readFile", "readEnvironment", "environmentNames":
+	case "readText", "textLength", "textByteLength", "textByteAt", "textConcat", "substring", "equals", "notEquals", "argumentText", "readFile", "readEnvironment", "environmentNames", "directoryNames":
 		return true
 	}
 	return false
@@ -803,6 +809,18 @@ func isRuntimeTextOrderingOperator(operator string) bool {
 	return operator == "<" || operator == "<=" || operator == ">" || operator == ">="
 }
 func runtimeFunctionParameterTypes(function functionDecl) []string {
+	if function.runtimeReturnsText {
+		types := make([]string, len(function.parameters))
+		for index := range function.parameters {
+			switch function.parameterTypes[index] {
+			case "运行时结果", "运行时字符串":
+				types[index] = function.parameterTypes[index]
+			default:
+				types[index] = "运行时整数"
+			}
+		}
+		return types
+	}
 	if len(function.parameterTypes) == len(function.parameters) {
 		return function.parameterTypes
 	}
@@ -890,6 +908,8 @@ func runtimeStatementLocalSlotCount(function functionDecl) int {
 		} else if runtimeStatementLocalType(function, name) == "运行时结果" {
 			if isTextResultPayload(function.localResultPayloads[name]) {
 				count += 4
+			} else if isRuntimeArrayResultPayload(function.localResultPayloads[name]) || isTextArrayResultPayload(function.localResultPayloads[name]) {
+				count += 4
 			} else {
 				count += 2
 			}
@@ -904,10 +924,29 @@ func isRuntimeTextDurableCopyValue(input value, environment map[string]constantV
 	if problem != nil || kind != "运行时字符串" {
 		return false
 	}
+	if isTextReturnCall(input) {
+		return true
+	}
 	if input.kind == "引用" {
 		return environment[input.text].kind == "运行时字符串"
 	}
-	return input.kind == "调用" && (input.text == "textConcat" || input.text == "substring")
+	return input.kind == "调用" && (isRuntimeTextInput(input) || input.text == "textConcat" || input.text == "substring")
+}
+func isRuntimeTextSuccessPayload(input value, statements []statement) bool {
+	if input.kind == "调用" && input.text == "结果值" && len(input.args) == 1 {
+		input = input.args[0]
+	}
+	if input.kind != "调用" || input.text != "成功" || len(input.args) != 1 || !isTextReturnCall(input.args[0]) {
+		return false
+	}
+	for _, item := range statements {
+		if item.kind != "变量" || !isTextReturnCall(item.value) {
+			if statementContainsRuntimeTextReturnCall(item) {
+				return false
+			}
+		}
+	}
+	return true
 }
 func classifyRuntimeFunctionLocalTypes(program *program, payloads map[string]constantValue) *issue {
 	for _, name := range program.runtimeFunctionNames {
@@ -988,36 +1027,40 @@ func collectRuntimeResultObservations(input value, observations map[string]bool)
 	})
 }
 func annotateRuntimeTextReturns(program *program) {
-	for _, name := range program.runtimeFunctionNames {
-		function := program.runtimeFunctions[name]
-		if function.body.kind == "" && function.runtimeReturnsResult && function.runtimeResultPayload == "" {
-			function.runtimeResultPayload = "整数"; program.runtimeFunctions[name] = function
-			for index := range program.functions {
-				if program.functions[index].name.text == name {
-					program.functions[index].runtimeResultPayload = "整数"
-					break
+	changed := true
+	for changed {
+		changed = false
+		for _, name := range program.runtimeFunctionNames {
+			function := program.runtimeFunctions[name]
+			if function.body.kind == "" && function.runtimeReturnsResult && function.runtimeResultPayload == "" {
+				function.runtimeResultPayload = "整数"; program.runtimeFunctions[name] = function
+				for index := range program.functions {
+					if program.functions[index].name.text == name {
+						program.functions[index].runtimeResultPayload = "整数"
+						break
+					}
 				}
 			}
-		}
-		if function.body.kind != "" || function.runtimeReturnsResult || len(function.statements) == 0 {
-			continue
-		}
-		last := function.statements[len(function.statements)-1]
-		if last.kind != "返回" || last.value.kind != "引用" {
-			continue
-		}
-		if function.localTypes[last.value.text] != "运行时字符串" {
-			continue
-		}
-		if containsStatementKind(function.statements[:len(function.statements)-1], "返回") {
-			continue
-		}
-		function.runtimeReturnsText = true; function.runtimeReturnLocal = last.value.text
-		program.runtimeFunctions[name] = function
-		for index := range program.functions {
-			if program.functions[index].name.text == name {
-				program.functions[index].runtimeReturnsText = true; program.functions[index].runtimeReturnLocal = last.value.text
-				break
+			if function.runtimeReturnsResult || len(function.statements) == 0 {
+				continue
+			}
+			last := function.statements[len(function.statements)-1]
+			if last.kind != "返回" || last.value.kind != "引用" {
+				continue
+			}
+			if function.localTypes[last.value.text] != "运行时字符串" {
+				continue
+			}
+			if containsStatementKind(function.statements[:len(function.statements)-1], "返回") {
+				continue
+			}
+			function.runtimeReturnsText = true; function.runtimeReturnLocal = last.value.text
+			program.runtimeFunctions[name] = function
+			for index := range program.functions {
+				if program.functions[index].name.text == name {
+					program.functions[index].runtimeReturnsText = true; program.functions[index].runtimeReturnLocal = last.value.text
+					break
+				}
 			}
 		}
 	}
@@ -1030,7 +1073,11 @@ func validateRuntimeTextReturnCalls(program *program) *issue {
 		}
 		for statementIndex := range function.statements {
 			item := &function.statements[statementIndex]
-			if statementContainsRuntimeTextReturnCall(*item) {
+			if (item.kind == "变量" || item.kind == "赋值") &&
+				runtimeStatementLocalType(function, item.name.text) == "运行时字符串" && isTextReturnCall(item.value) {
+				continue
+			}
+			if !allowsRuntimeTextReturnCall(*item) && !runtimeTextReturnCallsAreBorrowedInStatement(*item) && statementContainsRuntimeTextReturnCall(*item) {
 				return runtimeTextReturnCallIssue(item.name.pos)
 			}
 		}
@@ -1042,15 +1089,7 @@ func validateRuntimeTextReturnCalls(program *program) *issue {
 	}
 	for index := range program.statements {
 		item := &program.statements[index]
-		if !allowsRuntimeTextReturnCall(*item) && statementContainsRuntimeTextReturnCall(*item) {
-			return runtimeTextReturnCallIssue(item.name.pos)
-		}
-	}
-	for _, item := range program.statements {
-		if item.kind == "变量" || item.kind == "赋值" {
-			continue
-		}
-		if statementContainsRuntimeTextReturnCall(item) {
+		if !allowsRuntimeTextReturnCall(*item) && !runtimeTextReturnCallsAreBorrowedInStatement(*item) && statementContainsRuntimeTextReturnCall(*item) {
 			return runtimeTextReturnCallIssue(item.name.pos)
 		}
 	}
@@ -1059,17 +1098,83 @@ func validateRuntimeTextReturnCalls(program *program) *issue {
 		if field.name.text == "输出" && call.kind == "调用" && call.runtimeFunction && call.runtimeFunctionText && !valuesContainRuntimeTextReturnCall(call.args) {
 			continue
 		}
-		if field.name.text == "输出" && isTextReturnBorrowConsumer(field.value) && runtimeTextReturnCallAsBorrowedTextArgument(field.value) {
+		if field.name.text == "输出" && isRuntimeTextSuccessPayload(call, program.statements) {
 			continue
 		}
-		if !runtimeTextReturnCallAsBorrowedTextArgument(field.value) && containsRuntimeTextReturnCall(field.value) {
+		if !runtimeTextReturnCallsAreBorrowed(call) {
 			return runtimeTextReturnCallIssue(field.value.pos)
 		}
 	}
 	return nil
 }
+func runtimeTextReturnCallsAreBorrowedInStatement(item statement) bool {
+	if !runtimeTextReturnCallsAreBorrowed(item.value) || !runtimeTextReturnCallsAreBorrowed(item.condition) {
+		return false
+	}
+	for _, nested := range item.body {
+		if !runtimeTextReturnCallsAreBorrowedInStatement(nested) {
+			return false
+		}
+	}
+	for _, nested := range item.otherwise {
+		if !runtimeTextReturnCallsAreBorrowedInStatement(nested) {
+			return false
+		}
+	}
+	return true
+}
+// A text-return call may only appear where its mapping is immediately borrowed
+// and released. Generic expressions remain forbidden so ownership cannot
+// escape into variables, containers or unconstrained nested consumers.
+func runtimeTextReturnCallsAreBorrowed(input value) bool {
+	if !containsRuntimeTextReturnCall(input) {
+		return true
+	}
+	if isTextReturnCall(input) {
+		return false
+	}
+	if input.kind == "调用" {
+		if isTextReturnBorrowConsumer(input) {
+			for _, argument := range input.args {
+				if isTextReturnCall(argument) {
+					continue
+				}
+				if !runtimeTextReturnCallsAreBorrowed(argument) {
+					return false
+				}
+			}
+			return true
+		}
+		if input.text == "ifElse" && len(input.args) == 3 {
+			return runtimeTextReturnCallsAreBorrowed(input.args[0]) &&
+				runtimeTextReturnCallsAreBorrowed(input.args[1]) && runtimeTextReturnCallsAreBorrowed(input.args[2])
+		}
+		// Integer-only bit operators have their own S-3021 type diagnostic; let
+		// that earlier type check own the rejection before escape analysis.
+		if input.text == "bitAnd" || input.text == "bitOr" || input.text == "bitXor" {
+			return true
+		}
+		return false
+	}
+	if input.kind == "比较" && input.left != nil && input.right != nil {
+		if !isTextOrderingOperator(input.operator) {
+			return runtimeTextReturnCallsAreBorrowed(*input.left) && runtimeTextReturnCallsAreBorrowed(*input.right)
+		}
+		if isTextReturnCall(*input.left) || isTextReturnCall(*input.right) {
+			return true
+		}
+		return runtimeTextReturnCallsAreBorrowed(*input.left) && runtimeTextReturnCallsAreBorrowed(*input.right)
+	}
+	if input.kind == "逻辑" || input.kind == "表达式" {
+		if input.left == nil || input.right == nil {
+			return false
+		}
+		return runtimeTextReturnCallsAreBorrowed(*input.left) && runtimeTextReturnCallsAreBorrowed(*input.right)
+	}
+	return false
+}
 func runtimeTextReturnCallIssue(pos sourcePosition) *issue {
-	return &issue{code: "S-3023", expected: "运行时文本返回函数仅直接作为程序输出", actual: "文本返回调用出现在变量、条件、函数体或嵌套表达式中", suggestion: "先把文本返回函数调用保留为程序根 输出 的完整表达式", pos: pos}
+	return &issue{code: "S-3023", expected: "运行时文本返回函数仅进入受支持的调用方边界", actual: "文本返回调用出现在未开放的变量、条件、函数体或嵌套表达式中", suggestion: "把文本返回函数调用放入直接输出、受支持文本变量、成功载荷或借用消费者", pos: pos}
 }
 func statementContainsRuntimeTextReturnCall(item statement) bool {
 	return containsRuntimeTextReturnCall(item.value) || containsRuntimeTextReturnCall(item.condition) || statementsContainRuntimeTextReturnCall(item.body) || statementsContainRuntimeTextReturnCall(item.otherwise)
@@ -1231,21 +1336,21 @@ func setStatementRuntimeFunctionPayload(item *statement, runtimeFunctions map[st
 		setStatementRuntimeFunctionPayload(&item.otherwise[index], runtimeFunctions)
 	}
 }
-func blockFunctionReturnsResult(statements []statement) bool {
-	return blockFunctionReturnsResultIn(statements, statements)
+func blockFunctionReturnsResult(statements []statement, functions map[string]functionDecl) bool {
+	return blockFunctionReturnsResultIn(statements, statements, functions)
 }
-func blockFunctionReturnsResultValue(statements []statement, value value) bool {
-	if runtimeResultReturnShape(value, nil, map[string]bool{}) == "运行时结果" {
+func blockFunctionReturnsResultValue(statements []statement, value value, functions map[string]functionDecl) bool {
+	if runtimeResultReturnShape(value, functions, map[string]bool{}) == "运行时结果" {
 		return true
 	}
-	return value.kind == "引用" && localResultShape(statements, value.text, nil)
+	return value.kind == "引用" && localResultShape(statements, value.text, functions)
 }
-func blockFunctionReturnsResultIn(statements, allStatements []statement) bool {
+func blockFunctionReturnsResultIn(statements, allStatements []statement, functions map[string]functionDecl) bool {
 	for _, item := range statements {
-		if item.kind == "返回" && blockFunctionReturnsResultValue(allStatements, item.value) {
+		if item.kind == "返回" && blockFunctionReturnsResultValue(allStatements, item.value, functions) {
 			return true
 		}
-		if blockFunctionReturnsResultIn(item.body, allStatements) || blockFunctionReturnsResultIn(item.otherwise, allStatements) {
+		if blockFunctionReturnsResultIn(item.body, allStatements, functions) || blockFunctionReturnsResultIn(item.otherwise, allStatements, functions) {
 			return true
 		}
 	}
@@ -1310,16 +1415,16 @@ func localResultShape(statements []statement, name string, functions map[string]
 	}
 	return false
 }
-func annotateRuntimeFunctionResults(functions map[string]functionDecl) {
+func annotateRuntimeFunctionResults(runtimeFunctions, functions map[string]functionDecl) {
 	changed := true
 	for changed {
 		changed = false
-		for name, function := range functions {
+		for name, function := range runtimeFunctions {
 			if function.runtimeReturnsResult {
 				continue
 			}
-			if runtimeResultReturnShape(function.body, functions, map[string]bool{name: true}) == "运行时结果" || blockFunctionReturnsResult(function.statements) || functionBodyUsesResultParameter(function) || functionReturnsResultParameter(function) {
-				function.runtimeReturnsResult = true; functions[name] = function
+			if runtimeResultReturnShape(function.body, functions, map[string]bool{name: true}) == "运行时结果" || blockFunctionReturnsResult(function.statements, functions) || functionBodyUsesResultParameter(function) || functionReturnsResultParameter(function) {
+				function.runtimeReturnsResult = true; runtimeFunctions[name] = function
 				changed = true
 			}
 		}
@@ -1471,7 +1576,7 @@ func expandFunctionValue(input value, functions map[string]functionDecl, runtime
 				return value{}, &issue{code: "S-3061", expected: strconv.Itoa(len(function.parameters)) + " 个实参", actual: strconv.Itoa(len(input.args)) + " 个实参", suggestion: "按函数声明提供相同数量的参数", pos: input.pos}
 			}
 			input.runtimeFunction = true; input.runtimeFunctionResult = function.runtimeReturnsResult
-			input.runtimeFunctionPayload = function.runtimeResultPayload; var problem *issue
+			input.runtimeFunctionPayload = function.runtimeResultPayload; input.runtimeFunctionText = function.runtimeReturnsText; var problem *issue
 			for index := range input.args {
 				input.args[index], problem = expandFunctionValue(input.args[index], functions, runtimeFunctions, stack, depth+1, remaining, rootEffects, callPayloads, statements)
 				if problem != nil {
@@ -1715,8 +1820,8 @@ func functionEffects(function functionDecl) ([]string, *issue) {
 		if item.kind != "字符串" {
 			return nil, &issue{code: "S-4105", expected: "静态文本效果名", actual: item.kind, suggestion: "仅使用文本字面量声明函数效果", pos: item.pos}
 		}
-		if item.text != "stdin" && item.text != "filesystem.read" && item.text != "filesystem.write" && item.text != "array.write" && item.text != "map.write" && item.text != "args" {
-			return nil, &issue{code: "S-4103", expected: "函数支持的 stdin、filesystem.read、filesystem.write、array.write、map.write 或 args 效果", actual: item.text, suggestion: "当前函数效果子集支持 stdin、filesystem.read、filesystem.write、array.write、map.write 和 args", pos: item.pos}
+		if item.text != "stdout" && item.text != "stderr" && item.text != "stdin" && item.text != "filesystem.read" && item.text != "filesystem.write" && item.text != "array.write" && item.text != "map.write" && item.text != "args" && item.text != "process" {
+			return nil, &issue{code: "S-4103", expected: "函数支持的 stdout、stderr、stdin、filesystem.read、filesystem.write、array.write、map.write、args 或 process 效果", actual: item.text, suggestion: "当前函数效果子集支持 stdout、stderr、stdin、filesystem.read、filesystem.write、array.write、map.write、args 和 process", pos: item.pos}
 		}
 		if seen[item.text] {
 			return nil, &issue{code: "S-4104", expected: "唯一函数效果名", actual: item.text, suggestion: "每项效果只声明一次", pos: item.pos}
@@ -1830,12 +1935,18 @@ func countValueNodes(input value) int {
 }
 func isFunctionEffect(name string) bool {
 	switch name {
-	case "readInteger", "readText", "readFile", "readModule", "readModuleResult", "fileSize", "exists", "isDirectory", "writeFile", "appendFile", "writeByteArray", "removeFile", "renameFile", "createDirectory", "removeDirectory", "setFileMode", "changeFileMode", "replaceFile", "environmentNames", "arrayPush", "arraySet", "映射置", "映射删", "argumentCount", "argumentText", "readEnvironment":
+	case "writeText", "writeError", "readInteger", "readByte", "readText", "readFile", "readModule", "readModuleResult", "fileSize", "exists", "isDirectory", "directoryNames", "runCommand", "writeFile", "appendFile", "writeByteArray", "removeFile", "renameFile", "createDirectory", "removeDirectory", "setFileMode", "changeFileMode", "replaceFile", "environmentNames", "arrayPush", "arraySet", "映射置", "映射删", "argumentCount", "argumentText", "readEnvironment":
 		return true
 	}
 	return false
 }
 func requiredFunctionEffect(name string) string {
+	if name == "writeText" {
+		return "stdout"
+	}
+	if name == "writeError" {
+		return "stderr"
+	}
 	if name == "arrayPush" || name == "arraySet" {
 		return "array.write"
 	}
@@ -1845,8 +1956,11 @@ func requiredFunctionEffect(name string) string {
 	if name == "argumentCount" || name == "argumentText" || name == "readEnvironment" || name == "environmentNames" {
 		return "args"
 	}
-	if name == "readFile" || name == "readModule" || name == "readModuleResult" || name == "fileSize" || name == "exists" || name == "isDirectory" {
+	if name == "readFile" || name == "readModule" || name == "readModuleResult" || name == "fileSize" || name == "exists" || name == "isDirectory" || name == "directoryNames" {
 		return "filesystem.read"
+	}
+	if name == "runCommand" {
+		return "process"
 	}
 	if name == "writeFile" || name == "appendFile" || name == "writeByteArray" || name == "removeFile" || name == "renameFile" || name == "replaceFile" || name == "createDirectory" || name == "removeDirectory" || name == "setFileMode" || name == "changeFileMode" {
 		return "filesystem.write"
@@ -2074,7 +2188,10 @@ func statementRuntimeEffects(input value, functions map[string]functionDecl) []s
 }
 func hasStatementEffectSupport(input value, functions map[string]functionDecl, allowReadText ...bool) bool {
 	if input.kind == "调用" {
-		if input.text == "readInteger" || len(allowReadText) > 0 && input.text == "readText" {
+		if input.text == "writeText" || input.text == "writeError" {
+			return true
+		}
+		if input.text == "readInteger" || input.text == "readByte" || len(allowReadText) > 0 && input.text == "readText" {
 			return true
 		}
 		if isFunctionEffect(input.text) && input.text != "readInteger" {
@@ -2117,13 +2234,11 @@ func statementEffectSupport(function functionDecl, item statement, input value, 
 	if (item.kind == "变量" || item.kind == "赋值") && runtimeStatementLocalType(function, item.name.text) == "运行时结果" {
 		return hasRuntimeResultEffectSupport(input, functions)
 	}
+	if (item.kind == "变量" || item.kind == "赋值") && runtimeStatementLocalType(function, item.name.text) == "运行时字符串" { return hasStatementEffectSupport(input, functions, true) }
 	return hasStatementEffectSupport(input, functions)
 }
 func validateRuntimeFunctions(program *program, constants map[string]constantValue, rootEffects map[string]bool) *issue {
-	functions := make(map[string]functionDecl, len(program.functions))
-	for _, function := range program.functions {
-		functions[function.name.text] = function
-	}
+	functions := make(map[string]functionDecl, len(program.functions)); for _, function := range program.functions { functions[function.name.text] = function }
 	for _, name := range program.runtimeFunctionNames {
 		function := program.runtimeFunctions[name]; environment := copyConstantEnvironment(constants)
 		registerCount := runtimeFunctionRegisterCount(function)
@@ -2552,6 +2667,8 @@ func validateConsoleProgram(root value, constants map[string]constantValue, stat
 		required := 2
 		if isTextResultPayload(variable.resultPayload) {
 			required = 4
+		} else if isRuntimeArrayResultPayload(variable.resultPayload) || isTextArrayResultPayload(variable.resultPayload) {
+			required = 4
 		}
 		counted := 1
 		if isRuntimeResultValue(item.value) {
@@ -2559,7 +2676,7 @@ func validateConsoleProgram(root value, constants map[string]constantValue, stat
 		}
 		slotCount += required - counted
 		if slotCount > 502 {
-			return &issue{code: "S-3040", expected: "不超过 502 个整数等价栈槽", actual: "结果标签、值、文本指针与长度超过当前原生栈帧容量", suggestion: "缩小结果状态或拆分程序状态", pos: item.name.pos}
+			return &issue{code: "S-3040", expected: "不超过 502 个整数等价栈槽", actual: strconv.Itoa(slotCount) + " 个等价栈槽（结果标签、值、文本指针与长度）", suggestion: "缩小结果状态或拆分程序状态", pos: item.name.pos}
 		}
 	}
 	seenOutput := false
@@ -2588,7 +2705,7 @@ func validateConsoleProgram(root value, constants map[string]constantValue, stat
 				return problem
 			}
 		case "运行时字符串":
-			if isRuntimeTextInput(item.value) || isRuntimeFileRead(item.value) || isRuntimeEnvironmentRead(item.value) || isRuntimeEnvironmentNames(item.value) || item.value.kind == "调用" && (item.value.runtimeFunctionText || item.value.text == "argumentText" && len(item.value.args) == 1) {
+			if isRuntimeTextInput(item.value) || isRuntimeFileRead(item.value) || isRuntimeEnvironmentRead(item.value) || isRuntimeEnvironmentNames(item.value) || isRuntimeDirectoryNames(item.value) || item.value.kind == "调用" && (item.value.runtimeFunctionText || item.value.text == "argumentText") {
 				break
 			}
 			if item.value.kind == "调用" && (item.value.text == "substring" || item.value.text == "textConcat" || item.value.text == "arrayGet") {
@@ -2602,6 +2719,9 @@ func validateConsoleProgram(root value, constants map[string]constantValue, stat
 				if exists && variable.kind == "运行时字符串" {
 					break
 				}
+			}
+			if item.value.kind == "调用" && item.value.text == "ifElse" && len(item.value.args) == 3 {
+				break
 			}
 			return &issue{code: "S-3044", expected: "readText（）、textConcat（）、substring（）或已初始化的运行时文本变量", actual: "运行时文本表达式", suggestion: "使用有界文本函数或先将结果存入文本变量", pos: item.value.pos}
 		default:
@@ -2638,9 +2758,9 @@ func validateConsoleCapabilities(root value, statements []statement, constants m
 				return &issue{code: "S-4105", expected: "编译期字符串能力", actual: capability.kind, suggestion: "能力数组只包含字符串标识", pos: item.value.pos}
 			}
 			switch capability.text {
-			case "stdin", "stdout", "filesystem.read", "filesystem.write", "array.write", "map.write", "args":
+			case "stdin", "stdout", "stderr", "filesystem.read", "filesystem.write", "array.write", "map.write", "args", "process":
 			default:
-				return &issue{code: "S-4103", expected: "当前支持的 stdout、stdin、filesystem.read、filesystem.write、array.write、map.write 或 args 能力", actual: capability.text, suggestion: "删除未知能力或使用已支持的能力标识", pos: item.value.pos}
+				return &issue{code: "S-4103", expected: "当前支持的 stdout、stderr、stdin、filesystem.read、filesystem.write、array.write、map.write、args 或 process 能力", actual: capability.text, suggestion: "删除未知能力或使用已支持的能力标识", pos: item.value.pos}
 			}
 			if declared[capability.text] {
 				return &issue{code: "S-4104", expected: "互不重复的能力标识", actual: capability.text, suggestion: "每项能力只声明一次", pos: item.value.pos}
@@ -2675,7 +2795,7 @@ func validateConsoleCapabilities(root value, statements []statement, constants m
 			required["map.write"] = item.name.pos
 		}
 	}
-	for _, capability := range []string{"stdout", "stdin", "filesystem.read", "filesystem.write", "array.write", "map.write", "args"} {
+	for _, capability := range []string{"stdout", "stderr", "stdin", "filesystem.read", "filesystem.write", "array.write", "map.write", "args", "process"} {
 		position, used := required[capability]
 		if used && !declared[capability] {
 			return &issue{code: "S-4102", expected: capability + " 能力声明", actual: "程序使用了未声明的 " + capability, suggestion: "将该能力加入程序根记录的 能力 字符串数组", pos: position}
@@ -2688,10 +2808,16 @@ func collectInputCapabilities(input value, required map[string]sourcePosition) *
 		if current.kind == "调用" {
 			capability := ""
 			switch current.text {
-			case "readInteger", "readText":
+			case "writeText":
+				capability = "stdout"
+			case "writeError":
+				capability = "stderr"
+			case "readInteger", "readByte", "readText":
 				capability = "stdin"
-			case "readFile", "readModule", "readModuleResult", "fileSize", "exists", "isDirectory":
+			case "readFile", "readModule", "readModuleResult", "fileSize", "exists", "isDirectory", "directoryNames":
 				capability = "filesystem.read"
+			case "runCommand":
+				capability = "process"
 			case "writeFile", "appendFile", "writeByteArray", "removeFile", "renameFile", "replaceFile", "createDirectory", "removeDirectory", "setFileMode", "changeFileMode":
 				capability = "filesystem.write"
 			case "arrayPush", "arraySet":
@@ -2832,13 +2958,17 @@ func assignConsoleInteger(item statement, environment map[string]constantValue, 
 		return &issue{code: "S-3023", expected: "运行时结果变量赋值", actual: kind, suggestion: "使用成功或失败生成结果值", pos: item.value.pos}
 	}
 	if kind == "运行时字符串" {
-		if !isRuntimeTextValue(item.value) && !isRuntimeFileRead(item.value) && !isRuntimeArgumentText(item.value) && !isRuntimeEnvironmentRead(item.value) && !isRuntimeEnvironmentNames(item.value) && !isTextResultValue(item.value, environment) && !isStoredTextReturnCall(item.value) {
+		if !isRuntimeTextValue(item.value) && !isRuntimeFileRead(item.value) && !isRuntimeArgumentText(item.value) && !isRuntimeEnvironmentRead(item.value) && !isRuntimeEnvironmentNames(item.value) && !isTextResultValue(item.value, environment) && !isStoredTextReturnCall(item.value) && !isRuntimeStaticTextIfElse(item.value) {
 			return &issue{code: "S-3044", expected: "有界运行时文本表达式、文件读取、参数文本或文本结果值", actual: "运行时文本表达式", suggestion: "使用 readText（）、readFile（静态路径）、argumentText（下标）、textConcat、有界 substring 或文本结果值初始化或更新文本变量", pos: item.value.pos}
 		}
 		if expected == "整数赋值" && environment[item.name.text].kind != "运行时字符串" {
 			return &issue{code: "S-3023", expected: "整数变量或数组赋值", actual: "运行时字符串", suggestion: "将文本输入赋给文本变量", pos: item.value.pos}
 		}
-		environment[item.name.text] = constantValue{kind: "运行时字符串"}
+		origin := ""
+		if isRuntimeArgumentText(item.value) {
+			origin = "argumentText"
+		}
+		environment[item.name.text] = constantValue{kind: "运行时字符串", text: origin}
 		return nil
 	}
 	if kind == "布尔值" || kind == "运行时布尔值" {
@@ -2994,7 +3124,10 @@ func runtimeResultPayload(input value, environment map[string]constantValue) str
 	if input.kind != "调用" || input.text != "成功" || len(input.args) != 1 {
 		return ""
 	}
-	if isRuntimeTextValue(input.args[0]) || isRuntimeArgumentText(input.args[0]) {
+	if isRuntimeTextValue(input.args[0]) || isRuntimeArgumentText(input.args[0]) || isTextReturnCall(input.args[0]) {
+		return "运行时文本"
+	}
+	if input.args[0].kind == "引用" && environment[input.args[0].text].kind == "运行时字符串" {
 		return "运行时文本"
 	}
 	kind, problem := constantType(input.args[0], environment)
@@ -3007,10 +3140,23 @@ func runtimeResultPayload(input value, environment map[string]constantValue) str
 	if kind == "整数" || kind == "运行时整数" {
 		return "整数"
 	}
+	if kind == "运行时整数数组" {
+		return "运行时整数数组"
+	}
+	if kind == "整数数组" {
+		return "运行时整数数组"
+	}
+	if kind == "字符串数组" || kind == "运行时字符串数组" {
+		return "文本数组"
+	}
 	return ""
 }
 func isTextResultPayload(payload string) bool {
 	return payload == "文本" || payload == "运行时文本"
+}
+func isRuntimeArrayResultPayload(payload string) bool { return payload == "运行时整数数组" }
+func isTextArrayResultPayload(payload string) bool {
+	return payload == "文本数组" || payload == "运行时文本数组"
 }
 func isRuntimeMapValue(input value) bool {
 	return input.kind == "调用" && input.text == "映射" && len(input.args) == 0
@@ -3140,7 +3286,21 @@ func validateFilePathArgument(input value, constants map[string]constantValue, c
 	return nil
 }
 func validateEnvironmentNameArgument(input value, constants map[string]constantValue) *issue {
-	if input.kind == "调用" && input.text == "argumentText" && len(input.args) == 1 { return &issue{code: "S-3083", expected: "编译期文本名称", actual: "运行时字符串", suggestion: "当前环境变量查询仅接受非空静态文本名称", pos: input.pos} }
+	if isRuntimeArgumentText(input) {
+		indexType, problem := constantType(input.args[0], constants)
+		if problem != nil {
+			return problem
+		}
+		if indexType != "整数" && indexType != "运行时整数" {
+			return &issue{code: "S-3069", expected: "整数参数下标", actual: indexType, suggestion: "使用整数常量、变量或整数表达式读取参数", pos: input.args[0].pos}
+		}
+		return nil
+	}
+	if input.kind == "引用" {
+		if constant, exists := constants[input.text]; exists && constant.kind == "运行时字符串" && constant.text == "argumentText" {
+			return nil
+		}
+	}
 	nameType, problem := constantType(input, constants)
 	if problem != nil {
 		return problem
@@ -3355,7 +3515,8 @@ func constantType(input value, constants map[string]constantValue) (string, *iss
 					return "", problem
 				}
 				if current.text == "成功" {
-					if argumentType == "运行时字符串" && (isRuntimeTextValue(current.args[0]) || isRuntimeArgumentText(current.args[0]) || current.args[0].kind == "调用" && current.args[0].text == "arrayGet" && len(current.args[0].args) == 2 && current.args[0].args[0].kind == "引用") {
+					if argumentType == "运行时字符串" && (isRuntimeTextValue(current.args[0]) || isRuntimeArgumentText(current.args[0]) || current.args[0].kind == "引用" || current.args[0].kind == "调用" && current.args[0].text == "arrayGet" && len(current.args[0].args) == 2 && current.args[0].args[0].kind == "引用") {
+					} else if strings.HasSuffix(argumentType, "数组") && current.args[0].kind == "调用" && current.args[0].text == "array" {
 					} else if argumentType != "整数" && argumentType != "运行时整数" && argumentType != "字符串" {
 						return "", &issue{code: "S-3023", expected: "整数、编译期文本或有界运行时文本成功值", actual: argumentType, suggestion: "成功结果支持整数、编译期文本、readText（）、textConcat（）或 substring（）载荷", pos: current.args[0].pos}
 					}
@@ -3400,6 +3561,10 @@ func constantType(input value, constants map[string]constantValue) (string, *iss
 					kind = "运行时整数"
 				} else if isTextResultPayload(runtimeResultPayload(current.args[0], constants)) {
 					kind = "运行时字符串"
+				} else if isRuntimeArrayResultPayload(runtimeResultPayload(current.args[0], constants)) {
+					kind = "运行时整数数组"
+				} else if isTextArrayResultPayload(runtimeResultPayload(current.args[0], constants)) {
+					kind = "运行时字符串数组"
 				} else {
 					kind = "运行时整数"
 				}
@@ -3542,6 +3707,11 @@ func constantType(input value, constants map[string]constantValue) (string, *iss
 					return "", &issue{code: "S-3043", expected: "readInteger（）无参数调用", actual: strconv.Itoa(len(current.args)) + " 个参数", suggestion: "删除 readInteger 的参数", pos: current.pos}
 				}
 				kind = "运行时整数"
+			case "readByte":
+				if len(current.args) != 0 {
+					return "", &issue{code: "S-3086", expected: "readByte（）无参数调用", actual: strconv.Itoa(len(current.args)) + " 个参数", suggestion: "删除 readByte 的参数", pos: current.pos}
+				}
+				kind = "运行时整数"
 			case "readText":
 				if len(current.args) != 0 {
 					return "", &issue{code: "S-3044", expected: "readText（）无参数调用", actual: strconv.Itoa(len(current.args)) + " 个参数", suggestion: "删除 readText 的参数", pos: current.pos}
@@ -3563,6 +3733,19 @@ func constantType(input value, constants map[string]constantValue) (string, *iss
 				if isModuleReadResult(current) {
 					kind = "运行时结果"
 				}
+			case "writeText", "writeError":
+				code := map[bool]string{false: "S-3084", true: "S-3085"}[current.text == "writeError"]
+				if len(current.args) != 1 {
+					return "", &issue{code: code, expected: current.text + "（文本）", actual: strconv.Itoa(len(current.args)) + " 个参数", suggestion: "提供一个静态文本或有界运行时文本表达式", pos: current.pos}
+				}
+				textType, problem := constantType(current.args[0], constants)
+				if problem != nil {
+					return "", problem
+				}
+				if textType != "字符串" && textType != "运行时字符串" {
+					return "", &issue{code: code, expected: "标准流写入文本", actual: textType, suggestion: "参数使用静态文本或有界运行时文本表达式", pos: current.args[0].pos}
+				}
+				kind = "运行时整数"
 			case "writeFile", "appendFile", "writeByteArray":
 				if len(current.args) != 2 {
 					return "", &issue{code: "S-3071", expected: current.text + "（静态或参数文本路径，内容）", actual: strconv.Itoa(len(current.args)) + " 个参数", suggestion: "提供静态或参数文本路径和要写入的内容", pos: current.pos}
@@ -3622,6 +3805,22 @@ func constantType(input value, constants map[string]constantValue) (string, *iss
 					return "", &issue{code: "S-3083", expected: "environmentNames（）", actual: strconv.Itoa(len(current.args)) + " 个参数", suggestion: "不提供参数，返回按字节顺序排序并逐行输出的环境变量名称文本", pos: current.pos}
 				}
 				kind = "运行时字符串"
+			case "directoryNames":
+				if len(current.args) != 1 {
+					return "", &issue{code: "S-3087", expected: "directoryNames（静态文本或参数文本路径）", actual: strconv.Itoa(len(current.args)) + " 个参数", suggestion: "提供一个待枚举的目录路径", pos: current.pos}
+				}
+				if problem := validateFilePathArgument(current.args[0], constants, "S-3087", "编译期文本或 argumentText（下标）路径", "当前目录枚举接受静态路径或命令行参数文本"); problem != nil {
+					return "", problem
+				}
+				kind = "运行时字符串"
+			case "runCommand":
+				if len(current.args) != 1 {
+					return "", &issue{code: "S-3088", expected: "runCommand（静态文本或参数文本命令）", actual: strconv.Itoa(len(current.args)) + " 个参数", suggestion: "提供一条交由 /bin/sh -c 执行的命令", pos: current.pos}
+				}
+				if problem := validateFilePathArgument(current.args[0], constants, "S-3088", "编译期文本或 argumentText（下标）命令", "当前进程执行接受静态命令或命令行参数文本"); problem != nil {
+					return "", problem
+				}
+				kind = "运行时整数"
 			case "removeFile":
 				if len(current.args) != 1 {
 					return "", &issue{code: "S-3075", expected: "removeFile（静态或参数文本路径）", actual: strconv.Itoa(len(current.args)) + " 个参数", suggestion: "提供要删除的非空文件路径", pos: current.pos}
@@ -3725,7 +3924,7 @@ func constantType(input value, constants map[string]constantValue) (string, *iss
 				}
 				if textKind == "字符串" {
 					kind = "整数"
-				} else if textKind == "运行时字符串" && (current.args[0].kind == "引用" || isRuntimeTextValue(current.args[0]) || isRuntimeArgumentText(current.args[0]) || current.args[0].kind == "调用" && current.args[0].text == "readEnvironment" || current.args[0].kind == "调用" && current.args[0].text == "arrayGet" || isTextResultValue(current.args[0], constants)) {
+				} else if textKind == "运行时字符串" && (current.args[0].kind == "引用" || isRuntimeTextValue(current.args[0]) || isRuntimeArgumentText(current.args[0]) || isTextReturnCall(current.args[0]) || current.args[0].kind == "调用" && (current.args[0].text == "readEnvironment" || current.args[0].text == "arrayGet" || isRuntimeStaticTextIfElse(current.args[0])) || isTextResultValue(current.args[0], constants)) {
 					kind = "运行时整数"
 				} else {
 					return "", &issue{code: "S-3044", expected: "编译期字符串或受支持的运行时文本值", actual: textKind, suggestion: "使用文本变量、readText（）、textConcat（）或 substring（）结果", pos: current.args[0].pos}
@@ -3761,6 +3960,18 @@ func constantType(input value, constants map[string]constantValue) (string, *iss
 			case "arrayGet":
 				if len(current.args) != 2 {
 					return "", arrayIssue(current, "S-3035", "2 个参数", strconv.Itoa(len(current.args))+" 个参数", "提供数组和零起始整数索引")
+				}
+				if current.args[0].kind == "调用" && current.args[0].text == "结果值" && len(current.args[0].args) == 1 &&
+					isTextArrayResultPayload(runtimeResultPayload(current.args[0].args[0], constants)) {
+					indexType, problem := constantType(current.args[1], constants)
+					if problem != nil {
+						return "", problem
+					}
+					if indexType != "整数" && indexType != "运行时整数" {
+						return "", arrayIssue(current, "S-3034", "整数索引", indexType, "将数组索引改为整数表达式")
+					}
+					kind = "运行时字符串"
+					break
 				}
 				arrayType, problem := constantType(current.args[0], constants)
 				if problem != nil {
@@ -3836,6 +4047,13 @@ func constantType(input value, constants map[string]constantValue) (string, *iss
 				if problem != nil {
 					return "", problem
 				}
+				if current.args[0].kind == "调用" && current.args[0].text == "结果值" && len(current.args[0].args) == 1 {
+					payload := runtimeResultPayload(current.args[0].args[0], constants)
+					if isRuntimeArrayResultPayload(payload) || isTextArrayResultPayload(payload) {
+						kind = "运行时整数"
+						break
+					}
+				}
 				if arrayType != "字符串数组" && arrayType != "整数数组" && arrayType != "布尔值数组" && arrayType != "运行时整数数组" && arrayType != "运行时字符串数组" && arrayType != "运行时布尔值数组" {
 					return "", arrayIssue(current, "S-3036", "数组", arrayType, "将参数改为字符串或整数数组")
 				}
@@ -3872,7 +4090,7 @@ func runtimeTextConcatType(call value, constants map[string]constantValue) (stri
 			}
 			continue
 		}
-		if kind == "运行时字符串" && (argument.kind == "引用" || isRuntimeArgumentText(argument) || isTextResultValue(argument, constants) || argument.kind == "调用" && (argument.text == "readText" || argument.text == "arrayGet" || argument.text == "textConcat" || argument.text == "substring" && (argument.args[0].kind == "引用" || isRuntimeArgumentText(argument.args[0]) || isTextResultValue(argument.args[0], constants) || argument.args[0].kind == "调用" && (argument.args[0].text == "textConcat" || argument.args[0].text == "readText" || argument.args[0].text == "arrayGet")))) {
+		if kind == "运行时字符串" && (argument.kind == "引用" || isRuntimeArgumentText(argument) || isTextResultValue(argument, constants) || isRuntimeStaticTextIfElse(argument) || argument.kind == "调用" && (argument.text == "readText" || argument.text == "arrayGet" || argument.text == "textConcat" || argument.text == "substring" && (argument.args[0].kind == "引用" || isRuntimeArgumentText(argument.args[0]) || isTextResultValue(argument.args[0], constants) || argument.args[0].kind == "调用" && (argument.args[0].text == "textConcat" || argument.args[0].text == "readText" || argument.args[0].text == "arrayGet")))) {
 			continue
 		}
 		if kind != "运行时字符串" || argument.kind != "引用" {
@@ -3934,7 +4152,7 @@ func runtimeTextSubstringType(call value, constants map[string]constantValue) (s
 	if textType != "运行时字符串" {
 		return "", &issue{code: "S-3013", expected: "字符串或运行时文本变量", actual: textType, suggestion: "向 substring 提供字符串值", pos: call.args[0].pos}
 	}
-	if call.args[0].kind != "引用" && !isRuntimeArgumentText(call.args[0]) && !isTextResultValue(call.args[0], constants) && (call.args[0].kind != "调用" || call.args[0].text != "textConcat" && call.args[0].text != "arrayGet" && call.args[0].text != "readText") {
+	if call.args[0].kind != "引用" && !isRuntimeArgumentText(call.args[0]) && !isTextResultValue(call.args[0], constants) && !isRuntimeStaticTextIfElse(call.args[0]) && (call.args[0].kind != "调用" || call.args[0].text != "textConcat" && call.args[0].text != "arrayGet" && call.args[0].text != "readText") {
 		return "", &issue{code: "S-3013", expected: "运行时文本变量或 textConcat 结果", actual: "运行时文本表达式", suggestion: "使用文本变量或单层有界 textConcat 结果作为切片源", pos: call.args[0].pos}
 	}
 	for _, operand := range call.args[0].args {
@@ -3999,7 +4217,10 @@ func booleanCallType(call value, constants map[string]constantValue) (string, *i
 }
 func runtimeTextComparisonOperand(input value) bool {
 	return input.kind == "引用" || isRuntimeArgumentText(input) || isTextReturnCall(input) || input.kind == "调用" &&
-		(input.text == "readText" || input.text == "textConcat" || input.text == "substring" || input.text == "arrayGet" || input.text == "结果值" && len(input.args) == 1 && input.args[0].kind == "引用")
+		(input.text == "readText" || input.text == "textConcat" || input.text == "substring" || input.text == "arrayGet" || input.text == "readEnvironment" || isRuntimeStaticTextIfElse(input) || input.text == "结果值" && len(input.args) == 1 && input.args[0].kind == "引用")
+}
+func isRuntimeStaticTextIfElse(input value) bool {
+	return input.kind == "调用" && input.text == "ifElse" && len(input.args) == 3 && input.args[1].kind == "字符串" && input.args[2].kind == "字符串"
 }
 func isTextResultValue(input value, constants map[string]constantValue) bool {
 	if input.kind != "调用" || input.text != "结果值" || len(input.args) != 1 || !isResultOperand(input.args[0]) {
@@ -4028,7 +4249,7 @@ func ifElseType(call value, constants map[string]constantValue) (string, *issue)
 	}
 	if whenTrue == "字符串" && whenFalse == "字符串" {
 		if condition == "运行时布尔值" {
-			return "", &issue{code: "S-3042", expected: "编译期确定的字符串分支条件", actual: "运行时整数比较", suggestion: "字符串 ifElse 暂只接受可静态求值的 equals 条件", pos: call.pos}
+			return "运行时字符串", nil
 		}
 		return "字符串", nil
 	}
@@ -4421,6 +4642,9 @@ func integerValue(input value, constants map[string]constantValue) (int64, *issu
 			if current.text == "readInteger" {
 				return 0, &issue{code: "S-3042", expected: "可静态求值的整数表达式", actual: "readInteger（）运行时值", suggestion: "运行时整数不能参与编译期求值或动态算术", pos: current.pos}
 			}
+			if current.text == "readByte" {
+				return 0, &issue{code: "S-3042", expected: "可静态求值的整数表达式", actual: "readByte（）运行时字节", suggestion: "运行时字节不能参与编译期求值或动态算术", pos: current.pos}
+			}
 			if current.text == "textByteLength" || current.text == "textByteAt" {
 				result, problem := staticTextByteValue(current, constants)
 				if problem != nil {
@@ -4575,7 +4799,8 @@ func compareIntegerValues(operator string, left, right int64) bool {
 }
 func allowsRuntimeTextReturnCall(item statement) bool {
 	return (item.kind == "变量" || item.kind == "赋值") &&
-		(isTextReturnCall(item.value) || runtimeTextReturnCallAsBorrowedTextArgument(item.value))
+		(isTextReturnCall(item.value) || runtimeTextReturnCallAsBorrowedTextArgument(item.value) ||
+			isRuntimeTextSuccessPayload(item.value, []statement{item}))
 }
 func isTextReturnBorrowConsumer(input value) bool {
 	if input.kind != "调用" {

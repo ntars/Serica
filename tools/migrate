@@ -1,0 +1,59 @@
+#!/usr/bin/env python3
+# SPDX-License-Identifier: MIT
+# Copyright (c) 2026 行简（Serica）贡献者
+"""Migrate one documented deprecated spelling to its supported replacement."""
+
+from __future__ import annotations
+
+import argparse
+import pathlib
+import re
+import sys
+
+RULES = {
+    "legacy-equality": (
+        re.compile(r"(?<![^\s（【，。=])判等(?=\s*（)"),
+        "equals",
+        "判等（…）",
+        "equals（…）",
+    )
+}
+
+
+def main() -> int:
+    parser = argparse.ArgumentParser(description="迁移已弃用的 Serica 写法")
+    parser.add_argument("rule", choices=sorted(RULES), nargs="?", default="legacy-equality")
+    parser.add_argument("paths", nargs="+", type=pathlib.Path)
+    parser.add_argument("--check", action="store_true", help="只检查是否需要迁移")
+    parser.add_argument("--write", action="store_true", help="写回迁移后的源码")
+    args = parser.parse_args()
+    if args.check == args.write:
+        parser.error("必须且只能指定 --check 或 --write 之一")
+
+    pattern, replacement, old, new = RULES[args.rule]
+    changed = 0
+    failures = []
+    for path in args.paths:
+        source = path.read_text(encoding="utf-8")
+        migrated, count = pattern.subn(replacement, source)
+        if count == 0:
+            continue
+        changed += count
+        if args.check:
+            failures.append(f"{path}: 发现 {count} 处 {old}，应改为 {new}")
+        else:
+            path.write_text(migrated, encoding="utf-8")
+            print(f"{path}: 迁移 {count} 处 {old} → {new}")
+    if args.check:
+        if failures:
+            print("迁移检查失败：", file=sys.stderr)
+            print("\n".join(failures), file=sys.stderr)
+            return 1
+        print(f"迁移检查通过：{args.rule}，无需改写")
+        return 0
+    print(f"迁移完成：{args.rule}，共 {changed} 处")
+    return 0
+
+
+if __name__ == "__main__":
+    raise SystemExit(main())

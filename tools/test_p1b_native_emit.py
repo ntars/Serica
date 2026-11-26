@@ -88,7 +88,7 @@ def verify_programs(work):
         ("equals（『行』，『行』）", b"1\n"),
         ("notEquals（0，0）", b"0\n"),
         ("『』", b"\n"),
-        ("『é𠮷\\n简』+「\\n」", "é𠮷\n简\\n\n".encode()),
+        ("『é𠮷\\n简』+「\\n」", "é𠮷\n简\\n\n".encode()),
     )
     for index, (expression, expected) in enumerate(cases):
         project = work / f"static {index}"
@@ -382,7 +382,7 @@ def verify_runtime_text(work):
     valid = (
         (b"", b"\n"), (b"\r\n", b"\n"), (b"\r", b"\n"), (b"\x00\n", b"\x00\n"),
         (b"\xf4\x8f\xbf\xbf\n", b"\xf4\x8f\xbf\xbf\n"),
-        ("行简é𠮷\r\n".encode(), "行简é𠮷\n".encode()),
+        ("行简é𠮷\r\n".encode(), "行简é𠮷\n".encode()),
         (exact + b"\n", exact + b"\n"), (exact, exact + b"\n"),
     )
     direct = tuple((value, expected, 0) for value, expected in valid)
@@ -471,8 +471,8 @@ def verify_borrowed_text(work):
     memory = ("_mmap", "_munmap")
     caps = "array（『stdout』，『stdin』）"
     # A named constant can hold folded expressions, while a direct literal keeps its own bytes.
-    literal = "常量 文=『行简𠮷\\n』+「é」。\n变量 位=0。\n" + program("文")
-    output = "行简𠮷\né".encode()
+    literal = "常量 文=『行简𠮷\\n』+「é」。\n变量 位=0。\n" + program("文")
+    output = "行简𠮷\né".encode()
     runtime_pair(work, "literal-rodata", {"main.serica": literal}, ((b"", output + b"\n", 0),),
                  reads=False, instructions=("adr\tx0,", "strb\tw9, [sp"), pool=output + b"\0")
     empty = "变量 位=0。\n" + program("『』")
@@ -1102,10 +1102,10 @@ def verify_short_read_limit(work):
 
 
 def verify_native_text_comparison(work):
-    mode = "é𠮷"
+    mode = "é𠮷"
     argv = program(f"ifElse（equals（argumentText（1），『{mode}』），9，4）", "array（『stdout』，『args』）")
     argv_runs = (
-        (b"", b"9\n", 0, (mode,)), (b"", b"4\n", 0, ("é𠮷",)),
+        (b"", b"9\n", 0, (mode,)), (b"", b"4\n", 0, ("e\u0301𠮷",)),
         (b"", b"4\n", 0, ("",)), (b"", b"4\n", 0, (mode + "a",)), (b"", b"", 2),
     )
     runtime_pair(work, "cmp-mode", {"main.serica": argv}, argv_runs, reads=False, rebuild=True,
@@ -1150,7 +1150,7 @@ def verify_native_text_arrays(work):
         + program("arrayGet（队，位置）", caps)
     )
     first = "行𠮷\0".encode()
-    second = "é".encode()
+    second = "é".encode()
     stdin_base = first + b"\n" + second + b"\n"
     snapshot_runs = tuple((stdin_base + f"{index}\n".encode(), text + b"\n", 0)
                           for index, text in enumerate((second, b"", first, second)))

@@ -6,8 +6,8 @@
 [![Stage](https://img.shields.io/badge/stage-P1b%20in%20progress-yellow?style=flat-square)](#compatibility)
 [![Verified platform](https://img.shields.io/badge/platform-macOS%20arm64-lightgrey?style=flat-square)](#compatibility)
 [![License](https://img.shields.io/badge/license-MIT%20%2B%20Apache--2.0-blue?style=flat-square)](./LICENSING.md)
-[![Developer preview](https://img.shields.io/badge/release-v0.1.0--dev.4%20preview-orange?style=flat-square)](RELEASE.md)
-[![Seed size](https://img.shields.io/badge/seed-12077%2F12200%20lines-informational?style=flat-square)](#design-details-and-engineering-trade-offs)
+[![Developer preview](https://img.shields.io/badge/release-v0.1.0--dev.24%20preview-orange?style=flat-square)](RELEASE.md)
+[![Seed size](https://img.shields.io/badge/seed-12875%2F13200%20lines-informational?style=flat-square)](#design-details-and-engineering-trade-offs)
 
 # Serica（行简）
 
@@ -35,13 +35,13 @@ A Chinese-first programming language is not a new idea, and the hard part is not
 
 The design priorities are ordered and must not be rearranged: multi-device sync, capability-based side effects, single-threaded UI with message passing, interface-as-data, and full Chinese expression. Chinese is the medium, not the selling point; the difference has to land in *the cost of building a multi-device sync app*.
 
-The repository is at pre-alpha: the stage0 seed compiler can compile a restricted source program into a macOS arm64 Mach-O, and the artifact opens a native window that displays and edits Chinese text. The language itself is far from formed, and this repository **cannot be used to write any production software** today. The current product landing is the [v0.1.0-dev.18 developer-preview source-and-runtime bundle](RELEASE.md): it can be extracted, verified, built and run, and supports optional local prefix install/uninstall, but it is not a system installer, app bundle, or notarized distribution.
+The repository is at pre-alpha: the stage0 seed compiler can compile a restricted source program into a macOS arm64 Mach-O, and the artifact opens a native window that displays and edits Chinese text. The language itself is far from formed, and this repository **cannot be used to write any production software** today. The current product landing is the [v0.1.0-dev.24 developer-preview source-and-runtime bundle](RELEASE.md): it can be extracted, verified, built and run, and supports optional local prefix install/uninstall, but it is not a system installer, app bundle, or notarized distribution.
 
 **Where it fits**
 
 - Reading or contributing to the design and implementation of a language that bootstraps from zero and uses Chinese as its medium.
 - Auditing command-level evidence for claims such as "fullwidth punctuation is grammar", "Mach-O written by hand" and "reproducible builds".
-- Studying the boundary constraints of a compiler seed scaffold: a 12,000-line cap, per-line attribution, and deletion after self-hosting.
+- Studying the boundary constraints of a compiler seed scaffold: a 12,800 masked-code-line cap, per-line attribution, and deletion after self-hosting.
 
 **Where it does not fit**
 
@@ -58,7 +58,7 @@ The repository is at pre-alpha: the stage0 seed compiler can compile a restricte
 | The output is a native executable | The seed writes Mach-O directly; it generates no C and calls no LLVM, assembler or linker | `file build/p0b-window` prints `Mach-O 64-bit executable arm64`; `make doctor` and `tools/check-independence source` pass |
 | Builds are reproducible | The same source written to the same path produces byte-identical output across rebuilds | Measured on 2026-11-20, SHA-256 `40513babb5cc02d69e49ebdbb6e73ab0c571d5802d3d44137fee290d7d9f878f` |
 | Diagnostics report Chinese positions twice | Current lexer, parser, field and module errors report both code-point and display columns | `make test-p0b-scope`, `make test-p1b-static` and `make test-p1b-modules` |
-| Seed constraints | D-0026 permits a temporary bridge; D-0061/D-0087/D-0101 set the current 12,000-line cap, D-0158 moves checker tools out of the Go seed, and per-line attribution, Apache-2.0 and the P3b deletion gate remain | `make seed-audit`; 11,996 of 12,000 lines currently |
+| Seed constraints | D-0026 permits a temporary bridge; D-0061/D-0087/D-0101/D-0173/D-0192/D-0208/D-0210 adjust the current 12,800-line cap, D-0158 moves checker tools out of the Go seed, and per-line attribution, Apache-2.0 and the P3b deletion gate remain | `make seed-audit`; 12,787 of 12,800 lines currently |
 
 **Limits**
 
@@ -112,9 +112,9 @@ The repository is at pre-alpha: the stage0 seed compiler can compile a restricte
 ### The seed is scaffolding, not a dependency
 
 - **Why it matters**: the most common way a self-hosting project fails is that the seed grows to look like the real implementation, nobody dares delete it, and "zero dependency" becomes a permanent slogan.
-- **How it works**: the seed may only live in `bootstrap/` and must stay under 12,000 lines; Go is used only as "C with a GC" (no interfaces, generics, goroutines, channels, reflection, `init` or third-party packages); every implementation line is registered in [docs/build/seed-attribution.md](docs/build/seed-attribution.md); the whole directory is deleted once the P3b self-hosting fixed point is reached.
+- **How it works**: the seed may only live in `bootstrap/` and must stay under 12,800 masked code lines; Go is used only as "C with a GC" (no interfaces, generics, goroutines, channels, reflection, `init` or third-party packages); every implementation line is registered in [docs/build/seed-attribution.md](docs/build/seed-attribution.md); the whole directory is deleted once the P3b self-hosting fixed point is reached.
 - **How it differs**: the deletion condition is written into the repository and paired with machine-counted line and attribution commands, rather than relying on good intentions.
-- **Evidence**: `make seed-audit` checks the Go subset, dependencies and per-line attribution; the active seed has 11,996 lines against a 12,000 cap. D-0026 permits limited temporary bootstrap extensions; the whole `bootstrap/` directory must still be deleted at P3b.
+- **Evidence**: `make seed-audit` checks the Go subset, dependencies and per-line attribution; the active seed has 12,787 masked code lines against a 12,800 cap, with 13,029 physical lines reported for attribution. D-0026 permits limited temporary bootstrap extensions; the whole `bootstrap/` directory must still be deleted at P3b.
 
 ## Design details and engineering trade-offs
 
@@ -138,7 +138,9 @@ The repository is at pre-alpha: the stage0 seed compiler can compile a restricte
 
 ### Runtime semantics remain limited to native console subgates
 
-- **Current fact**: `程序=【能力=array（『stdout』），输出=...】` declares the console output capability and emits integer expressions as ARM64 code and supports integer variables, dynamically growing integer and UTF-8 text arrays, runtime arithmetic with overflow/division/shift checks, and integer control flow. Text arrays use registered virtual-memory calls to copy elements, grow geometrically, replace values safely when the source aliases the target array, and check dynamic indexes. `textLength(arrayGet(...))` counts Unicode scalar values. `readInteger()` provides bounded integer input and requires declared `stdin`; every console root requires declared `stdout`. When stored in a text variable, `readText()` uses a mapped buffer that grows geometrically to a 16 MiB capacity (up to 16 MiB−1 content bytes), validates the whole line as UTF-8, then stores or outputs it. Direct root input still uses a 63-byte buffer. `textConcat(left, right)` variable assignments join direct readText() input, runtime text, a slice of a dynamic text-array element and compile-time string operands up to 63 bytes into alias-safe mapped storage of up to 16 MiB−1 result bytes; direct root output remains bounded to 63 bytes, with oversized results rejected before output. `substring(text, start, end)` accepts direct readText(), supported variables, dynamic text-array elements or a one-level textConcat source, scans by Unicode code point, and keeps indexes within 0 through 63, including runtime integer indexes. Text variables support byte equality with compile-time strings and Unicode scalar ordering without normalization in conditions. Compile-time string expressions also support code-point ordering conditions and static `ifElse` selection without normalization. General text expressions remain unsupported. `equals` and `notEquals` compare compile-time boolean expressions, runtime boolean scalars and dynamic boolean array elements. Runtime boolean results can be stored and reassigned in scalar variables or mutable dynamic boolean arrays. Boolean arrays support push, set, indexed reads and length while retaining strict type separation from integer arrays; direct root output is normalized to `1` or `0`, while integer arithmetic remains rejected. Bounded results can carry integer, compile-time text, direct runtime readText() or supported runtime textConcat()/substring() success payloads, expose status and error codes, and propagate a failed result through a nonzero exit before stdout; text results use four native slots, direct runtime payloads reuse a 16 MiB−1-byte anonymous mapping, and values can be copied or reassigned. Text result values can be read through textLength, textConcat, substring, equality and ordering conditions while failed results propagate before stdout; runtime text-result deep copies into result buffers, text variables and text-array elements are implemented, while cross-function recovery remains unimplemented. Compile-time UTF-8 text can also be written from the Mach-O constant section. Function-level `stdin`, `array.write` and `map.write` effects are explicit and propagated; `stdout`/other IO effects, general containers, general key/value maps and file/process IO remain unimplemented.
+- **Current fact**: `程序=【能力=array（『stdout』），输出=...】` declares the console output capability and emits integer expressions as ARM64 code and supports integer variables, dynamically growing integer and UTF-8 text arrays, runtime arithmetic with overflow/division/shift checks, and integer control flow. Text arrays use registered virtual-memory calls to copy elements, grow geometrically, replace values safely when the source aliases the target array, and check dynamic indexes. `textLength(arrayGet(...))` counts Unicode scalar values. `readInteger()` provides bounded integer input and requires declared `stdin`; every console root requires declared `stdout`. When stored in a text variable, `readText()` uses a mapped buffer that grows geometrically to a 16 MiB capacity (up to 16 MiB−1 content bytes), validates the whole line as UTF-8, then stores or outputs it. Direct root input still uses a 63-byte buffer. `textConcat(left, right)` variable assignments join direct readText() input, runtime text, a slice of a dynamic text-array element and compile-time string operands up to 63 bytes into alias-safe mapped storage of up to 16 MiB−1 result bytes; direct root output remains bounded to 63 bytes, with oversized results rejected before output. `substring(text, start, end)` accepts direct readText(), supported variables, dynamic text-array elements or a one-level textConcat source, scans by Unicode code point, and keeps indexes within 0 through 63, including runtime integer indexes. Text variables support byte equality with compile-time strings and Unicode scalar ordering without normalization in conditions. Compile-time string expressions also support code-point ordering conditions and static `ifElse` selection without normalization. General text expressions remain unsupported. `equals` and `notEquals` compare compile-time boolean expressions, runtime boolean scalars and dynamic boolean array elements. Runtime boolean results can be stored and reassigned in scalar variables or mutable dynamic boolean arrays. Boolean arrays support push, set, indexed reads and length while retaining strict type separation from integer arrays; direct root output is normalized to `1` or `0`, while integer arithmetic remains rejected. Bounded results can carry integer, compile-time text, conditionally selected known text, ordinary runtime text variables, direct runtime readText() or supported runtime textConcat()/substring() success payloads, expose status and error codes, and propagate a failed result through a nonzero exit before stdout; text results use four native slots, direct runtime payloads reuse a 16 MiB−1-byte anonymous mapping, and values can be copied or reassigned. Text result values can be read through textLength, textConcat, substring, equality and ordering conditions while failed results propagate before stdout; runtime text-result deep copies into result buffers, text variables and text-array elements are implemented, while cross-function recovery remains unimplemented. Compile-time UTF-8 text can also be written from the Mach-O constant section. Function-level `stdin`, `array.write` and `map.write` effects are explicit and propagated; `stdout`/other IO effects, general containers, general key/value maps and file/process IO remain unimplemented.
+- **Runtime text branches**: a runtime integer or text condition can select between two compile-time UTF-8 branches for direct root output, as an operand of `textLength`, `substring`, `textConcat`, `equals`/`notEquals` and text ordering, or to initialize and update a bounded text variable with its own buffer. D-0202 additionally verifies initialization and update of text arrays, read-only arguments to effect-free functions, returns from function-local text, and success-result payloads. D-0203 opens ordinary runtime text variables as success payloads: result variables own a deep copy, and direct value, length, status and error-code observation is supported. D-0204 permits effectful statement functions to store `readText()` directly in a text local, reassign it, and package it as a success result. D-0205 additionally permits a final direct return of that local with caller ownership transfer. Arrays and result buffers own copied content while function arguments remain read-only borrows. Dynamic branches, nested effectful text returns, recursive result ABI, general container result payloads, container escape and cross-function result recovery remain rejected. [D-0196](docs/decisions/0196-runtime-static-text-ifelse.md), [D-0197](docs/decisions/0197-runtime-static-text-ifelse-operand.md), [D-0198](docs/decisions/0198-runtime-static-text-ifelse-comparison.md), [D-0199](docs/decisions/0199-runtime-static-text-ifelse-substring.md), [D-0200](docs/decisions/0200-runtime-static-text-ifelse-concat.md), [D-0201](docs/decisions/0201-runtime-static-text-ifelse-variable.md), [D-0202](docs/decisions/0202-runtime-static-text-ifelse-consumers-result.md), [D-0203](docs/decisions/0203-runtime-text-variable-success-payload.md), [D-0204](docs/decisions/0204-effectful-text-local-success-payload.md), [D-0205](docs/decisions/0205-effectful-text-local-direct-return.md)
+- **Exact standard-stream output**: `writeText(text)` and `writeError(text)` write valid UTF-8 bytes to stdout and stderr without an implicit newline and return the written byte count. The native bridge loops over short writes, and the root plus every call layer must declare the matching capability. Missing root `stderr`, hidden effects, bad arity and non-text arguments produce `S-4102`, `S-4106` and `S-3085`. The same change fixes Darwin arm64 `stat` frames that overwrote caller return values and the missing `isDirectory` stack restore. [D-0206](docs/decisions/0206-stdout-write-boundary.md), [D-0207](docs/decisions/0207-darwin-stat-frame-root-cause.md), [D-0209](docs/decisions/0209-standard-error-write-boundary.md)
 - **Stage constraint**: these are hard P1b gates; constants or static subsets cannot substitute for runtime capability. D-0026 allows a temporary Go bootstrap bridge, with Serica taking over the formal implementation before P3b seed deletion.
 
 ### The window uses the system graphics stack for now
@@ -180,9 +182,11 @@ make doctor
 Output:
 
 ```text
-Go 种子子集检查：通过（活动源码行数以 `make seed-audit` 为准，归因完整）
-C-1 AST 归因：4927/11842 行（41.6%）；种子超过 3000 行且占比超过 40% 时须记录语言复核
-C-1 条件已触发；D-0009/D-0059 复核记录通过
+口径：掩码代码行（注释、字符串与空白不计）
+Go 种子子集检查：通过（11 个活动源码文件，13161/13200 行，余量 39，归因完整）
+物理行参考：12930 行（仅用于核对文件长度与归因范围）
+C-1 AST 归因：5013/12905 行（38.8%）；种子超过 3000 行且占比超过 40% 时须记录语言复核
+C-1 条件未触发
 bootstrap/archive/prototype-3.8/lexical.serica：NFC=true 半角标点=0 禁用字符=0
 examples/p0b-window.serica：NFC=true 半角标点=0 禁用字符=0
 依赖缓存路径： 通过
@@ -229,7 +233,7 @@ build/hello: Mach-O 64-bit executable arm64
 
 Running it opens a native window titled 「行简 P0b」 with the body 「点击这里编辑中文」, editable straight from the keyboard.
 
-The compile-time P1b subset, static modules and native output subgates can be rerun with `make test-p1b-static`, `make test-p1b-modules` and `make test-p1b-runtime`. Checked runtime integer variables and arithmetic are implemented; dynamic integer and text arrays support push/index/update, while bounded integer, compile-time text, direct runtime readText() or supported runtime text-expression results, status/error-code queries and explicit failure propagation are implemented; runtime text-result deep copies into result buffers, text variables and text-array elements are implemented, while cross-function recovery, general key/value types, general containers and general IO remain unimplemented, so the P1b stage gate is still open.
+The compile-time P1b subset, static modules and native output subgates can be rerun with `make test-p1b-static`, `make test-p1b-modules` and `make test-p1b-runtime`. Checked runtime integer variables and arithmetic are implemented; dynamic integer and text arrays support push/index/update, while bounded integer, compile-time text, direct runtime readText() or supported runtime text-expression results, status/error-code queries and explicit failure propagation are implemented; runtime text-result deep copies into result buffers, text variables and text-array elements are implemented. `readEnvironment` accepts compile-time text, an `argumentText` integer index, or a stored argument-text variable; dynamic names are NUL-terminated, UTF-8 validated and bounded by a 4 KiB scratch area before use in direct output, textLength, comparisons, or success payloads. Arbitrary concatenated or sliced names remain rejected. Cross-function recovery, general key/value types, general containers and general IO remain unimplemented, so the P1b stage gate is still open.
 
 ## Configuration
 
@@ -388,7 +392,7 @@ There is **no** performance data at this stage, and no estimates are provided.
 - **Bottleneck analysis**: not measured. Only a single-window text example is built, there is no general runtime, and window rendering goes through system AppKit, so performance is decided by the platform.
 - **Tuning advice**: no performance work before the P1b gate passes, to avoid misleading numbers from an unsettled implementation.
 
-Checkable quantitative facts: the active seed is 11,996 lines (12,000 cap), and the example artifact is a macOS arm64 Mach-O.
+Checkable quantitative facts: the active seed is 12,558 masked code lines (12,800 cap), and the example artifact is a macOS arm64 Mach-O.
 
 ## Security and privacy
 
@@ -441,7 +445,7 @@ The root program accepts one `窗口` or one `程序` binding. Compile-time cons
 
 ## Changelog
 
-Version changes follow semantic versioning and the Keep a Changelog structure; the full record is in [CHANGELOG.md](CHANGELOG.md). No formal language version has been released yet; `v0.1.0-dev.18` is only a developer-preview distribution, see [RELEASE.md](RELEASE.md) and [ACCEPTANCE.md](ACCEPTANCE.md).
+Version changes follow semantic versioning and the Keep a Changelog structure; the full record is in [CHANGELOG.md](CHANGELOG.md). No formal language version has been released yet; `v0.1.0-dev.24` is only a developer-preview distribution, see [RELEASE.md](RELEASE.md) and [ACCEPTANCE.md](ACCEPTANCE.md).
 
 ## Roadmap
 

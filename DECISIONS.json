@@ -6,7 +6,8 @@
       "decision": "多端同步应用是首要动机；中文是表达媒介，不是差异点。",
       "check": "每个差异特性执行双向关键字替换测试，并给出模块证据。",
       "status": "settled",
-      "source": "docs/decisions/0006-anti-shell-and-differentiation.md"
+      "source": "docs/decisions/0006-anti-shell-and-differentiation.md",
+      "makeTarget": "none"
     },
     {
       "id": "D-0007",
@@ -14,7 +15,8 @@
       "decision": "stage0 至 stage3 分阶段；完全独立要求源码、链接、构建三层全过。",
       "check": "stage2 与 stage3 四段归一化比较；执行附录 K 命令。",
       "status": "settled",
-      "source": "docs/decisions/0007-self-hosting-and-zero-dependency.md"
+      "source": "docs/decisions/0007-self-hosting-and-zero-dependency.md",
+      "makeTarget": "none"
     },
     {
       "id": "D-0008",
@@ -22,7 +24,8 @@
       "decision": "禁止转译、透传、复用他语言实现及外部工具生成行简产物；仅 bootstrap 种子例外。",
       "check": "tools/check-independence source；核对依赖登记与产物格式。",
       "status": "settled",
-      "source": "docs/decisions/0008-anti-shell-enforcement.md"
+      "source": "docs/decisions/0008-anti-shell-enforcement.md",
+      "makeTarget": "none"
     },
     {
       "id": "D-0009",
@@ -30,7 +33,8 @@
       "decision": "种子主选 Go，使用 go1.27.4；原型三项实测是 P0b 启动门槛。",
       "check": "make prototype；中文词法、直接产出可执行文件、CoreText 中文窗口均有命令与截图证据。",
       "status": "settled",
-      "source": "docs/decisions/0009-seed-language-is-go.md"
+      "source": "docs/decisions/0009-seed-language-is-go.md",
+      "makeTarget": "prototype"
     },
     {
       "id": "D-0010",
@@ -38,7 +42,8 @@
       "decision": "要求转成机器事实；决策快照、交叉审计和证据等级按手册执行。",
       "check": "逐项核对 DECISIONS.json；零知识检查记录命令与期望输出。",
       "status": "settled",
-      "source": "docs/decisions/0010-ai-driven-governance.md"
+      "source": "docs/decisions/0010-ai-driven-governance.md",
+      "makeTarget": "none"
     },
     {
       "id": "D-0011",
@@ -46,7 +51,8 @@
       "decision": "P6b 可视化编辑等价 .serica AST 文本，能力声明显式，不产出黑盒资源。",
       "check": "源码导出／回读、双向同步、相同类型与能力检查、无二进制 UI 资源。",
       "status": "settled",
-      "source": "docs/decisions/0011-visual-editing-is-ast-view.md"
+      "source": "docs/decisions/0011-visual-editing-is-ast-view.md",
+      "makeTarget": "none"
     },
     {
       "id": "D-0012",
@@ -54,7 +60,8 @@
       "decision": "T-2/T-9 冻结中性现代中文关键字、全角符号表；标准库 API 使用英文。",
       "check": "punct-scan／serica lex 检查 NFC、半角标点与禁用字符。",
       "status": "settled",
-      "source": "docs/decisions/0012-syntax-symbols-and-stdlib-naming.md"
+      "source": "docs/decisions/0012-syntax-symbols-and-stdlib-naming.md",
+      "makeTarget": "none"
     },
     {
       "id": "D-0013-T10-TRADEMARK",
@@ -62,7 +69,8 @@
       "decision": "未核；不得宣称名称已注册。",
       "check": "首个对外发布前完成法务检索并记录日期与范围。",
       "status": "pending",
-      "source": "docs/decisions/0013-open-items-closure.md"
+      "source": "docs/decisions/0013-open-items-closure.md",
+      "makeTarget": "none"
     },
     {
       "id": "D-0013-T12-LEGAL",
@@ -70,7 +78,8 @@
       "decision": "首个对外 release 前复核。",
       "check": "记录法务复核结论；发布前阻断。",
       "status": "pending",
-      "source": "docs/decisions/0013-open-items-closure.md"
+      "source": "docs/decisions/0013-open-items-closure.md",
+      "makeTarget": "none"
     },
     {
       "id": "D-0014",
@@ -78,7 +87,8 @@
       "decision": "stage0 先实现受限通用记录值语法，以标题和文本字段驱动最小窗口程序。",
       "check": "build 示例并验收原生可执行产物、中文显示与点击改字。",
       "status": "settled",
-      "source": "docs/decisions/0014-p0b-source-subset.md"
+      "source": "docs/decisions/0014-p0b-source-subset.md",
+      "makeTarget": "none"
     },
     {
       "id": "D-0015",
@@ -86,7 +96,8 @@
       "decision": "P1b 编译期子集：ASCII + 左结合连接字符串；运行时字符串仍未实现。",
       "check": "make test-p1b-static 的字符串正反例与产物检查；不代表运行时语义通过。",
       "status": "settled",
-      "source": "docs/decisions/0015-p1b-string-concatenation.md"
+      "source": "docs/decisions/0015-p1b-string-concatenation.md",
+      "makeTarget": "test-p1b-static"
     },
     {
       "id": "D-0016",
@@ -94,7 +105,8 @@
       "decision": "P1b 编译期子集：substring 使用 Unicode 码位零起始、半开区间；运行时切片仍未实现。",
       "check": "make test-p1b-static 的切片正例、边界诊断和产物检查。",
       "status": "settled",
-      "source": "docs/decisions/0016-p1b-string-slicing.md"
+      "source": "docs/decisions/0016-p1b-string-slicing.md",
+      "makeTarget": "test-p1b-static"
     },
     {
       "id": "D-0017",
@@ -102,7 +114,8 @@
       "decision": "P1b 编译期子集：equals 比较码位序列；ifElse 根据结果选择字符串；运行时控制流仍未实现。",
       "check": "make test-p1b-static 的相等比较、分支正反例和产物检查。",
       "status": "settled",
-      "source": "docs/decisions/0017-p1b-string-equality-and-selection.md"
+      "source": "docs/decisions/0017-p1b-string-equality-and-selection.md",
+      "makeTarget": "test-p1b-static"
     },
     {
       "id": "D-0018",
@@ -110,7 +123,8 @@
       "decision": "P1b 编译期子集：substring 索引支持有符号 64 位整数算术；D-0027/D-0029/D-0030 另有固定表达式、整数变量栈槽和静态可证变量算术原生子门。",
       "check": "make test-p1b-static 的整数正例和溢出/除零诊断。",
       "status": "settled",
-      "source": "docs/decisions/0018-p1b-integer-constant-addition.md"
+      "source": "docs/decisions/0018-p1b-integer-constant-addition.md",
+      "makeTarget": "test-p1b-static"
     },
     {
       "id": "D-0019",
@@ -118,7 +132,8 @@
       "decision": "P1b 编译期子集：bitAnd/bitOr/bitXor 对有符号 64 位补码执行；D-0027/D-0029/D-0030 另有固定表达式和静态可证变量的原生位运算子门。",
       "check": "make test-p1b-static 的位运算正例、参数反例和产物检查。",
       "status": "settled",
-      "source": "docs/decisions/0019-p1b-constant-bitwise-operations.md"
+      "source": "docs/decisions/0019-p1b-constant-bitwise-operations.md",
+      "makeTarget": "test-p1b-static"
     },
     {
       "id": "D-0020",
@@ -126,7 +141,8 @@
       "decision": "P1b 编译期子集：支持先声明后引用的顶层中文不可变常量；运行时存储仍未实现。",
       "check": "make test-p1b-static 的常量正例与重复/前向/未定义引用诊断。",
       "status": "settled",
-      "source": "docs/decisions/0020-p1b-immutable-constant-bindings.md"
+      "source": "docs/decisions/0020-p1b-immutable-constant-bindings.md",
+      "makeTarget": "test-p1b-static"
     },
     {
       "id": "D-0021",
@@ -134,7 +150,8 @@
       "decision": "P1b 编译期子集：有符号 64 位整数支持一元负号、分组、加减乘除和补码位运算；D-0027/D-0029/D-0030 另有固定表达式执行、整数变量栈槽与静态可证变量运算子门。",
       "check": "make test-p1b-static 的运算结果、溢出、除零和类型诊断。",
       "status": "settled",
-      "source": "docs/decisions/0021-p1b-signed-integer-constant-arithmetic.md"
+      "source": "docs/decisions/0021-p1b-signed-integer-constant-arithmetic.md",
+      "makeTarget": "test-p1b-static"
     },
     {
       "id": "D-0022",
@@ -142,7 +159,8 @@
       "decision": "P1b 编译期子集：支持一维同类型字符串/整数数组、arrayGet 与 arrayLength；动态数组仍未实现。",
       "check": "make test-p1b-static 的数组正例、索引边界与消费类型诊断。",
       "status": "settled",
-      "source": "docs/decisions/0022-p1b-constant-arrays.md"
+      "source": "docs/decisions/0022-p1b-constant-arrays.md",
+      "makeTarget": "test-p1b-static"
     },
     {
       "id": "D-0023",
@@ -150,7 +168,8 @@
       "decision": "定义静态相对文件导入、无环依赖、平面常量名称空间和确定性依赖顺序。",
       "check": "make test-p1b-modules 验收静态闭包、路径边界、诊断与顺序稳定；由行简接管仍待验收。",
       "status": "settled",
-      "source": "docs/decisions/0023-p1b-module-import-semantics.md"
+      "source": "docs/decisions/0023-p1b-module-import-semantics.md",
+      "makeTarget": "test-p1b-modules"
     },
     {
       "id": "D-0024",
@@ -158,7 +177,8 @@
       "decision": "按用户继续推进指示，对既定 P1b 能力作任务范围内的 Go 种子扩展；明确记录其与外部手册 3.7/4.6 冲突。",
       "check": "每项 P1b 能力有正反例与诊断；维持 Go 子集、5000 行上限、逐行归因并在 P3b 删除种子。",
       "status": "superseded",
-      "source": "docs/decisions/0024-p1b-seed-stage-exception.md"
+      "source": "docs/decisions/0024-p1b-seed-stage-exception.md",
+      "makeTarget": "none"
     },
     {
       "id": "D-0025",
@@ -166,7 +186,8 @@
       "decision": "全项目目标严格执行手册 §3.7/§4.6；D-0024 不再作为例外，现有 Go P1b 扩展不计合规验收。",
       "check": "阶段清单与实际硬门一致；P1b 通过前不进入 P2b；独立性与自举证据均可复跑。",
       "status": "superseded",
-      "source": "docs/decisions/0025-strict-bootstrap-compliance.md"
+      "source": "docs/decisions/0025-strict-bootstrap-compliance.md",
+      "makeTarget": "none"
     },
     {
       "id": "D-0026",
@@ -174,7 +195,8 @@
       "decision": "允许 Go 种子临时补齐 P1b 自举能力；最终 compiler/runtime/stdlib 仍须为行简实现，第三方代码生成与 Go 产品运行时不得进入行简产物，P3b 删除种子。",
       "check": "P1b 各硬门、原生产物、依赖/许可/独立性审计和 stage2/stage3 四段比较均有可复跑证据；5000 行、逐行归因和种子删除门通过。",
       "status": "settled",
-      "source": "docs/decisions/0026-temporary-bootstrap-bridge.md"
+      "source": "docs/decisions/0026-temporary-bootstrap-bridge.md",
+      "makeTarget": "none"
     },
     {
       "id": "D-0027",
@@ -182,7 +204,8 @@
       "decision": "stage0 将固定整数表达式直接生成为 macOS arm64 指令，通过 libSystem write 输出；这只是 P1b 运行时子门，不代表变量或完整 IO 已实现。",
       "check": "D-0027 首次验收执行 9 个整数产物；后续整数变量栈槽和静态可证变量运算分别见 D-0029 与 D-0030。",
       "status": "settled",
-      "source": "docs/decisions/0027-native-integer-runtime-subgate.md"
+      "source": "docs/decisions/0027-native-integer-runtime-subgate.md",
+      "makeTarget": "none"
     },
     {
       "id": "D-0028",
@@ -190,7 +213,8 @@
       "decision": "程序根绑定可将编译期确定的 UTF-8 字符串放入 Mach-O 常量区，并由原生产物通过 libSystem write 输出；不代表动态字符串或通用 IO。",
       "check": "make test-p1b-runtime 实际运行中文字符串产物，检查 stdout、Mach-O/dyld/系统符号/签名，并复验整数子门。",
       "status": "settled",
-      "source": "docs/decisions/0028-native-utf8-output-subgate.md"
+      "source": "docs/decisions/0028-native-utf8-output-subgate.md",
+      "makeTarget": "test-p1b-runtime"
     },
     {
       "id": "D-0029",
@@ -198,7 +222,8 @@
       "decision": "原始子门支持整数变量初始化、赋值和直接读取；D-0030 随后扩展静态可证变量算术与位运算。",
       "check": "D-0029 原始验收执行 14 个整数和 1 个 UTF-8 Mach-O，并检查 str/ldr、模块组合、502 槽边界和 9 个诊断；当前扩展证据见 D-0030。",
       "status": "settled",
-      "source": "docs/decisions/0029-native-integer-variable-slots.md"
+      "source": "docs/decisions/0029-native-integer-variable-slots.md",
+      "makeTarget": "none"
     },
     {
       "id": "D-0030",
@@ -206,7 +231,8 @@
       "decision": "整数变量可执行加减乘除、取负及补码位运算；语义按程序顺序静态证明所有值无溢出和除零，原生 ARM64 产物从栈槽加载并执行运算。",
       "check": "make test-p1b-runtime 实际运行 17 个整数和 1 个 UTF-8 Mach-O，反汇编验证原生栈槽运算，11 个诊断和 502 槽边界通过；不覆盖输入、控制流或数据相关错误路径，P1b 总门未通过。",
       "status": "settled",
-      "source": "docs/decisions/0030-statically-proven-variable-arithmetic.md"
+      "source": "docs/decisions/0030-statically-proven-variable-arithmetic.md",
+      "makeTarget": "test-p1b-runtime"
     },
     {
       "id": "D-0031",
@@ -214,7 +240,8 @@
       "decision": "增加有符号 64 位余数、左移和算术右移；移位量限 0..63，左移溢出检查，负数余数向零截断并沿用被除数符号。",
       "check": "make test-p1b-static 验收常量余数、移位和优先级；make test-p1b-runtime 实际运行 23 个整数和 1 个 UTF-8 Mach-O，反汇编确认 sdiv/msub/lsl/asr，并通过 15 个诊断；P1b 总门未通过。",
       "status": "settled",
-      "source": "docs/decisions/0031-integer-remainder-and-shifts.md"
+      "source": "docs/decisions/0031-integer-remainder-and-shifts.md",
+      "makeTarget": "test-p1b-static"
     },
     {
       "id": "D-0032",
@@ -222,7 +249,8 @@
       "decision": "readInteger（）逐字节读取一行有符号十进制整数并直接输出；完整 int64 范围可用，输入错误通过非零退出报告。仅允许直接输出，不提供变量赋值或动态算术。",
       "check": "make test-p1b-runtime 实际运行 24 个整数和 1 个 UTF-8 Mach-O；输入正例覆盖符号、LF/CRLF、EOF、首行和 int64 边界，8 个非法输入非零退出且无输出；19 个编译诊断通过。",
       "status": "settled",
-      "source": "docs/decisions/0032-bounded-runtime-integer-input.md"
+      "source": "docs/decisions/0032-bounded-runtime-integer-input.md",
+      "makeTarget": "test-p1b-runtime"
     },
     {
       "id": "D-0033",
@@ -230,7 +258,8 @@
       "decision": "D-0033 原始实现允许 readInteger（）初始化或赋值给整数变量，解析值写入原生栈槽；运行时算术限制后来由 D-0034 扩展。",
       "check": "make test-p1b-runtime 实际运行输入初始化变量、输入赋值变量和重复读取产物；检查栈槽、_read/_write/_exit、dyld、系统依赖、签名、20 个编译诊断及 9 个运行时拒绝输入。",
       "status": "settled",
-      "source": "docs/decisions/0033-runtime-integer-variable-input.md"
+      "source": "docs/decisions/0033-runtime-integer-variable-input.md",
+      "makeTarget": "test-p1b-runtime"
     },
     {
       "id": "D-0034",
@@ -238,7 +267,8 @@
       "decision": "运行时整数可参与取负、加减乘除、余数、移位和位函数；原生 ARM64 检查溢出、除零和移位范围，失败以非零退出，不提供结构化错误值或传播。",
       "check": "make test-p1b-runtime 实际执行 40 个整数和 1 个 UTF-8 Mach-O；覆盖 13 个动态表达式正例、20 个编译诊断和 19 个运行时拒绝样例，并检查 ARM64 指令、依赖、导入符号、dyld 与签名。",
       "status": "settled",
-      "source": "docs/decisions/0034-checked-runtime-integer-arithmetic.md"
+      "source": "docs/decisions/0034-checked-runtime-integer-arithmetic.md",
+      "makeTarget": "test-p1b-runtime"
     },
     {
       "id": "D-0035",
@@ -246,7 +276,8 @@
       "decision": "equals 支持静态字符串/整数比较及运行时整数比较；ifElse 支持编译期字符串分支选择与原生运行时整数分支选择，动态未选分支不执行。",
       "check": "make test-p1b-runtime 实际执行 43 个整数和 1 个 UTF-8 Mach-O；覆盖静态选择、动态真/假路径、变量比较及未选分支输入惰性；23 个编译诊断和 19 个运行时拒绝样例通过。",
       "status": "settled",
-      "source": "docs/decisions/0035-runtime-integer-selection.md"
+      "source": "docs/decisions/0035-runtime-integer-selection.md",
+      "makeTarget": "test-p1b-runtime"
     },
     {
       "id": "D-0036",
@@ -254,7 +285,8 @@
       "decision": "整数在 ifElse 条件中支持 ==、<、<=、>、>= 及 equals/notEquals 比较函数；静态比较编译期求值，运行时比较生成 ARM64 条件跳转。符号白名单不扩展，!= 以 notEquals 函数表达。",
       "check": "make test-p1b-runtime 实际执行 56 个整数和 1 个 UTF-8 Mach-O；验证六种比较语义、静态/运行时真值、变量槽比较及惰性分支；25 个编译诊断和 19 个运行时拒绝样例通过。",
       "status": "settled",
-      "source": "docs/decisions/0036-runtime-integer-ordering-comparisons.md"
+      "source": "docs/decisions/0036-runtime-integer-ordering-comparisons.md",
+      "makeTarget": "test-p1b-runtime"
     },
     {
       "id": "D-0037",
@@ -262,7 +294,8 @@
       "decision": "复用若/否条件语句和凡条件循环，条件使用整数比较；控制块只允许更新已声明整数变量和嵌套控制语句，ARM64 产物生成分支、回跳和运行时失败路径。",
       "check": "make test-p1b-runtime 实际执行 59 个整数及 1 个 UTF-8 Mach-O；验证嵌套循环、真/假分支、条件跳转、回跳、变量栈槽、29 个编译诊断与 20 个运行时拒绝样例。P1b 阶段门仍未通过。",
       "status": "settled",
-      "source": "docs/decisions/0037-integer-statement-control-flow.md"
+      "source": "docs/decisions/0037-integer-statement-control-flow.md",
+      "makeTarget": "test-p1b-runtime"
     },
     {
       "id": "D-0038",
@@ -270,7 +303,8 @@
       "decision": "复用且/故构成布尔逻辑与/或，且优先级高于故；静态条件编译期求值，动态条件用 ARM64 条件分支短路，只能用于 ifElse、若和凡条件，不可存储布尔变量。",
       "check": "make test-p1b-runtime 实际执行 64 个整数和 1 个 UTF-8 Mach-O；覆盖静态逻辑、动态真/假、且/故短路与跳过 readInteger 的单行输入用例，并通过 31 个编译诊断及 20 个运行时拒绝样例。P1b 阶段门仍未通过。",
       "status": "settled",
-      "source": "docs/decisions/0038-runtime-short-circuit-logic.md"
+      "source": "docs/decisions/0038-runtime-short-circuit-logic.md",
+      "makeTarget": "test-p1b-runtime"
     },
     {
       "id": "D-0039",
@@ -278,7 +312,8 @@
       "decision": "整数变量可初始化为固定长度栈数组；arrayGet/arrayLength 读取元素和编译期已知长度，arraySet 语句更新数组。运行时索引检查负值和长度上界，越界时无输出非零退出。仅整数数组，栈槽与标量共用 502 槽预算；不实现动态分配或增长、哈希表和通用容器接口。",
       "check": "make test-p1b-runtime 实际执行 68 个整数 Mach-O 和 1 个 UTF-8 Mach-O，检查数组初始化/读写指令及间接寻址；34 个编译诊断与 22 个运行时拒绝样例通过。P1b 阶段门仍未通过。",
       "status": "settled",
-      "source": "docs/decisions/0039-fixed-length-runtime-integer-arrays.md"
+      "source": "docs/decisions/0039-fixed-length-runtime-integer-arrays.md",
+      "makeTarget": "test-p1b-runtime"
     },
     {
       "id": "D-0040",
@@ -286,7 +321,8 @@
       "decision": "readText（）仅允许直接用于程序根输出，最多读取换行符前 63 字节（CRLF 中 CR 计入上限），处理 LF/CRLF/EOF 并在写 stdout 前验证完整 UTF-8 标量编码；非法/截断/超长输入非零退出且不产生部分输出。此路径不提供运行时字符串存储、拼接、通用 IO 或结构化错误传播。",
       "check": "make test-p1b-runtime 实际执行 68 个整数、1 个静态 UTF-8 文本及 1 个运行时文本输入 Mach-O；文本产物覆盖 10 个有效输入和 9 个拒绝输入，整套运行时门通过 37 个编译诊断及 31 个运行时拒绝样例。P1b 阶段门仍未通过。",
       "status": "settled",
-      "source": "docs/decisions/0040-bounded-runtime-utf8-input.md"
+      "source": "docs/decisions/0040-bounded-runtime-utf8-input.md",
+      "makeTarget": "test-p1b-runtime"
     },
     {
       "id": "D-0041",
@@ -294,7 +330,8 @@
       "decision": "顶层文本变量可由 readText（）初始化并由 readText（）重赋值，输出可直接引用变量；每个变量使用 64 字节缓冲区和 8 字节长度槽，最多存储 63 个输入字节与规范化 LF，CRLF 中 CR 计入限制。文本变量与整数/数组共用 502 槽预算；不支持拼接、切片、比较、容器或通用字符串操作。",
       "check": "make test-p1b-runtime 执行 68 个整数、1 个静态文本、1 个直接文本输入和 2 个文本变量 Mach-O；变量用例验证重赋值、独立缓冲区、UTF-8/CRLF/63 字节边界和无部分输出，39 个编译诊断与 32 个运行时拒绝样例通过。P1b 阶段门仍未通过。",
       "status": "settled",
-      "source": "docs/decisions/0041-bounded-runtime-text-variables.md"
+      "source": "docs/decisions/0041-bounded-runtime-text-variables.md",
+      "makeTarget": "test-p1b-runtime"
     },
     {
       "id": "D-0042",
@@ -302,7 +339,8 @@
       "decision": "textConcat（左，右）只接受两个已初始化的有界运行时文本变量，用于变量初始化或赋值；通过 64 字节 scratch 栈缓冲区拼接，输出上限为 63 字节，超限在 stdout 前以非零退出，允许目标与来源变量别名。不支持嵌套表达式、常量操作数、切片、比较或动态增长。",
       "check": "make test-p1b-runtime 该决策初始验收实际执行 2 个文本拼接 Mach-O，覆盖 ASCII、中文、CRLF、空值、63 字节边界、写回别名、超限和错型诊断；当前门通过 43 个编译诊断及 34 个运行时拒绝样例。P1b 阶段门仍未通过。",
       "status": "settled",
-      "source": "docs/decisions/0042-bounded-runtime-text-concatenation.md"
+      "source": "docs/decisions/0042-bounded-runtime-text-concatenation.md",
+      "makeTarget": "test-p1b-runtime"
     },
     {
       "id": "D-0043",
@@ -310,7 +348,8 @@
       "decision": "equals/notEquals 可对两个有界运行时文本变量做 UTF-8 字节相等判断，并作为 ifElse、若/凡、且/故 条件；运行时布尔不能存储或输出。比较不做 Unicode 归一化；该决策当时不支持文本排序比较（后由 D-0046 扩展）、静态与动态混合操作数或一般表达式。",
       "check": "make test-p1b-runtime 执行 3 个比较 Mach-O，覆盖相同/不同中文、空值、不同长度、ifElse、notEquals 分支和且短路跳过整数输入；46 个编译诊断和 34 个运行时拒绝样例通过。P1b 阶段门仍未通过。",
       "status": "settled",
-      "source": "docs/decisions/0043-runtime-text-equality.md"
+      "source": "docs/decisions/0043-runtime-text-equality.md",
+      "makeTarget": "test-p1b-runtime"
     },
     {
       "id": "D-0044",
@@ -318,7 +357,8 @@
       "decision": "substring（文本变量，起点，终点）可切片有界运行时文本变量，起止索引按 Unicode 码位计且须是 0 至 63 的编译期整数；起点包含、终点不含。运行时输入不足以覆盖终点时在输出前非零退出。结果可输出或写入有界文本变量；采用 64 字节栈 scratch，支持源变量别名写回。本决策初始实现时不支持运行时索引、grapheme、排序比较（后由 D-0046 扩展）或动态增长。",
       "check": "make test-p1b-runtime 实际执行 4 个切片 Mach-O，覆盖 ASCII、中文、四字节码位、63 字节输入和上限索引 63、空切片、别名写回、输入过短及 S-3013 诊断；P1b 阶段门仍未通过。",
       "status": "settled",
-      "source": "docs/decisions/0044-runtime-text-slicing.md"
+      "source": "docs/decisions/0044-runtime-text-slicing.md",
+      "makeTarget": "test-p1b-runtime"
     },
     {
       "id": "D-0045",
@@ -326,7 +366,8 @@
       "decision": "有界运行时文本变量的 substring 起止索引可为整数常量、整数表达式、运行时整数变量或 readInteger（）。每个索引按左至右求值一次，运行时检查 0≤起点≤终点≤63；索引、区间或源文本范围无效时在 stdout 前非零退出。UTF-8 码位语义和有界 scratch 别名安全继承 D-0044。",
       "check": "make test-p1b-runtime 执行 5 个文本切片 Mach-O，动态索引覆盖 ASCII、中文、四字节码位、空范围、63 码位上限以及负值、反向、超限和短输入拒绝；50 个编译诊断、39 个运行时拒绝通过。P1b 阶段门仍未通过。",
       "status": "settled",
-      "source": "docs/decisions/0045-runtime-text-slice-indexing.md"
+      "source": "docs/decisions/0045-runtime-text-slice-indexing.md",
+      "makeTarget": "test-p1b-runtime"
     },
     {
       "id": "D-0046",
@@ -334,7 +375,8 @@
       "decision": "两个已初始化的有界运行时文本变量可在条件中使用 <、<=、>、>=；按 Unicode 码位逐个排序，合法 UTF-8 的无符号字节字典序保持同一顺序，前缀较短者在前。不做归一化、区域设置或 grapheme 合并；结果仅可作为条件，比较仅接受文本变量引用。",
       "check": "make test-p1b-runtime 实际执行一个含四种关系的 ARM64 Mach-O，覆盖 ASCII、前缀、空文本、中文、四字节码位和组合字符不归一化；整套运行时门通过 52 个成功文本输入、51 个编译诊断及 39 个运行时拒绝样例。P1b 阶段门仍未通过。",
       "status": "settled",
-      "source": "docs/decisions/0046-runtime-text-ordering.md"
+      "source": "docs/decisions/0046-runtime-text-ordering.md",
+      "makeTarget": "test-p1b-runtime"
     },
     {
       "id": "D-0047",
@@ -342,7 +384,8 @@
       "decision": "扩展 D-0042：textConcat（左，右）接受两个已初始化的有界运行时文本变量，并可直接用于程序根输出；结果最多 63 字节，采用固定 scratch 与长度槽，在 stdout 前检查上限。不支持静态操作数、嵌套拼接或一般表达式。",
       "check": "make test-p1b-runtime 执行直接输出拼接 Mach-O，覆盖 ASCII、中文、CRLF、空串、精确 63 字节和超限无部分输出；当前运行时门通过 58 个成功文本输入、51 个编译诊断及 41 个运行时拒绝样例。P1b 阶段门仍未通过。",
       "status": "settled",
-      "source": "docs/decisions/0047-runtime-text-concatenation-output.md"
+      "source": "docs/decisions/0047-runtime-text-concatenation-output.md",
+      "makeTarget": "test-p1b-runtime"
     },
     {
       "id": "D-0048",
@@ -350,7 +393,8 @@
       "decision": "编译期可求值的字符串表达式支持 <、<=、>、>= 条件并可驱动静态 ifElse 和且/故组合；按 Unicode 码位顺序比较，合法 UTF-8 字节字典序保持相同顺序，不做归一化、区域设置或 grapheme 合并。运行时文本排序仍仅接受两个已初始化的文本变量引用。",
       "check": "make test-p1b-static 构建原生窗口并核对 ASCII、相等、前缀、中文、补充平面码位、正反分支及逻辑组合结果 123450089；另以临时非 NFC 源码确认 e 加组合重音按原始码位序列小于 é。make test-p1b-runtime 保留静态字符串/混合类型排序诊断。P1b 阶段门仍未通过。",
       "status": "settled",
-      "source": "docs/decisions/0048-compile-time-string-ordering.md"
+      "source": "docs/decisions/0048-compile-time-string-ordering.md",
+      "makeTarget": "test-p1b-static"
     },
     {
       "id": "D-0049",
@@ -358,7 +402,8 @@
       "decision": "textConcat 的操作数可为已初始化的有界运行时文本变量或最多 63 字节的编译期字符串表达式，可在左侧或右侧并通过字符串常量引用。结果仍不超过 63 字节；Mach-O 常量区与固定 scratch 栈缓冲区承载拼接，不分配堆内存，超限在 stdout 前失败且不产生部分输出。",
       "check": "make test-p1b-runtime 执行含静态表达式前缀、常量引用后缀和运行时输入的 Mach-O，覆盖 ASCII/中文/空输入、63 字节边界、前后缀超限、别名与无部分输出；当前门通过 62 个成功文本输入、51 个编译诊断和 43 个运行时拒绝样例。P1b 阶段门仍未通过。",
       "status": "settled",
-      "source": "docs/decisions/0049-runtime-text-concatenation-constants.md"
+      "source": "docs/decisions/0049-runtime-text-concatenation-constants.md",
+      "makeTarget": "test-p1b-runtime"
     },
     {
       "id": "D-0050",
@@ -366,7 +411,8 @@
       "decision": "equals/notEquals 条件允许比较已初始化的有界运行时文本变量与编译期字符串；静态操作数可在任一侧并可引用不可变字符串常量。仍按 UTF-8 字节精确比较，不归一化；动态文本表达式仍只接受变量引用，结果只能作为条件。",
       "check": "make test-p1b-runtime 构建并执行运行时文本与静态常量/字面量比较产物，覆盖两侧顺序、相等/不等、空值及 63 字节输入，反汇编核对字节循环和分支；动态子串混用返回 S-3015。当前门通过 66 个成功文本输入、51 个编译诊断和 43 个运行时拒绝样例。P1b 阶段门仍未通过。",
       "status": "settled",
-      "source": "docs/decisions/0050-runtime-text-static-equality.md"
+      "source": "docs/decisions/0050-runtime-text-static-equality.md",
+      "makeTarget": "test-p1b-runtime"
     },
     {
       "id": "D-0051",
@@ -374,7 +420,8 @@
       "decision": "textLength（文本）接受编译期可求值字符串表达式，或已初始化的有界文本变量、readText（）结果、textConcat（变量，静态文本）结果和 substring（变量或单层 textConcat 结果，索引，索引）结果。返回 Unicode 标量值（码位）数量；静态输入编译期折叠，运行时输入由原生 ARM64 循环扫描已校验 UTF-8 缓冲区并按非续字节计数。运行时结果作为运行时整数表达式，可写入并更新整数变量，也可继续用于整数运算、比较条件和切片索引。不计算字节数，不合并组合字符/扩展字素簇，也不执行 Unicode 归一化。拼接/输入仍受 63 字节约束；不支持任意深度动态文本表达式。",
       "check": "make test-p1b-static 通过不可变字符串常量验证 行简𠮷 长度为 3，并验证非 NFC 分解/预组文本分别为 2/1；make test-p1b-runtime 构建并执行运行时变量组合和直接 readText（）两个长度产物，覆盖 ASCII、中文、补充平面、分解/预组字符、混合宽度、空输入、CRLF 和 63 字节。首个长度产物将结果存入整数变量、赋值更新后用于 ifElse 与 substring 边界，并进入整数表达式和 textConcat。两个长度产物均拒绝全部 9 类非法 UTF-8/超长输入且无 stdout，反汇编确认 ARM64 字节分类循环。D-0051 原始运行时门通过 84 个成功文本输入、52 个编译诊断及 61 个运行时拒绝样例；D-0052 扩展后当前完整运行时门通过 92/52/67。P1b 阶段门仍未通过。",
       "status": "settled",
-      "source": "docs/decisions/0051-runtime-text-codepoint-length.md"
+      "source": "docs/decisions/0051-runtime-text-codepoint-length.md",
+      "makeTarget": "test-p1b-static"
     },
     {
       "id": "D-0052",
@@ -382,7 +429,8 @@
       "decision": "substring（文本，起点，终点）的运行时源接受已初始化文本变量或单层 textConcat（变量，静态字符串表达式）结果。拼接写入独立有界 scratch 缓冲区，再按 Unicode 标量值边界切片；索引可为静态值或运行时表达式。拼接结果仍受 63 字节上限约束，范围不足、超限或非法 UTF-8 均在 stdout 前以非零退出。此项不支持任意嵌套动态文本表达式、动态增长或堆分配。",
       "check": "make test-p1b-runtime 构建并执行 examples/p1b-runtime-text-concat-slice.serica 与 examples/p1b-runtime-text-concat-slice-length.serica 两个 Mach-O；覆盖 ASCII/中文跨动态与静态边界、CRLF、精确 63 字节结果及嵌套码位长度，并验证切片源范围不足、拼接超限、非法 UTF-8 三类无输出运行时拒绝。当前整套门通过 92 个成功文本输入、52 个编译诊断及 67 个运行时拒绝样例；make seed-audit 通过，活动种子为 4993/5000 行且归因完整。P1b 阶段门仍未通过。",
       "status": "settled",
-      "source": "docs/decisions/0052-runtime-text-concat-slice.md"
+      "source": "docs/decisions/0052-runtime-text-concat-slice.md",
+      "makeTarget": "test-p1b-runtime"
     },
     {
       "id": "D-0053",
@@ -390,7 +438,8 @@
       "decision": "可变整数 array 使用登记的 macOS libSystem _mmap/_munmap 虚拟内存接口按需分配；数组保存映射地址与运行时长度。arrayLength、arrayGet、arraySet 按运行时长度执行，arrayPush 语句通过扩展映射、复制旧元素和追加新值实现动态增长。每次追加 O(n)，仅限整数数组；不导入 malloc/realloc 或第三方运行时。为容纳 P1b 动态容器子门，活动种子行数审计上限从 5000 调至 5500；Go 子集、逐行归因、许可、独立性和 P3b 删除种子的自举硬门不变。",
       "check": "make test-p1b-runtime 实际执行 72 个整数 ARM64 Mach-O，覆盖映射初始化、重复追加、别名追加、循环增长、动态长度、增长后更新和数组边界；通过 55 个编译诊断及 68 个运行时拒绝样例，并审计系统导入符号。examples/p1b-runtime-dynamic-array.serica 实际输出 99。make seed-audit 按 5500 行上限核验 Go 子集及归因。哈希表、错误传播、一般 IO、行简编译器仍缺失，P1b 阶段门未通过。",
       "status": "settled",
-      "source": "docs/decisions/0053-runtime-dynamic-integer-arrays.md"
+      "source": "docs/decisions/0053-runtime-dynamic-integer-arrays.md",
+      "makeTarget": "test-p1b-runtime"
     },
     {
       "id": "D-0054",
@@ -398,7 +447,8 @@
       "decision": "动态整数数组记录长度与容量。arrayPush 未满容量时直接写入；容量耗尽时优先翻倍，若字节数乘法将溢出则改用最小所需容量。增长时分配映射、复制有效元素、解除旧映射并更新指针和容量。连续追加摊销 O(1)，单次扩容 O(n)；仍只支持整数数组。",
       "check": "make test-p1b-runtime 实际执行 73 个整数 Mach-O；循环跨多次增长检查首项/尾项和增长后更新，55 个编译诊断和 68 个运行时拒绝样例通过。D-0054 时完整门另有 92 个成功文本输入；动态文本的当前验收见 D-0055；_mmap/_munmap 符号白名单、make seed-audit、许可和源码独立性通过。P1b 阶段门仍未通过。",
       "status": "settled",
-      "source": "docs/decisions/0054-geometric-runtime-array-capacity.md"
+      "source": "docs/decisions/0054-geometric-runtime-array-capacity.md",
+      "makeTarget": "test-p1b-runtime"
     },
     {
       "id": "D-0055",
@@ -406,7 +456,8 @@
       "decision": "运行时文本变量保存映射指针、字节长度和容量，初始化容量为 64 字节；readText（）赋值可几何扩容至 16 MiB 映射容量（最多 16 MiB−1 字节内容），复制有效数据并解除旧映射。整行完成后校验 UTF-8，非法输入/超限/映射失败在 stdout 前非零退出。动态变量可输出、计算码位长度、进行字节相等和 Unicode 码位排序条件比较；textConcat 结果仍限 63 字节，substring 索引仍限 0–63，但扫描完整动态源。直接根 readText（）与 textLength（readText（））路径仍为 63 字节。",
       "check": "make test-p1b-runtime 实际执行 73 个整数 ARM64 Mach-O，覆盖 98 个成功文本输入、55 个编译诊断及 72 个运行时拒绝样例；另验收 16 MiB−1 字节成功、16 MiB 输入失败无 stdout、100 个补充平面码位扩容、长文本相等/排序/长度和 90 字节偏移切片。文本变量 Mach-O 导入白名单含登记的 _mmap/_munmap。make seed-audit 通过（5317/5500 行，归因完整）；P1b 阶段门仍未通过。",
       "status": "settled",
-      "source": "docs/decisions/0055-dynamic-runtime-text-variables.md"
+      "source": "docs/decisions/0055-dynamic-runtime-text-variables.md",
+      "makeTarget": "test-p1b-runtime"
     },
     {
       "id": "D-0056",
@@ -414,7 +465,8 @@
       "decision": "变量初始化/赋值形式的 textConcat 可组合运行时文本变量和各自不超过 63 字节的静态操作数，结果最多 16 MiB−1 字节。先检查总长，分配独立的动态映射并复制两侧文本、写入 LF，然后解除目标旧映射并提交新指针、长度、容量；旧源映射在复制完成前有效，目标可与任一输入别名。超限、mmap 或 munmap 失败时在 stdout 前非零退出。仅用登记的系统 _mmap/_munmap。每次操作都分配新映射并复制全部输入，单次 O(n)，不保证重复追加的摊销复杂度。直接根输出 concat 及 substring scratch 仍限 63 字节；P1b 阶段门仍未通过。",
       "check": "make test-p1b-runtime 实际执行 73 个整数 ARM64 Mach-O、101 个成功文本输入、55 个编译诊断及 70 个运行时拒绝样例；验证 64 字节和多次扩容、100 个四字节码位、两种输入别名写回、最大 16 MiB−1 字节拼接成功和 16 MiB 结果无 stdout 失败，并保留直接根输出的 63 字节边界。产物系统导入白名单包括登记的 _mmap/_munmap。make seed-audit 通过，检查 5384/5500 行、Go 白名单子集及逐行归因。",
       "status": "settled",
-      "source": "docs/decisions/0056-dynamic-runtime-text-concatenation.md"
+      "source": "docs/decisions/0056-dynamic-runtime-text-concatenation.md",
+      "makeTarget": "test-p1b-runtime"
     },
     {
       "id": "D-0057",
@@ -422,7 +474,8 @@
       "decision": "substring 写回动态文本变量时按实际 UTF-8 字节长度映射目标，先复制后解除旧目标映射，支持源与目标别名；零起始码位索引仍为 0..63，因此最长 63 个码位、252 字节。根直接输出切片按实际字节数限 63 并在 stdout 前拒绝超限。textLength 的长切片 scratch 与整数输出区分离；失败使用登记的系统 _mmap/_munmap 并在输出前非零退出。",
       "check": "make test-p1b-runtime 实际执行从 100 个补充平面码位切出 63 个并别名写回、长切片 textLength 返回 63、252 字节根输出无 stdout 拒绝；完整门为 73 个整数 Mach-O、103 个成功文本输入、55 个编译诊断和 71 个运行时拒绝样例。make seed-audit 通过，活动种子 5434/5500 行，Go 白名单及逐行归因完整。P1b 阶段门仍未通过。",
       "status": "settled",
-      "source": "docs/decisions/0057-dynamic-runtime-text-slicing.md"
+      "source": "docs/decisions/0057-dynamic-runtime-text-slicing.md",
+      "makeTarget": "test-p1b-runtime"
     },
     {
       "id": "D-0058",
@@ -430,7 +483,8 @@
       "decision": "textConcat 的操作数可包含运行时 substring 结果，但切片源必须为已初始化文本变量，索引仍限 0..63；不接受以 textConcat 结果为源的嵌套切片操作数。左右切片写入独立 scratch 后再拼接，因此允许赋值目标与源别名。变量写回结果继续按 D-0056 动态扩容至 16 MiB−1 字节；根输出和 textLength 中的拼接 scratch 仍限 63 字节。",
       "check": "make test-p1b-runtime 通过：实际执行最长 63 个四字节码位切片加静态后缀的 255 字节别名写回和多字节短文本写回；验证嵌套切片源诊断、UTF-8、边界、无部分输出及系统符号白名单。完整门为 73 个整数 Mach-O、105 个成功文本输入、56 个编译诊断和 71 个运行时拒绝样例。make seed-audit 通过：10 个活动源码文件、5472/5500 行，Go 子集和逐行归因完整。源码独立性、相关样例 NFC/全角标点/禁用字符、JSON 解析和 git diff 检查通过；P1b 阶段门仍未通过。",
       "status": "settled",
-      "source": "docs/decisions/0058-runtime-concat-of-slices.md"
+      "source": "docs/decisions/0058-runtime-concat-of-slices.md",
+      "makeTarget": "test-p1b-runtime"
     },
     {
       "id": "D-0059",
@@ -438,7 +492,8 @@
       "decision": "make seed-audit 按 seed-attribution.md 的 AST 标签统计 Go 种子根目录非空非注释代码；2026-11-21 为 3344/5021 行（66.6%），且种子总行数超过 3000，因此 D-0009/C-1 的默认 OCaml 接替条件已触发。依所有者授权灵活调整实现方案，暂时保留受限 Go 自举桥，不放宽 5500 行、Go 白名单、逐行归因、独立性、许可和 P3b 整体删除要求。",
       "check": "make seed-audit 输出 AST 行数及比例，并验证 D-0009 中的 C-1 复核记录存在；./tools/check-independence source 与 make license 保持为独立硬门。若 Go 桥不再是 P3b 前的临时实现，必须重新评估语言选择。",
       "status": "settled",
-      "source": "docs/decisions/0059-go-seed-ast-threshold-review.md"
+      "source": "docs/decisions/0059-go-seed-ast-threshold-review.md",
+      "makeTarget": "seed-audit"
     },
     {
       "id": "D-0060",
@@ -446,7 +501,8 @@
       "decision": "textConcat 操作数中的 substring 源可为已初始化文本变量或一层 textConcat（文本变量，静态文本）结果。拼接源结果仍限 63 字节；切片索引限 0–63，最多产生 252 字节。切片 scratch 独立，支持目标与源别名写回；变量写回拼接仍可增长到 16 MiB−1 字节。禁止拼接源继续嵌套含切片的拼接，深层表达式返回 S-3013，以限制递归与临时空间复用。",
       "check": "make test-p1b-runtime GO=/Users/ntars/.local/go1.27.4/bin/go 实际构建并运行新增拼接源切片产物：输入 A行简Z、0、2 输出 A行A；完整门通过 73 个整数 Mach-O、106 个成功文本输入、56 个编译诊断及 71 个运行时拒绝样例。make stage0 和 make seed-audit 通过，种子为 5500/5500 行、归因完整，C-1 为 3349/5050（66.3%）。P1b 阶段门仍未通过。",
       "status": "settled",
-      "source": "docs/decisions/0060-concat-of-concat-slices.md"
+      "source": "docs/decisions/0060-concat-of-concat-slices.md",
+      "makeTarget": "test-p1b-runtime"
     },
     {
       "id": "D-0061",
@@ -454,7 +510,8 @@
       "decision": "按所有者明确授权灵活调整开发手册的实现方案，临时 Go 自举桥的机器行数上限从 5500 调至 6500，为 P1b/P2b 过渡能力保留有限余量。Go 标准库白名单、逐行归因、Apache-2.0、依赖/源码/产物独立性和 P3b 整体删除自举门继续有效。活动预算其后经 D-0087 调整为 8000 行，并由 D-0101 调整为 12000 行，替代本决定中“超过 6500 行不再抬高预算”的原限制；其他约束不变。",
       "check": "make seed-audit 继续核验总量与单文件限制、Go 子集及逐行归因，当前预算以 D-0101 的 12000 行为准；make license、./tools/check-independence source 和产物符号审计为独立硬门。本决定不代表 P1b 或 P3b 通过。",
       "status": "settled",
-      "source": "docs/decisions/0061-temporary-bootstrap-budget.md"
+      "source": "docs/decisions/0061-temporary-bootstrap-budget.md",
+      "makeTarget": "seed-audit"
     },
     {
       "id": "D-0062",
@@ -462,7 +519,8 @@
       "decision": "字符串数组使用匿名映射保存元素指针和字节长度；arrayPush 深复制并按几何容量增长，arraySet 先复制再替换并解除旧元素映射，支持同数组别名读取。动态索引和长度读取运行时描述符，textLength(arrayGet(...)) 按 Unicode 标量值计数。动态文本数组仅复用登记的系统 mmap/munmap 和现有 UTF-8 输入路径，不引入第三方依赖。根输出拼接继续受 63 字节 scratch 上限约束；该子门不构成 P1b 阶段出口。",
       "check": "make test-p1b-runtime GO=/Users/ntars/.local/go1.27.4/bin/go 通过：73 个整数 Mach-O、4 个文本数组 Mach-O、114 个成功文本输入、58 个编译诊断和 77 个运行时拒绝样例；覆盖动态 UTF-8 数组增长、别名替换、码位长度、arrayLength、类型拒绝和边界无输出失败；dyld/依赖/符号/签名检查通过。动态切片越界输入期间的源指针/长度保存也由既有运行时拒绝案例复验。make seed-audit 通过：5705/6500 行，Go 子集和逐行归因完整；C-1 为 3479/5250（66.3%）。",
       "status": "settled",
-      "source": "docs/decisions/0062-dynamic-runtime-text-arrays.md"
+      "source": "docs/decisions/0062-dynamic-runtime-text-arrays.md",
+      "makeTarget": "test-p1b-runtime"
     },
     {
       "id": "D-0063",
@@ -470,7 +528,8 @@
       "decision": "控制台根记录以编译期字符串数组声明能力；输出要求 stdout，readInteger/readText 要求 stdin，并对缺失、未知、重复能力及所有语句/表达式路径静态检查。当前只覆盖入口级 IO；函数效果签名与一般 IO 尚未实现。",
       "check": "make test-p1b-runtime 覆盖能力声明通过、缺失/未知/重复/错型拒绝和语句、条件、循环输入调用；既有 make test-p1b-static、make test-p1b-modules、make doctor、make seed-audit、make license 与源码独立性门通过。",
       "status": "settled",
-      "source": "docs/decisions/0063-console-capability-declarations.md"
+      "source": "docs/decisions/0063-console-capability-declarations.md",
+      "makeTarget": "test-p1b-runtime"
     },
     {
       "id": "D-0064",
@@ -478,7 +537,8 @@
       "decision": "增加可经模块导入的纯表达式函数；以有界 AST 展开复用现有类型/代码生成，不允许函数体隐藏 IO 或数组变更，函数级效果签名、递归和运行时调用约定仍未实现。",
       "check": "已复跑通过：make stage0、make test-p0b-scope、make test-p1b-static（10 个正例产物、1 个 Unicode 边界、17 个诊断）、make test-p1b-modules（函数模块原生产物输出 42、导入顺序字节稳定、S-4006 重名诊断）、make test-p1b-runtime（74 个整数 Mach-O、运行时整数和文本纯函数 Mach-O 各 1 个、115 个成功文本输入、82 个编译诊断、77 个运行时拒绝样例）、make seed-audit（6174/6500 行，C-1 3909/5703）、make doctor、make license、./tools/check-independence source、git diff --check。readInteger/readText/arrayPush/arraySet 函数效果隐藏由 check/build 均拒绝。",
       "status": "settled",
-      "source": "docs/decisions/0064-pure-expression-functions.md"
+      "source": "docs/decisions/0064-pure-expression-functions.md",
+      "makeTarget": "stage0"
     },
     {
       "id": "D-0065",
@@ -486,7 +546,8 @@
       "decision": "用户函数可显式声明 stdin 效果；readInteger/readText 需要直接函数签名，效果沿嵌套调用逐层声明，展开后的根程序仍要求 D-0063 的 stdin 能力。arrayPush/arraySet 与其他 IO 仍禁止出现在函数中。",
       "check": "已复跑通过：make stage0、make test-p0b-scope、make test-p1b-static（10 个正例、1 个 Unicode 边界、17 个诊断）、make test-p1b-modules（纯函数及 stdin 效果函数导入产物输出 42、导入顺序稳定、S-4006 重名诊断）、make test-p1b-runtime（74 个整数 Mach-O、运行时整数/文本纯函数与整数/文本 stdin 效果函数各 1 个产物、116 个成功文本输入、87 个编译诊断、77 个运行时拒绝样例）；未声明、漏传递、缺根能力、未知/重复/错型效果在 check/build 稳定拒绝，数组变更仍拒绝。make seed-audit 通过（6256/6500 行，C-1 3988/5782，69.0%）、make doctor、make license、./tools/check-independence source、git diff --check。P1b 阶段门仍未通过。",
       "status": "settled",
-      "source": "docs/decisions/0065-function-stdin-effects.md"
+      "source": "docs/decisions/0065-function-stdin-effects.md",
+      "makeTarget": "stage0"
     },
     {
       "id": "D-0066",
@@ -494,7 +555,8 @@
       "decision": "函数可以显式声明 array.write；arrayPush/arraySet 要求调用链每一层函数均声明该效果，展开后的程序还须在根能力列表声明 array.write。stdin 效果独立核验，数组运行时类型和别名语义不变。",
       "check": "已复跑通过：make stage0、make test-p0b-scope、make test-p1b-static（10 个正例、1 个 Unicode 边界、17 个诊断）、make test-p1b-modules（模块导入的 array.write 函数 Mach-O 输出 42；纯函数与 stdin 效果函数、顺序稳定和路径边界通过）、make test-p1b-runtime（74 个整数 Mach-O、1 个本地嵌套 array.write Mach-O、116 个成功文本输入、90 个编译诊断、77 个运行时拒绝样例）；arrayPush/arraySet 嵌套效果正例、模块正例及 check/build 漏签名/根缺能力反例通过。make seed-audit 通过（6270/6500 行，C-1 4001/5795，69.0%）、make doctor、make license、./tools/check-independence source、git diff --check。P1b 阶段门仍未通过。",
       "status": "settled",
-      "source": "docs/decisions/0066-array-write-effects.md"
+      "source": "docs/decisions/0066-array-write-effects.md",
+      "makeTarget": "stage0"
     },
     {
       "id": "D-0067",
@@ -502,7 +564,8 @@
       "decision": "纯函数实参可为完整纯表达式并包含嵌套函数调用；效果调用仍以 S-4106 拒绝。替换时深拷贝 AST，按替换后的节点数扣减 65536 节点预算，保留深度上限。",
       "check": "已复跑通过：make stage0、make test-p0b-scope、make test-p1b-static（10 个正例、1 个 Unicode 边界、17 个诊断）、make test-p1b-modules（导入函数接受复合纯实参并稳定输出 42；stdin/array.write 模块效果、路径与顺序门通过）、make test-p1b-runtime（74 个整数 Mach-O、2 个运行时整数纯函数 Mach-O、1 个复合实参函数输出 42、116 个成功文本输入、91 个编译诊断、77 个运行时拒绝样例）；65536 节点展开预算由 check/build 返回 S-3063，含直接 IO 或带效果函数的实参由 check/build 返回 S-4106。make seed-audit 通过（6313/6500 行，C-1 4043/5837，69.3%）、make doctor、make license、./tools/check-independence source、git diff --check。P1b 阶段门仍未通过。",
       "status": "settled",
-      "source": "docs/decisions/0067-pure-expression-function-arguments.md"
+      "source": "docs/decisions/0067-pure-expression-function-arguments.md",
+      "makeTarget": "stage0"
     },
     {
       "id": "D-0068",
@@ -510,7 +573,8 @@
       "decision": "跳出/继续只允许出现在凡循环体（可嵌套于若/否）；分别离开或重测最内层循环，循环外使用以 S-3067 拒绝。",
       "check": "已复跑通过：make stage0、make test-p0b-scope、make test-p1b-static（10 个正例、1 个 Unicode 边界、17 个诊断）、make test-p1b-modules（模块纯函数及 stdin/array.write 效果闭包通过）、make test-p1b-runtime（76 个 ARM64 整数 Mach-O，嵌套循环输出 112233、恒真循环跳出输出 3；跳出/继续在 check/build 均以 S-3067 拒绝；116 个成功文本输入、93 个编译诊断和 77 个运行时拒绝样例）；make seed-audit 通过（6359/6500 行，C-1 4102/5882，69.7%）、make doctor、make license、./tools/check-independence source、git diff --check。P1b 阶段门仍未通过。",
       "status": "settled",
-      "source": "docs/decisions/0068-loop-break-and-continue.md"
+      "source": "docs/decisions/0068-loop-break-and-continue.md",
+      "makeTarget": "stage0"
     },
     {
       "id": "D-0069",
@@ -518,7 +582,8 @@
       "decision": "运行时 textConcat 可在每条表达式路径嵌套至两层；内层中间结果最多 63 字节，更深表达式在 check/build 以 S-3044 拒绝。最外层写回仍可增长至 16 MiB−1 字节，根直接输出仍限 63 字节。",
       "check": "已复跑通过：make stage0、make test-p0b-scope test-p1b-static test-p1b-modules doctor license、make test-p1b-runtime（76 个整数 Mach-O、3 个嵌套拼接 Mach-O、左右嵌套及 textLength 输出通过；超 63 字节中间结果无 stdout 退出，三层嵌套在 check/build 返回 S-3044；119 个成功文本输入、94 个编译诊断和 78 个运行时拒绝样例）、make seed-audit（6417/6500 行，C-1 4159/5939，70.0%）、./tools/check-independence source、build/punct-scan examples/p1b-runtime-text-concat-nested.serica、git diff --check。P1b 阶段门仍未通过。",
       "status": "settled",
-      "source": "docs/decisions/0069-nested-runtime-text-concat.md"
+      "source": "docs/decisions/0069-nested-runtime-text-concat.md",
+      "makeTarget": "stage0"
     },
     {
       "id": "D-0070",
@@ -526,7 +591,8 @@
       "decision": "运行时 textConcat 每条表达式路径最多嵌套三层，按深度分配独立栈帧 scratch；每层中间值仍限 63 字节，更深表达式在 check/build 以 S-3044 拒绝。最外层写回仍可增长至 16 MiB−1 字节，根直接输出仍限 63 字节。",
       "check": "已复跑通过：make stage0、make test-p1b-runtime（76 个整数 Mach-O、4 个嵌套拼接 Mach-O；三层原生产物对输入‘行简’输出‘行简尾！终’，四层在 check/build 返回 S-3044；120 个成功文本输入、94 个编译诊断和 78 个运行时拒绝样例）、make test-p0b-scope test-p1b-static test-p1b-modules doctor license、make seed-audit（6413/6500 行，C-1 4155/5935，70.0%）、./tools/check-independence source、build/punct-scan examples/p1b-runtime-text-concat-nested.serica、git diff --check。P1b 阶段门仍未通过。",
       "status": "settled",
-      "source": "docs/decisions/0070-three-level-runtime-text-concat.md"
+      "source": "docs/decisions/0070-three-level-runtime-text-concat.md",
+      "makeTarget": "stage0"
     },
     {
       "id": "D-0071",
@@ -534,7 +600,8 @@
       "decision": "运行时 textConcat 每条表达式路径最多嵌套四层，第五层在 check/build 以 S-3044 拒绝。每层使用两个独立的 256 字节操作数区并按 512 字节层距分配，根输入/输出 scratch 单独保留；中间结果限 63 字节，最外层变量写回限 16 MiB−1 字节，根直接输出限 63 字节。",
       "check": "已复跑通过：make stage0、make test-p1b-runtime（76 个整数 Mach-O、6 个嵌套拼接 Mach-O；四层原生产物的根输出和动态变量写回均输出‘行简甲乙丙丁’，五层在 check/build 返回 S-3044；122 个成功文本输入、94 个编译诊断和 78 个运行时拒绝样例）、make test-p0b-scope test-p1b-static test-p1b-modules doctor license、make seed-audit（6418/6500 行，C-1 4159/5939，70.0%）、./tools/check-independence source、build/punct-scan examples/p1b-runtime-text-concat-nested.serica、git diff --check。P1b 阶段门仍未通过。",
       "status": "settled",
-      "source": "docs/decisions/0071-four-level-runtime-text-concat.md"
+      "source": "docs/decisions/0071-four-level-runtime-text-concat.md",
+      "makeTarget": "stage0"
     },
     {
       "id": "D-0072",
@@ -542,7 +609,8 @@
       "decision": "equals/notEquals 条件可比较已初始化文本变量、readText、最多四层 textConcat、受支持源的 substring 和运行时文本数组 arrayGet，并可与编译期字符串混合；按 UTF-8 字节精确比较，不归一化。布尔结果仍不可存储或输出，运行时文本 ifElse 分支结果继续拒绝。比较左右使用独立 scratch，并在栈帧分配时纳入条件与循环内比较需求。",
       "check": "已复跑通过：make stage0、make test-p1b-runtime（76 个整数 Mach-O、5 个文本相等比较产物；直接 readText、四层拼接/切片及动态文本数组 arrayGet 比较执行预期结果；125 个成功文本输入、94 个编译诊断、78 个运行时拒绝样例）、make test-p0b-scope test-p1b-static test-p1b-modules doctor license、make seed-audit（6500/6500 行，C-1 为 4239/6019，70.4%）、./tools/check-independence source、build/punct-scan examples/p1b-runtime-text-concat-nested.serica、git diff --check。P1b 阶段门仍未通过。",
       "status": "settled",
-      "source": "docs/decisions/0072-runtime-text-expression-comparison.md"
+      "source": "docs/decisions/0072-runtime-text-expression-comparison.md",
+      "makeTarget": "stage0"
     },
     {
       "id": "D-0073",
@@ -550,7 +618,8 @@
       "decision": "<、<=、>、>= 条件可使用已初始化运行时文本变量、readText、最多四层 textConcat、支持源的 substring 和动态文本数组 arrayGet，也可与编译期字符串混合；UTF-8 字节字典序与 Unicode 标量值顺序一致，不做归一化。左右操作数通过独立 scratch 和栈区寄存器保护生成，布尔结果仍只可用于条件。",
       "check": "已复跑通过：make stage0、make test-p1b-runtime（76 个整数 Mach-O、5 个文本相等比较产物和 2 个文本排序比较产物；变量/拼接/切片/arrayGet/readText/静态混合操作数实际执行，CJK、补充平面码位及非归一化行为通过；127 个成功文本输入、94 个编译诊断、78 个运行时拒绝样例；substring(readText()) 以 S-3013 拒绝）、make test-p0b-scope test-p1b-static test-p1b-modules doctor license、make seed-audit（6500/6500 行，C-1 4239/6019，70.4%）、./tools/check-independence source、build/punct-scan examples/p1b-runtime-text-order-expressions.serica、git diff --check。P1b 阶段门仍未通过。",
       "status": "settled",
-      "source": "docs/decisions/0073-runtime-text-expression-ordering.md"
+      "source": "docs/decisions/0073-runtime-text-expression-ordering.md",
+      "makeTarget": "stage0"
     },
     {
       "id": "D-0074",
@@ -558,7 +627,8 @@
       "decision": "允许 substring(readText(), start, end) 作为运行时文本表达式；readText 仍最多读取 63 字节且要求 stdin 根能力。按 Unicode 标量索引切片，保持 0–63 边界和右端不包含规则；结果可根输出或用于相等/排序条件。完整读取和 UTF-8 验证、索引校验都在输出前完成，失败以非零退出且不产生部分输出。动态文本 ifElse 结果仍拒绝。",
       "check": "已复跑通过：make stage0、make test-p1b-runtime（76 个整数 Mach-O、5 个文本相等比较和 2 个文本排序比较产物、1 个直接 readText 切片产物；A行简Z 的码位切片输出行简；直接输入切片用于排序条件；短输入、非法 UTF-8 和超过 63 字节输入均无 stdout 非零退出；128 个成功文本输入、94 个编译诊断和 81 个运行时拒绝样例）、make test-p0b-scope test-p1b-static test-p1b-modules doctor license、make seed-audit（6500/6500 行，C-1 为 4239/6019，70.4%）、./tools/check-independence source、build/punct-scan examples/p1b-runtime-text-read-slice.serica、git diff --check。P1b 阶段门仍未通过。",
       "status": "settled",
-      "source": "docs/decisions/0074-direct-input-text-slicing.md"
+      "source": "docs/decisions/0074-direct-input-text-slicing.md",
+      "makeTarget": "stage0"
     },
     {
       "id": "D-0075",
@@ -566,7 +636,8 @@
       "decision": "textConcat 的左右操作数可直接调用 readText；每次最多读取 63 字节并完成 UTF-8 校验，stdin 能力递归核验，变量写回拼接仍最多 16 MiB−1 字节且根输出仍限 63 字节。超长或非法输入在 stdout 前失败。",
       "check": "已复跑通过：make stage0、make test-p1b-runtime（原生 ARM64 产物从 textConcat 两侧分别读入并合并两行；非法 UTF-8 和超过 63 字节输入无 stdout 非零退出；缺少根 stdin 能力时 check/build 均以 S-4102 拒绝；130 个成功文本输入、95 个编译诊断和 85 个运行时拒绝样例）、make test-p0b-scope test-p1b-static test-p1b-modules doctor license、make seed-audit（6500/6500 行，C-1 为 4239/6019，70.4%）、./tools/check-independence source、build/punct-scan examples/p1b-runtime-text-concat-read.serica、git diff --check。P1b 阶段门仍未通过。",
       "status": "settled",
-      "source": "docs/decisions/0075-read-text-concatenation-operands.md"
+      "source": "docs/decisions/0075-read-text-concatenation-operands.md",
+      "makeTarget": "stage0"
     },
     {
       "id": "D-0076",
@@ -574,7 +645,8 @@
       "decision": "textConcat 可接受 substring(readText(), start, end)；UTF-8 输入仍限 63 字节，切片索引为 0–63 Unicode 标量，切片最多 252 字节，嵌套拼接中间结果限 63 字节，变量写回结果限 16 MiB−1 字节，根输出限 63 字节。stdin 能力递归复核；读入、UTF-8、索引和拼接错误均在 stdout 前失败。",
       "check": "已复跑通过：make stage0、make test-p1b-runtime（ARM64 产物执行 CJK 与补充平面码位切片拼接；短输入、非法 UTF-8、超过 63 字节输入均无 stdout 非零退出；缺少根 stdin 时 check/build 返回 S-4102；132 个成功文本输入、95 个编译诊断和 88 个运行时拒绝样例）、make test-p0b-scope test-p1b-static test-p1b-modules doctor license、make seed-audit（6500/6500 行，C-1 为 4239/6019，70.4%）、./tools/check-independence source、build/punct-scan examples/p1b-runtime-text-concat-read-slice.serica、git diff --check。P1b 阶段门仍未通过。",
       "status": "settled",
-      "source": "docs/decisions/0076-direct-input-slice-concat.md"
+      "source": "docs/decisions/0076-direct-input-slice-concat.md",
+      "makeTarget": "stage0"
     },
     {
       "id": "D-0077",
@@ -582,7 +654,8 @@
       "decision": "substring 可将动态文本数组的 arrayGet(array, index) 结果作为源，使用运行时数组索引并按 Unicode 标量索引切片。数组索引越界、非整数输入、元素切片范围越界均在 stdout 前非零失败；不改变数组和切片的 UTF-8 字节、码位和系统调用边界。",
       "check": "make test-p1b-runtime 构建并运行 examples/p1b-runtime-text-array-slice.serica：动态索引分别选中 CJK 与补充平面元素并输出预期切片；数组索引越界、负索引、非法整数与元素端点越界均无 stdout 失败。当前门通过 134 个成功文本输入、95 个编译诊断和 92 个运行时拒绝样例；make seed-audit 仍为 6500/6500 行、C-1 为 4239/6019（70.4%）。P1b 阶段门仍未通过。",
       "status": "settled",
-      "source": "docs/decisions/0077-runtime-text-array-slicing.md"
+      "source": "docs/decisions/0077-runtime-text-array-slicing.md",
+      "makeTarget": "test-p1b-runtime"
     },
     {
       "id": "D-0078",
@@ -590,7 +663,8 @@
       "decision": "textConcat 可接受 substring(arrayGet(textArray, index), start, end) 作为单层运行时操作数。数组和 Unicode 码位切片索引继续执行原边界检查；拼接中间结果限 63 字节，变量写回限 16 MiB−1 字节，根输出限 63 字节，不允许由此递归嵌套切片源。stdin 根能力仍须声明。",
       "check": "已复跑通过：make stage0、make test-p1b-runtime（原生 ARM64 产物以动态索引切片 CJK/补充平面数组元素并拼接后缀；数组负值/越界、输入错误、切片越界均在 stdout 前失败；缺少根 stdin 时 check/build 以 S-4102 拒绝；136 个成功文本输入、96 个编译诊断、96 个运行时拒绝样例）、make seed-audit（6500/6500 行，C-1 为 4239/6019，70.4%）、静态/模块/P0b/doctor/license/独立性/标点/差异门。P1b 阶段门仍未通过。",
       "status": "settled",
-      "source": "docs/decisions/0078-runtime-text-array-slice-concat.md"
+      "source": "docs/decisions/0078-runtime-text-array-slice-concat.md",
+      "makeTarget": "stage0"
     },
     {
       "id": "D-0079",
@@ -598,7 +672,8 @@
       "decision": "将运行时 textConcat 每条表达式路径的最大深度从四层提高到五层；保留每层两个独立 256 字节操作数 scratch 区、512 字节层距、63 字节中间结果、16 MiB−1 字节变量写回和 63 字节根输出上限。六层表达式在 check/build 返回 S-3044。",
       "check": "已复跑通过：make stage0 && make test-p1b-runtime（五层 ARM64 根输出、变量写回、equals 与排序条件；六层 check/build 均以 S-3044 拒绝；10 个嵌套拼接产物、6 个文本相等比较、3 个文本排序比较、139 个成功文本输入、96 个编译诊断、96 个运行时拒绝样例）、make test-p0b-scope test-p1b-static test-p1b-modules doctor license、make seed-audit（6500/6500 行，C-1 为 4239/6019，70.4%）、./tools/check-independence source、5 个新增/相关示例的 punct-scan、python3 -m json.tool DECISIONS.json、git diff --check。P1b 阶段门仍未通过。",
       "status": "settled",
-      "source": "docs/decisions/0079-five-level-runtime-text-concat.md"
+      "source": "docs/decisions/0079-five-level-runtime-text-concat.md",
+      "makeTarget": "stage0"
     },
     {
       "id": "D-0080",
@@ -606,7 +681,8 @@
       "decision": "运行时比较和逻辑结果可初始化或更新布尔标量变量，并用于若/凡、且/故和整数 ifElse 条件。布尔值复用整数栈槽，生成规范 0/1；布尔直接输出、整数运算和数组元素仍拒绝，整数转换需显式 ifElse（条件，1，0）。",
       "check": "已复跑通过：make stage0 && make test-p1b-runtime（78 个整数 ARM64 产物；真/假布尔变量路径、分支重赋值与短路条件通过；错型赋值、布尔算术、布尔数组元素及直接输出在 check/build 拒绝；139 个成功文本输入、106 个编译诊断和 96 个运行时拒绝样例）；make test-p0b-scope test-p1b-static test-p1b-modules doctor license；make seed-audit（6499/6500 行，C-1 为 4246/6016，70.6%）；./tools/check-independence source；标点扫描；JSON 与 git diff --check。P1b 阶段门仍未通过。",
       "status": "settled",
-      "source": "docs/decisions/0080-runtime-boolean-variables.md"
+      "source": "docs/decisions/0080-runtime-boolean-variables.md",
+      "makeTarget": "stage0"
     },
     {
       "id": "D-0081",
@@ -614,7 +690,8 @@
       "decision": "可变动态数组支持布尔元素的初始化、追加、替换、索引读取和长度查询。语义类型与整数数组区分；arrayGet 返回值可作为条件或整数 ifElse 条件，但布尔值不能直接输出或参与整数运算。ARM64 运行时复用动态数组的 64 位槽并以规范化 0/1 表示，根数组变更仍要求 array.write 能力，索引继续检查负值及上界。静态布尔数组常量不属于本子门。",
       "check": "已复跑通过：make stage0、make test-p1b-runtime（80 个整数 ARM64 产物；布尔数组初始化/追加/替换/动态索引条件/长度及真/假分支通过；负索引和越界索引无输出非零退出；整数与布尔数组混写、布尔算术、整数 arrayGet 条件及直接布尔输出在 check/build 拒绝；139 个成功文本输入、114 个编译诊断、98 个运行时拒绝样例）、make test-p0b-scope test-p1b-static test-p1b-modules doctor license、make seed-audit（6500/6500 行，C-1 为 4241/6017，70.5%）、./tools/check-independence source、标点扫描、JSON 与 git diff --check。P1b 阶段门仍未通过。",
       "status": "settled",
-      "source": "docs/decisions/0081-runtime-boolean-arrays.md"
+      "source": "docs/decisions/0081-runtime-boolean-arrays.md",
+      "makeTarget": "stage0"
     },
     {
       "id": "D-0082",
@@ -622,7 +699,8 @@
       "decision": "equals/notEquals 接受两个布尔值，只要至少一个操作数是运行时布尔值；支持布尔标量变量、动态布尔数组 arrayGet 结果和布尔表达式。两侧类型都必须为布尔，布尔/整数混合以 S-3015 拒绝。结果为运行时布尔值，可用作控制流条件。全静态布尔相等求值不属于本子门。实现复用规范化 0/1 槽，不新增符号、系统调用或依赖。",
       "check": "已复跑通过：make stage0 test-p1b-runtime（84 个整数 ARM64 产物；布尔数组元素和标量布尔变量的 equals/notEquals 真/假路径执行通过；布尔/整数混合比较在 check/build 均以 S-3015 拒绝；139 个成功文本输入、116 个编译诊断、98 个运行时拒绝样例）、make test-p0b-scope test-p1b-static test-p1b-modules doctor license、make seed-audit（6500/6500 行，C-1 为 4241/6017，70.5%）、./tools/check-independence source、标点扫描、JSON 与 git diff --check。P1b 阶段门仍未通过。",
       "status": "settled",
-      "source": "docs/decisions/0082-runtime-boolean-equality.md"
+      "source": "docs/decisions/0082-runtime-boolean-equality.md",
+      "makeTarget": "stage0"
     },
     {
       "id": "D-0083",
@@ -630,7 +708,8 @@
       "decision": "编译期 equals/notEquals 支持两个布尔表达式，包括静态整数/文本比较结果；布尔与整数仍严格区分。静态字符串 notEquals 按不等语义返回结果，修复原编译期求值路径未取反的问题。",
       "check": "已复跑通过：make stage0 test-p1b-runtime（85 个整数 ARM64 产物；静态布尔相等/不等及静态字符串 notEquals 正确执行；139 个成功文本输入、116 个编译诊断、98 个运行时拒绝样例）、make test-p0b-scope test-p1b-static test-p1b-modules doctor license、make seed-audit（6499/6500 行，C-1 为 4240/6016，70.5%）、./tools/check-independence source、标点扫描、JSON 与 git diff --check。P1b 阶段门仍未通过。",
       "status": "settled",
-      "source": "docs/decisions/0083-static-boolean-equality.md"
+      "source": "docs/decisions/0083-static-boolean-equality.md",
+      "makeTarget": "stage0"
     },
     {
       "id": "D-0084",
@@ -638,7 +717,8 @@
       "decision": "控制台根程序可直接输出静态或运行时布尔表达式、布尔标量变量和动态布尔数组元素；外部表示规范为 1（真）或 0（假）。实现把布尔根输出显式转换为 ifElse（条件，1，0），复用已验证的整数输出和条件检查；布尔与整数类型仍严格区分，不开放布尔算术或隐式整数转换。",
       "check": "已复跑通过：make stage0 test-p1b-runtime（92 个整数形态 ARM64 产物；静态真/假/逻辑、运行时比较、布尔变量和布尔数组元素均输出规范化 1/0；139 个成功文本输入、108 个编译诊断、98 个运行时拒绝样例）；make test-p0b-scope test-p1b-static test-p1b-modules doctor license；make seed-audit（6500/6500 行，C-1 为 4239/6019，70.4%）；./tools/check-independence source；examples/p1b-runtime-boolean-output.serica 的 punct-scan；python3 -m json.tool DECISIONS.json；git diff --check。P1b 阶段门仍未通过。",
       "status": "settled",
-      "source": "docs/decisions/0084-runtime-boolean-output.md"
+      "source": "docs/decisions/0084-runtime-boolean-output.md",
+      "makeTarget": "stage0"
     },
     {
       "id": "D-0085",
@@ -646,7 +726,8 @@
       "decision": "控制台程序可构造成功（整数）或失败（1..255 错误码）结果，存入双槽结果变量并复制/重赋值；是否失败查询状态，错误码在成功时为 0、失败时为错误码，结果值在成功时返回载荷并在失败时以错误码无 stdout 退出。结果与整数、布尔和文本严格区分，不能直接输出或隐式混用；静态和动态错误码均检查范围。",
       "check": "已复跑通过：make stage0 test-p0b-scope test-p1b-static test-p1b-modules test-p1b-runtime doctor license seed-audit（98 个整数形态 ARM64 产物；成功值/错误码、复制、重赋值、是否失败真/假和 1/0 输出通过；静态 7 与动态 23 失败传播无 stdout 且退出码相符，动态 0/256 退出 1；导入失败传播和算术传播通过；139 个成功文本输入、138 个编译诊断、103 个运行时拒绝样例；251 个双槽结果变量通过而 252 个触发 S-3040）；make seed-audit（6500/6500 行，C-1 为 4866/6170，78.9%）；./tools/check-independence source；examples/p1b-runtime-result.serica 的 punct-scan；python3 -m json.tool DECISIONS.json；git diff --check。P1b 阶段门仍未通过。",
       "status": "settled",
-      "source": "docs/decisions/0085-bounded-integer-results.md"
+      "source": "docs/decisions/0085-bounded-integer-results.md",
+      "makeTarget": "stage0"
     },
     {
       "id": "D-0086",
@@ -654,7 +735,8 @@
       "decision": "控制台程序可创建映射（），以映射置（映射，键，值）写入有符号 64 位整数键和值，以映射取（映射，键，默认值）读取，以映射有（映射，键）查询，并以映射长（映射）读取唯一键数。映射变量占用桶指针、长度和容量三个原生栈槽；使用匿名映射桶和链式条目，负载达到 3/4 时几何扩容并复用节点重排。写入要求 map.write，并须在函数调用链逐层声明并由根能力复核。映射与整数、布尔、文本、数组和结果严格区分；当前不提供删除、文本键或通用值。",
       "check": "完整硬门实跑通过 stage0、test-p0b-scope、test-p1b-static、test-p1b-modules、test-p1b-runtime、doctor、license 和 seed-audit；运行时报告 106 个整数形态 ARM64 产物（其中 8 个映射）、139 个成功文本输入、173 个编译诊断和 103 个运行时拒绝样例。实现与测试覆盖最小往返、碰撞、覆盖更新、成员真/假、最小/最大整数键、默认值、函数效果传播、200 项跨 64→128→256→512 桶重排及重排后覆盖；167 个三槽映射变量达到 501 槽上限内，168 个触发 S-3040；参数、类型、能力和效果反例由 check/build 拒绝。独立性、标点、JSON 和 git diff 检查通过；P1b 阶段门仍未通过。",
       "status": "settled",
-      "source": "docs/decisions/0086-bounded-integer-hash-map.md"
+      "source": "docs/decisions/0086-bounded-integer-hash-map.md",
+      "makeTarget": "none"
     },
     {
       "id": "D-0087",
@@ -662,7 +744,8 @@
       "decision": "依据所有者“必要时可以扩大种子行数”的明确授权，将活动 Go 种子上限由 6500 行扩至 8000 行。调整只增加临时桥空间；种子位置、固定 Go 子集、逐行归因、许可证、依赖、源码/产物独立性、系统符号和 P3b 整体删除仍是硬门。若仍不足，须另行审查而不是自动继续扩额；活动预算其后由 D-0101 扩至 12000 行。",
       "check": "make seed-audit 实测 6838/8000 行，Go 子集和逐行归因完整；C-1 AST 为 5202/6508（79.9%），D-0009/D-0059 复核记录通过。完整硬门实跑通过 stage0、test-p0b-scope、test-p1b-static、test-p1b-modules、test-p1b-runtime、doctor 和 license；许可、源码独立性、映射样例标点扫描、JSON 解析和 git diff 均通过。P1b 阶段门仍未通过。",
       "status": "settled",
-      "source": "docs/decisions/0087-temporary-bootstrap-budget-8000.md"
+      "source": "docs/decisions/0087-temporary-bootstrap-budget-8000.md",
+      "makeTarget": "seed-audit"
     },
     {
       "id": "D-0088",
@@ -670,7 +753,8 @@
       "decision": "成功（编译期文本）生成带四槽布局的文本结果，槽位依次保存标签、值占位、文本指针和 UTF-8 字节长度；失败结果继续使用标签和 1..255 错误码。文本结果可复制、重赋值并允许被失败替换，成功载荷类型在声明后保持不变。结果值只允许作为根输出：成功时写文本和换行，失败时零 stdout 并按错误码退出。D-0089 后续已开放直接成功（readText（））的运行时文本载荷；动态文本结果复制、文本结果参与算术/切片/拼接/比较及函数运行时返回仍未开放。",
       "check": "完整硬门 make stage0 test-p0b-scope test-p1b-static test-p1b-modules test-p1b-runtime doctor license seed-audit 复跑通过：106 个整数形态 ARM64 产物、6 个静态文本结果产物、139 个成功文本输入、179 个编译诊断和 104 个运行时拒绝样例。覆盖静态文本、编译期拼接、复制、重赋值、补充平面 UTF-8、是否失败状态及文本结果被失败（9）替换后的无输出退出码 9；成功（readText（））、整数/文本载荷互换和文本结果值参与整数算术由 check/build 拒绝。125 个四槽文本结果达到 500 槽并可构建，126 个触发 S-3040；251 个双槽整数结果边界保持通过。独立源码检查、相关样例标点扫描、种子审计（当时为 6969/8000 行，C-1 5255/6639，79.2%）、JSON 解析和 git diff 检查通过；P1b 阶段门仍未通过。D-0089 后续扩展直接运行时输入，并更新当前基线。",
       "status": "settled",
-      "source": "docs/decisions/0088-bounded-text-result-payload.md"
+      "source": "docs/decisions/0088-bounded-text-result-payload.md",
+      "makeTarget": "stage0"
     },
     {
       "id": "D-0089",
@@ -678,7 +762,8 @@
       "decision": "成功（readText（））可构造拥有匿名映射缓冲区的四槽文本结果，容量上限为 16 MiB−1 字节内容。结果保存标签、容量/错误码、UTF-8 指针和内容长度；成功重赋值复用缓冲区，失败替换写入 1..255 错误码、保留指针、长度归零且无 stdout。结果值成功时输出文本和规范化换行。动态文本结果复制以及 textConcat、substring、文本变量等非直接输入载荷仍拒绝，所有权、捕获、结果文本操作和函数返回尚未开放。",
       "check": "完整硬门 make stage0 test-p0b-scope test-p1b-static test-p1b-modules test-p1b-runtime doctor license seed-audit 复跑通过：make test-p1b-runtime 通过 106 个整数形态、6 个静态文本结果和 7 个运行时文本结果 ARM64 产物，覆盖 139 个成功文本输入、181 个编译诊断和 104 个运行时拒绝样例；直接输入、补充平面 UTF-8、重赋值、失败替换、状态、空行和长 UTF-8 行通过，动态结果复制与非直接输入载荷由 check/build 以 S-3023 拒绝。make seed-audit 通过 7017/8000 行及 C-1 5263/6684（78.7%），Go 子集和逐行归因完整。P1b 阶段门仍未通过。",
       "status": "settled",
-      "source": "docs/decisions/0089-runtime-text-result-payload.md"
+      "source": "docs/decisions/0089-runtime-text-result-payload.md",
+      "makeTarget": "stage0"
     },
     {
       "id": "D-0090",
@@ -686,7 +771,8 @@
       "decision": "textLength、textConcat、substring、equals、notEquals 以及文本排序条件可直接读取结果值（文本结果变量）的成功载荷；失败结果在 stdout 前传播错误码。静态文本结果的语义字节长度不含根输出规范化换行，拼接、切片、长度和比较只读取载荷内容。动态文本结果复制、所有权转移和函数返回仍未开放。",
       "check": "完整硬门 make stage0 test-p0b-scope test-p1b-static test-p1b-modules test-p1b-runtime doctor license seed-audit 复跑通过：make test-p1b-runtime 通过 106 个整数形态、10 个静态文本结果和 13 个运行时文本结果 ARM64 产物，覆盖 139 个成功文本输入、187 个编译诊断和 104 个运行时拒绝样例；静态/运行时结果值的长度、拼接、切片、相等和排序通过，失败结果进入文本操作无 stdout 并退出 17，整数结果的文本操作由 check/build 拒绝。make seed-audit 通过 7066/8000 行及 C-1 5270/6733（78.3%）。源码独立性、结果操作与映射样例 NFC/全角标点/禁用字符、JSON 解析和 git diff 检查通过；P1b 阶段门仍未通过。",
       "status": "settled",
-      "source": "docs/decisions/0090-text-result-operations.md"
+      "source": "docs/decisions/0090-text-result-operations.md",
+      "makeTarget": "stage0"
     },
     {
       "id": "D-0091",
@@ -694,7 +780,8 @@
       "decision": "文本结果变量可作为同类文本结果变量的初始化值或赋值来源；复制保留标签、值或错误码、有效字节长度和成功载荷类型。目标首次接收运行时文本时建立独立的 16 MiB 匿名映射，只复制当前有效内容并补齐规范化换行；源重赋值或失败替换不改变副本，失败源复制保留错误码。文本结果栈预算按实际载荷计入四槽，整数结果继续使用两槽。所有权转移、捕获、函数返回和通用容器载荷仍未开放。",
       "check": "完整硬门 make stage0 test-p0b-scope test-p1b-static test-p1b-modules test-p1b-runtime doctor license seed-audit 复跑通过：make test-p1b-runtime 通过 106 个整数形态、10 个静态文本结果和 19 个运行时文本结果 ARM64 产物，覆盖 139 个成功文本输入、185 个编译诊断和 104 个运行时拒绝样例；独立复制、源成功重赋值、源失败替换、连续复制、失败源错误码传播和长 UTF-8 复制通过。make seed-audit 通过 7100/8000 行及 C-1 5280/6767（78.0%）。源码独立性、结果复制/操作/映射样例 NFC/全角标点/禁用字符、JSON 解析和 git diff 检查通过；P1b 阶段门仍未通过。",
       "status": "settled",
-      "source": "docs/decisions/0091-runtime-text-result-copy.md"
+      "source": "docs/decisions/0091-runtime-text-result-copy.md",
+      "makeTarget": "stage0"
     },
     {
       "id": "D-0092",
@@ -702,7 +789,8 @@
       "decision": "有界文本结果的成功载荷除直接 readText（）外，还接受受支持的 textConcat 和 substring 运行时表达式。三者统一识别为有界运行时文本值，结果仍使用标签、容量或错误码、UTF-8 指针和有效字节长度四槽。拼接载荷先写入独立临时映射再复制到目标缓冲区，从结果自身取操作数也安全；切片载荷复用既有码位边界检查。失败源作为载荷表达式操作数时继续传播 1..255 错误码。结果复制、跨函数返回/恢复、所有权转移、捕获、通用容器载荷和任意深度文本表达式仍未开放。",
       "check": "完整硬门 make stage0 test-p0b-scope test-p1b-static test-p1b-modules test-p1b-runtime doctor license seed-audit 复跑通过：make test-p1b-runtime 通过 106 个整数形态、10 个静态文本结果和 27 个运行时文本结果 ARM64 产物，覆盖 139 个成功文本输入、183 个编译诊断和 104 个运行时拒绝样例；拼接/切片载荷、长 UTF-8、结果自拼接、跨结果取拼接或切片载荷、失败源传播和结果重赋值为新拼接载荷通过。make seed-audit 通过 7161/8000 行及 C-1 5338/6825（78.2%）。源码独立性、结果载荷/复制/映射样例 NFC/半角标点/禁用字符、JSON 解析和 git diff 检查通过；P1b 阶段门仍未通过。",
       "status": "settled",
-      "source": "docs/decisions/0092-runtime-text-result-expression-payload.md"
+      "source": "docs/decisions/0092-runtime-text-result-expression-payload.md",
+      "makeTarget": "stage0"
     },
     {
       "id": "D-0093",
@@ -710,7 +798,8 @@
       "decision": "文本结果值可通过结果值（结果）初始化或更新普通运行时文本变量，也可初始化文本数组元素或作为 arrayPush/arraySet 的深复制来源。普通文本变量获得独立 16 MiB 映射，只复制结果当前有效字节并写入规范化换行；文本数组继续按元素深复制。源结果后续成功重赋值或失败替换不改变已保存内容。失败结果在目标写出前传播 1..255 错误码，stdout 为空；追加仍要求 array.write。整数结果到文本存储继续由类型检查拒绝，所有权转移、跨函数返回/恢复、捕获、共享引用和通用容器载荷仍未开放。",
       "check": "完整硬门 make stage0 test-p0b-scope test-p1b-static test-p1b-modules test-p1b-runtime doctor license seed-audit 复跑通过：make test-p1b-runtime 通过 106 个整数形态、10 个静态文本结果和 36 个运行时文本结果 ARM64 产物，覆盖 139 个成功文本输入、183 个编译诊断和 104 个运行时拒绝样例；文本变量初始化/赋值、拼接载荷复制、长 UTF-8、失败传播及文本数组初始化/追加/替换通过。make seed-audit 通过 7181/8000 行及 C-1 5347/6845（78.1%）。源码独立性、结果存储/载荷/复制/映射样例 NFC/半角标点/禁用字符、JSON 解析和 git diff 检查通过；P1b 阶段门仍未通过。",
       "status": "settled",
-      "source": "docs/decisions/0093-text-result-storage-copy.md"
+      "source": "docs/decisions/0093-text-result-storage-copy.md",
+      "makeTarget": "stage0"
     },
     {
       "id": "D-0094",
@@ -718,7 +807,8 @@
       "decision": "纯表达式函数可返回整数、文本或失败结果；条件结果的两个成功分支必须具有相同载荷类型，运行时文本结果分支复用四槽存储并按需登记系统映射调用，整数结果继续使用双槽。调用仍由有界 AST 展开完成，因此这是值语义上的函数返回边界，不是运行时 ABI。失败码穿过调用边界后保留，结果值在失败时于 stdout 前传播错误码，未选择分支保持惰性且不读取输入。函数效果继续逐层声明并由根能力复核；语句函数、局部作用域、真实调用栈、捕获恢复和通用容器载荷仍未开放。",
       "check": "已复跑通过：make test-p1b-runtime（113 个整数形态、1 个静态 UTF-8、10 个静态文本结果、36 个运行时文本结果和 7 个函数结果边界 ARM64 产物；覆盖 139 个成功文本输入、191 个编译诊断和 104 个运行时拒绝样例）；函数结果覆盖整数成功/失败、复制后观察、静态与运行时文本条件分支及失败分支短路 stdin，类型诊断覆盖参数数量、载荷不一致、结果与普通值混合和隐藏 stdin 效果。make seed-audit 通过 7232/8000 行及 C-1 5372/6896（77.9%）。完整硬门 make stage0 test-p0b-scope test-p1b-static test-p1b-modules test-p1b-runtime doctor license seed-audit 复跑通过；./tools/check-independence source 通过，结果函数及相关结果/映射示例的 NFC、半角标点与禁用字符扫描均为零，独立种子子集、JSON 解析和 git diff --check 通过。P1b 阶段门仍未通过。",
       "status": "settled",
-      "source": "docs/decisions/0094-result-return-boundary.md"
+      "source": "docs/decisions/0094-result-return-boundary.md",
+      "makeTarget": "test-p1b-runtime"
     },
     {
       "id": "D-0095",
@@ -726,7 +816,8 @@
       "decision": "用户函数支持表达式体和块体两种形式。块体可使用局部变量、赋值、若/否及返回；每个控制路径必须返回，无否则分支可提前返回，后续语句作为假分支继续路径。局部值按词法顺序消解并替换，双分支局部作用域隔离，前向/逃逸引用、重复或未知局部名、返回后语句、缺少返回及当前不支持循环均以 S-3068 拒绝。局部初始化或赋值不得含输入和容器写入，避免表达式替换使一次副作用因重复引用变多次；条件或返回表达式可按既有规则声明效果。实现仍是有界 AST 值和作用域消解，不提供运行时 ABI、真实栈帧、闭包、递归或通用语句副作用。",
       "check": "已复跑通过：make stage0 test-p1b-runtime（121 个整数形态、1 个静态 UTF-8、10 个静态文本结果、36 个运行时文本结果、7 个函数结果边界和 8 个块体函数局部作用域 ARM64 产物；覆盖 139 个成功文本输入、200 个编译诊断和 104 个运行时拒绝样例）。块体场景覆盖顺序局部绑定与赋值、真假提前返回、双分支同名局部、嵌套块函数、参数局部更新、效果返回和文本局部返回；check/build 均拒绝 S-3068 作用域/返回反例及块体隐藏输入。make seed-audit 通过 7495/8000 行及 C-1 5405/7150（75.6%）。完整硬门 make stage0 test-p0b-scope test-p1b-static test-p1b-modules test-p1b-runtime doctor license seed-audit 复跑通过；./tools/check-independence source、块体函数及相关结果/映射示例的 NFC、半角标点与禁用字符扫描、独立种子子集、JSON 解析和 git diff --check 均通过。P1b 阶段门仍未通过。",
       "status": "settled",
-      "source": "docs/decisions/0095-block-function-local-scope.md"
+      "source": "docs/decisions/0095-block-function-local-scope.md",
+      "makeTarget": "stage0"
     },
     {
       "id": "D-0096",
@@ -734,7 +825,8 @@
       "decision": "控制台程序可按需声明 args 能力；argumentCount（）返回包含可执行文件路径的 argc，argumentText（编译期下标）按 0 至 255 的静态索引从 dyld 传入的 argv 读取 NUL 终止文本，扫描上限 4096 字节，并在直接根输出前校验 UTF-8。缺少参数时静默退出 2，超长参数退出 3。函数使用参数读取时须逐层声明 args，根程序也须声明 args。当前参数文本只支持直接根输出及有界 AST 函数展开后的根输出，不支持动态下标、参数文本存储、环境变量或通用进程 IO。本子门不新增系统动态库符号，也不改变自举、独立性、许可和 P3b 删除种子的硬门。",
       "check": "make test-p1b-runtime 已通过：新增 3 个命令行参数 ARM64 产物，覆盖 argc、常量下标中文参数和声明 args 效果的函数返回；缺少调用下标对应参数时 stdout 为空并退出 2；check/build 以 S-3069 拒绝参数个数、负数或运行时下标，以 S-4102 拒绝缺少根 args 能力，以 S-4106 拒绝隐藏函数参数效果。当前完整运行时门覆盖 121 个整数形态、1 个静态 UTF-8、10 个静态文本结果、36 个运行时文本结果、7 个函数结果边界、8 个块体函数局部作用域及 3 个命令行参数产物，另有 139 个成功文本输入、206 个编译诊断和 104 个运行时拒绝样例。make seed-audit 通过 7623/8000 行及 C-1 5711/7277（78.5%）。完整硬门 make stage0 test-p0b-scope test-p1b-static test-p1b-modules test-p1b-runtime doctor license seed-audit 复跑通过；./tools/check-independence source、参数及相关结果/块体函数样例的 NFC、半角标点与禁用字符扫描、独立种子子集、JSON 解析和 git diff --check 均通过，参数产物未定义符号仅为 _exit 与 _write。P1b 阶段门仍未通过。",
       "status": "settled",
-      "source": "docs/decisions/0096-command-line-argument-boundary.md"
+      "source": "docs/decisions/0096-command-line-argument-boundary.md",
+      "makeTarget": "test-p1b-runtime"
     },
     {
       "id": "D-0097",
@@ -742,7 +834,8 @@
       "decision": "控制台根可声明 filesystem.read，并以 readFile（静态文本路径）直接输出普通文件内容。路径须为编译期非空且不含 NUL 的文本；内容上限 16 MiB−1 字节。后端直接使用 _open、_read、_close、_mmap、_munmap、_write、_exit，完整读取并关闭后才校验 UTF-8，通过后输出内容和换行；打开、读取、关闭、超限或编码失败均在 stdout 前非零退出。文件读取效果须由每层函数显式声明并由根能力复核。本子门只支持直接根输出，尚不支持写入文本变量、容器、拼接、切片或结果载荷。",
       "check": "make test-p1b-runtime 已通过：新增 5 个成功静态文件产物（ASCII、中文文件名与 UTF-8 内容、空文件、16 MiB−1 最大合法文件及带 filesystem.read 效果的函数返回）和 3 个无 stdout 失败（缺失文件、非法 UTF-8、16 MiB 超限）；产物未定义符号严格为 _open、_read、_close、_mmap、_munmap、_write、_exit。当前完整运行时门另有 121 个整数形态、1 个静态 UTF-8、10 个静态文本结果、36 个运行时文本结果、7 个函数结果边界、8 个块体函数局部作用域及 3 个命令行参数产物，覆盖 139 个成功文本输入、211 个编译诊断和 104 个运行时拒绝样例。check/build 以 S-3070 拒绝参数个数、动态或非文本路径，以 S-4102 拒绝缺少根 filesystem.read，以 S-4106 拒绝隐藏或未逐层传递的文件效果，并以 S-3044 拒绝尚不支持的文本变量存储。P1b 阶段门仍未通过。",
       "status": "settled",
-      "source": "docs/decisions/0097-static-file-input-boundary.md"
+      "source": "docs/decisions/0097-static-file-input-boundary.md",
+      "makeTarget": "test-p1b-runtime"
     },
     {
       "id": "D-0098",
@@ -750,7 +843,8 @@
       "decision": "readFile（静态文本路径）可初始化或更新普通动态 UTF-8 文本变量，并继续要求调用链逐层声明 filesystem.read、由根程序授权。文件仍以匿名映射读取，合法内容最多 16 MiB−1 字节；成功装载不含自动尾换行，终止换行只由既有根输出添加。重赋值先完整读取并校验新文件，成功后才解除旧映射并替换描述符，失败则无 stdout 退出。装载后的变量可复用文本长度、相等、排序、拼接、切片、结果复制和文本数组写入路径。当前仍不支持动态路径、目录或元数据、文件写入及通用文件系统接口。",
       "check": "make test-p1b-runtime 已通过：新增文件文本变量直接输出、Unicode 标量长度、二次文件读取替换旧映射和文件内容拼接 4 个成功场景，并以非法 UTF-8 与超限文件 2 个无 stdout 非零退出验证。当前完整运行时门为 121 个整数形态、1 个静态 UTF-8、5 个静态文件输入、4 个文件文本变量、10 个静态文本结果、36 个运行时文本结果、7 个函数结果边界和 8 个块体函数局部作用域产物，覆盖 139 个成功文本输入、210 个编译诊断和 104 个运行时拒绝样例。文件产物未定义符号仍仅含 _open、_read、_close、_mmap、_munmap、_write、_exit。make seed-audit 通过 7789/8000 行及 C-1 5832/7439（78.4%）。P1b 阶段门仍未通过。",
       "status": "settled",
-      "source": "docs/decisions/0098-file-input-dynamic-text-variable.md"
+      "source": "docs/decisions/0098-file-input-dynamic-text-variable.md",
+      "makeTarget": "test-p1b-runtime"
     },
     {
       "id": "D-0099",
@@ -758,7 +852,8 @@
       "decision": "控制台根可调用 writeFile（静态非空且不含 NUL 的文本路径，编译期文本或有界运行时文本），覆盖创建目标文件并返回实际写入的 UTF-8 字节数。后端按需使用 _creat 以 0644 权限请求创建或截断，循环处理部分写入并累计字节数，再以 _close 关闭；打开、写入无进展和关闭失败分别静默退出 21、22、23。文件写入须由函数调用链逐层声明 filesystem.write，并由根能力数组授权。当前不提供动态路径、目录、元数据、追加、刷盘、原子替换或通用文件系统接口。",
       "check": "make test-p1b-runtime 已通过：新增静态中文文本覆盖与字节计数、已有文件截断、空文本截断、补充平面 UTF-8、文件读取后写入另一文件以及声明 filesystem.write 效果的函数 5 个成功场景；父目录缺失、目录目标、无效源文件写入前失败及文件大小限制写入无进展 4 个无 stdout 场景；无效源保持目标不变，写入无进展退出 22。文件写入产物未定义符号限制为 _creat、_write、_close、_exit 及内容表达式所需的已登记读取/映射符号。check/build 以 S-3071 拒绝参数、路径和内容错误，以 S-4102 拒绝缺少根能力，以 S-4106 拒绝隐藏或漏传效果。当前完整运行时门为 121 个整数形态、1 个静态 UTF-8、5 个静态文件输入、4 个文件文本变量、5 个文件写入、10 个静态文本结果、36 个运行时文本结果、7 个函数结果边界和 8 个块体函数局部作用域产物，覆盖 139 个成功文本输入、228 个编译诊断和 108 个运行时拒绝样例。make seed-audit 通过 7916/8000 行及 C-1 5832/7566（77.1%）。P1b 阶段门仍未通过。",
       "status": "settled",
-      "source": "docs/decisions/0099-static-file-write-boundary.md"
+      "source": "docs/decisions/0099-static-file-write-boundary.md",
+      "makeTarget": "test-p1b-runtime"
     },
     {
       "id": "D-0100",
@@ -766,7 +861,8 @@
       "decision": "argumentText（下标）接受编译期或运行时整数下标；运行时在原生代码中检查 0 ≤ 下标 < argc，缺少参数时无 stdout 退出 2，参数扫描超过 4096 字节时无 stdout 退出 3。argc/argv 缓存于舞台栈帧，参数 UTF-8 校验可安全复用寄存器，参数文本可直接根输出、初始化或更新动态文本变量、深复制到文本数组元素，并参与 textLength。普通文本变量按参数字节数加规范换行按需替换匿名映射。直接未存储参数文本尚不开放为 textConcat/substring 操作数或结果成功载荷；环境变量、参数改写和通用进程控制仍未开放。",
       "check": "make test-p1b-runtime 已通过：新增整数变量下标、运行时 readInteger 下标、文本变量初始化/重赋值、超过 64 字节的中文参数复制、文本数组元素、textLength 和补充平面 UTF-8 成功场景；4095 字节参数成功、4096 字节参数无输出退出 3、负数或超过 argc 的动态下标无输出退出 2，无效 UTF-8 保持零 stdout 并非零退出。当前完整运行时门为 121 个整数形态、1 个静态 UTF-8、5 个静态文件输入、4 个文件文本变量、5 个文件写入、10 个静态文本结果、36 个运行时文本结果、7 个函数结果边界和 8 个块体函数局部作用域产物，覆盖 139 个成功文本输入、228 个编译诊断和 108 个运行时拒绝样例。参数文本存储产物按需导入 _mmap/_munmap，其余仍仅使用 _exit/_write。实现同时修复 D-0096 扫描循环从立即数装载中段回跳的缺陷。完整硬门 make stage0 test-p0b-scope test-p1b-static test-p1b-modules test-p1b-runtime doctor license seed-audit 复跑通过，源码独立性、参数示例 NFC/半角标点/禁用字符、JSON 解析和 git diff --check 通过；make seed-audit 通过 7967/8000 行及 C-1 5879/7617（77.2%）。P1b 阶段门仍未通过。",
       "status": "settled",
-      "source": "docs/decisions/0100-dynamic-command-line-arguments.md"
+      "source": "docs/decisions/0100-dynamic-command-line-arguments.md",
+      "makeTarget": "test-p1b-runtime"
     },
     {
       "id": "D-0101",
@@ -774,7 +870,8 @@
       "decision": "依据所有者“必要时可以扩大种子行数”的明确授权，将活动 Go 种子上限由 8000 行扩至 12000 行。D-0100 完成后仅余 33 行，而 P1b 仍需真实运行时函数 ABI、独立调用帧、块内循环、通用结果载荷、跨函数恢复、通用容器及更完整的文件和进程能力。调整只增加临时桥空间；种子位置、固定 Go 子集、逐行归因、许可证、依赖、源码/产物独立性、系统符号、C-1 复核和 P3b 整体删除仍是硬门。若 12000 行仍不足，须优先压缩或重构并另立扩额决策。",
       "check": "tools/check_seed_subset.py 的 MAX_SEED_LINES 为 12000；当前 make seed-audit 实测 8204/12000 行、Go 子集和逐行归因完整，C-1 为 5878/7846（74.9%），D-0009/D-0059 复核记录通过。本决定不代表 P1b 或 P3b 通过。",
       "status": "settled",
-      "source": "docs/decisions/0101-temporary-bootstrap-budget-12000.md"
+      "source": "docs/decisions/0101-temporary-bootstrap-budget-12000.md",
+      "makeTarget": "seed-audit"
     },
     {
       "id": "D-0102",
@@ -782,7 +879,8 @@
       "decision": "argumentText（下标）可直接作为 textConcat 操作数、substring 源、文本相等/不等与排序条件操作数，以及成功（argumentText（下标））的运行时文本载荷，无需先写入普通文本变量。参数装载继续执行 0 ≤ 下标 < argc、4096 字节扫描和完整 UTF-8 校验；substring 保持 0–63 Unicode 码位半开区间。结果载荷复制到结果变量自己的 16 MiB−1 字节映射，可经既有结果值、textLength 和根输出路径使用。参数改写、环境变量、argv 容器和任意进程控制仍未开放。",
       "check": "完整硬门 make stage0 test-p0b-scope test-p1b-static test-p1b-modules test-p1b-runtime doctor license seed-audit 已通过；examples/p1b-runtime-argument-combine.serica 对参数“行简”输出“行简尾”，examples/p1b-runtime-argument-result.serica 将参数文本直接装入成功结果并输出。make test-p1b-runtime 新增未存储拼接、切片、相等、成功载荷和结果码位长度 5 个成功产物，当前为 144 个成功文本输入、228 个编译诊断和 108 个运行时拒绝样例；结果载荷产物按需导入 _mmap/_munmap，拼接和切片产物仅导入 _exit/_write。源码独立性、参数示例 NFC/半角标点/禁用字符扫描、JSON 和 git diff --check 均通过。make seed-audit 通过 7985/12000 行及 C-1 5879/7635（77.0%）。P1b 阶段门仍未通过。",
       "status": "settled",
-      "source": "docs/decisions/0102-unstored-argument-text-operations.md"
+      "source": "docs/decisions/0102-unstored-argument-text-operations.md",
+      "makeTarget": "stage0"
     },
     {
       "id": "D-0103",
@@ -790,7 +888,8 @@
       "decision": "普通纯函数继续使用有界 AST 展开；无效果声明的递归调用环保留为运行时函数。运行时函数最多接受 8 个整数参数，x0 至 x7 传参、x0 返回值，独立保存 x29/x30/x19 并建立参数栈槽；调用方先求值实参，再以直接 BL 和统一补丁调用函数入口。支持自递归、互递归和 200 层调用，函数内整数溢出等失败仍进入无 stdout 失败出口。当前不开放文本、容器、结果载荷、效果函数或跨函数错误返回 ABI，也不承诺尾调用优化或语言级递归深度上限。",
       "check": "完整硬门 make stage0 test-p0b-scope test-p1b-static test-p1b-modules test-p1b-runtime doctor license seed-audit 已通过；examples/p1b-runtime-recursive-function.serica 对输入 5 输出 120。make test-p1b-runtime 通过 6 个递归运行时函数调用帧产物，覆盖阶乘、斐波那契、二元互递归、200 层累计、双参数乘方及全局常量递归；每个产物反汇编均要求直接 bl 与 ret，并在独立 Mach-O 上执行得到预期输出。运行时门当前为 127 个 arm64 整数形态、1 个静态 UTF-8、144 个成功文本输入、228 个编译诊断和 108 个运行时拒绝样例。源码独立性、示例 NFC/半角标点/禁用字符、JSON、Python 语法和 git diff --check 均通过。make seed-audit 通过 8204/12000 行及 C-1 5878/7846（74.9%）。P1b 阶段门仍未通过。",
       "status": "settled",
-      "source": "docs/decisions/0103-recursive-integer-call-frames.md"
+      "source": "docs/decisions/0103-recursive-integer-call-frames.md",
+      "makeTarget": "stage0"
     },
     {
       "id": "D-0104",
@@ -798,7 +897,8 @@
       "decision": "无效果声明且构成递归环的整数函数可在真实 ARM64 栈帧上返回有界结果：x0 为标签（0 成功、1 失败），x1 为成功整数载荷或 1..255 错误码。调用结果只能保存到结果变量并通过是否失败、错误码、结果值观察或传播；不能隐式作为普通整数表达式，文本/容器/通用结果载荷和效果函数返回值仍未进入 ABI。",
       "check": "examples/p1b-runtime-recursive-result.serica 对输入 5 输出 15、-1 无 stdout 退出 31、200 输出 20100。make test-p1b-runtime 新增 6 个递归整数结果 ABI 产物，覆盖成功、失败和互递归；当前为 133 个 arm64 整数形态、1 个静态 UTF-8、144 个成功文本输入、230 个编译诊断和 108 个运行时拒绝样例。结果函数直接作为整数根输出及文本结果载荷进入整数 ABI 由 check/build 以 S-3023 拒绝。P1b 阶段门仍未通过。",
       "status": "settled",
-      "source": "docs/decisions/0104-recursive-integer-result-abi.md"
+      "source": "docs/decisions/0104-recursive-integer-result-abi.md",
+      "makeTarget": "test-p1b-runtime"
     },
     {
       "id": "D-0105",
@@ -806,7 +906,8 @@
       "decision": "readFile 和 writeFile 接受 argumentText（整数下标）作为路径，复用非负/argc/4096 字节/UTF-8 边界；读取和写入仍分别要求 filesystem.read/filesystem.write，参数路径还要求 args，并在函数链逐层声明。普通文本变量、readText 和任意其他运行时表达式不能充当路径。写入内容在创建或截断目标前完成 UTF-8 校验，失败保留原目标。",
       "check": "examples/p1b-runtime-dynamic-file-read.serica 以中文参数路径读取 动态路径🙂；examples/p1b-runtime-dynamic-file-write.serica 以参数路径和内容覆盖写入，返回 6 字节且内容无尾随零。原生门新增动态路径读取和写入成功产物，并以缺失参数（退出 2）、4096 字节路径（退出 3）、无效 UTF-8 路径、无效 UTF-8 写入内容、目标保持及缺少 args/漏传效果诊断验证。make test-p1b-runtime 当前通过 240 个编译诊断和 116 个运行时拒绝样例；make seed-audit 通过 8345/12000 行及 C-1 5874/7984（73.6%）。P1b 阶段门仍未通过。",
       "status": "settled",
-      "source": "docs/decisions/0105-argument-text-file-paths.md"
+      "source": "docs/decisions/0105-argument-text-file-paths.md",
+      "makeTarget": "test-p1b-runtime"
     },
     {
       "id": "D-0106",
@@ -814,7 +915,8 @@
       "decision": "无效果递归函数可在真实 ARM64 栈帧上返回编译期文本结果：x0 为标签（0 成功、1 失败），成功编译期文本的 x1 为 0，x2 指向静态 UTF-8 字节，x3 为字节长度；整数成功使用 x1 载荷且 x2/x3 为零，失败使用 x1 错误码并清零 x2/x3。结果保存到四槽结果变量，复制到普通文本变量时分配独立缓冲区并深复制。当前只开放编译期文本成功载荷，运行时文本表达式/容器参数、容器结果载荷、效果函数返回和通用错误恢复仍未进入 ABI。",
       "check": "examples/p1b-runtime-recursive-text-result.serica 对输入 3 输出 到达零。make test-p1b-runtime 新增 5 个递归编译期文本结果 ABI 产物，覆盖自递归成功、自递归失败、互递归成功、互递归失败及结果深复制到普通文本变量；当前完整运行时门为 133 个 arm64 整数形态、1 个静态 UTF-8、144 个成功文本输入、240 个编译诊断和 116 个运行时拒绝样例。递归运行时文本表达式载荷继续由 S-3023 拒绝。make seed-audit 通过 8493/12000 行及 C-1 5873/8127（72.3%）。P1b 阶段门仍未通过。",
       "status": "settled",
-      "source": "docs/decisions/0106-recursive-text-result-abi.md"
+      "source": "docs/decisions/0106-recursive-text-result-abi.md",
+      "makeTarget": "test-p1b-runtime"
     },
     {
       "id": "D-0107",
@@ -822,7 +924,8 @@
       "decision": "无效果声明且块体包含凡的函数保留为真实 ARM64 运行时函数，最多 8 个整数参数，整数参数和局部状态保存在独立栈帧槽中，循环条件与赋值生成原生分支和回跳，函数以 ret 返回。当前要求局部整数变量声明位于第一个凡之前，循环体只做已声明整数状态赋值，最后一条语句返回整数；静态真条件、缺少返回、隐藏 IO 效果和超过 502 个状态槽拒绝。循环内局部声明、嵌套控制、返回、跳出/继续、文本/容器状态和效果函数帧仍未开放。",
       "check": "examples/p1b-runtime-block-loop.serica 对输入 10 输出 55、对 0 输出 0。make test-p1b-runtime 新增 5 个运行时整数块循环产物，覆盖单循环、零次循环、双参数状态、两个顺序循环和编译期假条件，每个产物要求 bl 与 ret；新增 9 类编译反例。当前完整运行时门为 138 个 arm64 整数形态、144 个成功文本输入、249 个编译诊断和 116 个运行时拒绝样例。make seed-audit 通过 8747/12000 行及 C-1 5891/8376（70.3%）。P1b 阶段门仍未通过。",
       "status": "settled",
-      "source": "docs/decisions/0107-runtime-block-function-loops.md"
+      "source": "docs/decisions/0107-runtime-block-function-loops.md",
+      "makeTarget": "test-p1b-runtime"
     },
     {
       "id": "D-0108",
@@ -830,7 +933,8 @@
       "decision": "扩展无效果整数块体运行时函数的循环体：支持若/否分支、嵌套凡循环、跳出和继续；循环控制绑定最近一层包围循环，循环外使用以 S-3068 拒绝。循环体仍禁止局部变量声明和返回，局部整数状态须在首个循环前声明，函数最后一条语句返回整数；条件必须为布尔值且编译期为真的循环被拒绝。参数和局部状态合计不超过 502 个 64 位槽，隐藏 IO、数组写入和映射写入以 S-4106 拒绝。当前不开放文本/容器状态、效果函数调用帧、运行时文本表达式载荷或跨函数错误恢复。",
       "check": "examples/p1b-runtime-block-loop-control.serica 对输入 10 输出 9。make test-p1b-runtime 新增跳出与继续、三角嵌套循环、若否加权和嵌套循环跳出 4 个原生整数块循环产物，每个要求 bl 与 ret；新增循环外跳出/继续两条 S-3068 编译反例，check/build 均拒绝。完整运行时门通过 142 个 arm64 整数形态、144 个成功文本输入、251 个编译诊断和 116 个运行时拒绝样例。make seed-audit 通过 8861/12000 行及 C-1 5896/8488（69.5%）。P1b 阶段门仍未通过。",
       "status": "settled",
-      "source": "docs/decisions/0108-runtime-block-loop-control.md"
+      "source": "docs/decisions/0108-runtime-block-loop-control.md",
+      "makeTarget": "test-p1b-runtime"
     },
     {
       "id": "D-0109",
@@ -838,7 +942,8 @@
       "decision": "无效果整数块体运行时函数的循环体、若否分支和嵌套循环可声明整数局部变量。声明执行到该语句时求值初值并写入预先分配的独立栈槽，每次循环到达时重新初始化；局部值采用块作用域，不得在循环或分支结束后引用。函数体内局部名称须全局唯一且不得与参数或常量重名，参数与全部局部状态合计不超过 502 个 64 位槽。当前仍拒绝文本/容器局部值、循环体内返回、隐藏 IO、非整数初值和静态真循环条件，也不改变文本/容器/效果函数/通用结果载荷 ABI。",
       "check": "examples/p1b-runtime-loop-local.serica 对输入 5 输出 15。make test-p1b-runtime 新增每轮初始化、若否分支局部和嵌套循环局部 3 个原生整数块循环产物，输出分别为 15、14、18，均要求 bl 与 ret；新增局部重名 S-3068、作用域逃逸 S-3022、循环内文本局部 S-3068 和隐藏输入初值 S-4106 四类 check/build 反例。完整运行时门通过 145 个 arm64 整数形态、其中 12 个块循环函数产物、144 个成功文本输入、254 个编译诊断和 116 个运行时拒绝样例。make seed-audit 通过 8895/12000 行及 C-1 5894/8520（69.2%）。P1b 阶段门仍未通过。",
       "status": "settled",
-      "source": "docs/decisions/0109-runtime-loop-local-variables.md"
+      "source": "docs/decisions/0109-runtime-loop-local-variables.md",
+      "makeTarget": "test-p1b-runtime"
     },
     {
       "id": "D-0110",
@@ -846,7 +951,8 @@
       "decision": "无效果整数块体运行时函数可在循环、若否分支及嵌套层执行整数返回。返回表达式使用当前运行时栈槽求值，再跳转到统一函数收束点恢复寄存器并 ret；同一语句列表中返回后不可有不可达语句，函数顶层仍须有整数回落返回。文本/容器/结果载荷返回、隐藏效果和多返回值仍拒绝，不改变现有直接 BL 调用与整数寄存器 ABI。",
       "check": "examples/p1b-runtime-loop-return.serica 对输入 5 返回 30、对 2 回落返回 -1。make test-p1b-runtime 新增提前返回、未命中回落和嵌套循环返回 3 个原生整数块循环产物，嵌套输入 3 输出 12，均要求 bl 与 ret；新增不可达语句 S-3068、文本返回 S-3068 和隐藏输入返回 S-4106 三类 check/build 反例，并移除旧循环返回不支持诊断。完整运行时门通过 148 个 arm64 整数形态、其中 15 个块循环函数产物、144 个成功文本输入、255 个编译诊断和 116 个运行时拒绝样例。make seed-audit 通过 8910/12000 行及 C-1 5894/8535（69.1%）。P1b 阶段门仍未通过。",
       "status": "settled",
-      "source": "docs/decisions/0110-runtime-loop-early-return.md"
+      "source": "docs/decisions/0110-runtime-loop-early-return.md",
+      "makeTarget": "test-p1b-runtime"
     },
     {
       "id": "D-0111",
@@ -854,7 +960,8 @@
       "decision": "无效果整数块体运行时函数的顶层语句可按执行顺序混合整数局部声明、赋值、若/否、凡和整数返回。顶层若/否按运行时参数和已初始化局部状态生成原生条件分支，命中返回时跳到统一函数收束点，未命中则继续后续语句。整数局部可在循环后按到达时初始化，也可在顶层分支内声明并使用；分支局部采用不可逃逸的块作用域。函数内局部名仍唯一，全部参数和局部在入口预分配独立栈槽，合计不超过 502 个 64 位槽。顶层跳出/继续、非布尔条件、非整数局部值、隐藏 IO、文本/容器局部和文本/容器返回值继续拒绝，不改变整数调用 ABI。",
       "check": "examples/p1b-runtime-top-level-if.serica 对输入 -1 由顶层守卫返回 0，对 4 完成循环累计返回 10；循环后局部场景对 0 输出 1，分支局部选择循环起点时对 5 输出 6。make test-p1b-runtime 新增顶层守卫命中、守卫未命中、循环后局部和分支局部起点 4 个原生整数产物；新增非布尔顶层条件 S-3068、顶层分支内跳出 S-3068、分支局部逃逸 S-3022 和顶层条件隐藏输入 S-4106 四类 check/build 反例，并移除循环后局部不支持限制。完整运行时门通过 152 个 arm64 整数形态、其中 19 个块循环函数产物、258 个编译诊断和 116 个运行时拒绝样例。make seed-audit 通过 8937/12000 行及 C-1 5894/8562（68.8%）。P1b 阶段门仍未通过。",
       "status": "settled",
-      "source": "docs/decisions/0111-runtime-block-top-level-control.md"
+      "source": "docs/decisions/0111-runtime-block-top-level-control.md",
+      "makeTarget": "test-p1b-runtime"
     },
     {
       "id": "D-0112",
@@ -862,7 +969,8 @@
       "decision": "无效果整数块体运行时函数现在可接收只读 UTF-8 文本参数。整数参数占一个 64 位寄存器，文本参数占相邻的数据指针和有效字节长度两个寄存器；全部参数展平后最多 8 个寄存器。子门只允许文本参数进入 textLength 及整数结果运算，文本参数不得赋值、复制、返回、写入容器或逃逸，隐藏 IO 效果继续拒绝，返回值仍为 x0 整数。",
       "check": "examples/p1b-runtime-text-parameter.serica 对输入 甲乙 输出 5。make test-p1b-runtime 新增纯文本、静态文本、直接 readText、双文本、拼接结果、整数/文本/整数顺序及八槽满预算 7 个原生整数产物，反汇编要求真实 bl、ret 和文本参数指针/长度栈槽；新增错型、超预算、赋值、算术逃逸和隐藏 IO 六类 check/build 反例及无效 UTF-8 运行时拒绝。D-0112 当时新增 7 个文本参数长度桥产物；D-0113 后当前完整运行时门为 167 个 arm64 整数形态、其中 15 个文本参数比较/长度桥产物、276 个编译诊断和 117 个运行时拒绝样例。make seed-audit 当前通过 9306/12000 行及 C-1 6038/8916（67.7%）。P1b 阶段门仍未通过。",
       "status": "settled",
-      "source": "docs/decisions/0112-runtime-text-parameter-length-bridge.md"
+      "source": "docs/decisions/0112-runtime-text-parameter-length-bridge.md",
+      "makeTarget": "test-p1b-runtime"
     },
     {
       "id": "D-0113",
@@ -870,7 +978,8 @@
       "decision": "无效果整数块体运行时函数的只读 UTF-8 文本参数可参与 equals、notEquals、<、<=、> 与 >= 比较，结果进入布尔条件和整数控制流，返回值仍为 x0 整数。参数类型由 textLength、静态或构造文本、同一比较中的已识别文本参数以及顶层真实调用实参推断；整数算术和整数比较证据优先，避免错误文本实参改变整数 ABI。两个文本参数可直接相等或排序比较，文本复制、返回、容器写入和结果载荷逃逸仍拒绝。",
       "check": "examples/p1b-runtime-text-parameter-comparison.serica 对输入 行简 输出 1001111，覆盖静态文本、两个参数、同一参数、六种相等/排序运算和拼接结果实参。自动化矩阵另覆盖直接 readText、运行时文本变量、补充平面标量和整数参数回归；新增文本与整数排序、文本与整数相等、文本返回三类 check/build 反例。make test-p1b-runtime 通过 167 个 arm64 整数形态、其中 15 个文本参数比较/长度桥产物、276 个编译诊断和 117 个运行时拒绝样例。make seed-audit 通过 9306/12000 行及 C-1 6038/8916（67.7%）。P1b 阶段门仍未通过。",
       "status": "settled",
-      "source": "docs/decisions/0113-runtime-text-parameter-comparisons.md"
+      "source": "docs/decisions/0113-runtime-text-parameter-comparisons.md",
+      "makeTarget": "test-p1b-runtime"
     },
     {
       "id": "D-0114",
@@ -878,7 +987,8 @@
       "decision": "无效果整数块体运行时函数可把只读 UTF-8 文本参数或受支持的 textConcat/substring 结果复制到函数顶层文本局部变量。副本拥有独立匿名映射、有效字节长度和容量槽，函数返回前统一解除仍存活的映射；文本局部可按同类型来源重新赋值，扩容或替换时释放旧映射。参数仍是调用方拥有的借用指针，不得赋值、返回或写入容器。循环/分支内文本局部、文本返回、容器逃逸、运行时文本结果载荷、副作用函数 ABI 和跨函数错误恢复继续拒绝。",
       "check": "examples/p1b-runtime-text-parameter-copy.serica 对输入 行简 输出 2。make test-p1b-runtime 新增直接参数复制、复制后比较、63 字节扩容拼接、双副本独立重赋值、切片副本、补充平面文本和提前返回清理 7 个成功场景，并拒绝文本本地返回、循环内文本本地、分支内文本本地、隐藏输入和容器逃逸。完整运行时门通过 174 个 arm64 整数形态、22 个文本参数比较/长度/本地副本桥产物、144 个成功文本输入、286 个编译诊断和 117 个运行时拒绝样例。make seed-audit 通过 9531/12000 行及 C-1 6029/9131（66.0%）。P1b 阶段门仍未通过。",
       "status": "settled",
-      "source": "docs/decisions/0114-runtime-text-parameter-owned-copies.md"
+      "source": "docs/decisions/0114-runtime-text-parameter-owned-copies.md",
+      "makeTarget": "test-p1b-runtime"
     },
     {
       "id": "D-0115",
@@ -886,7 +996,8 @@
       "decision": "无效果块函数可在末尾转交一个已初始化的顶层文本局部。ARM64 返回使用 x0=0、x1=数据指针、x2=有效字节长度、x3=映射容量。函数清理其余文本局部，根输出处理短写并释放接收的映射。调用暂限程序根输出。",
       "check": "macOS arm64 通过 make stage0 test-p0b-scope test-p1b-static test-p1b-modules test-p1b-runtime doctor license seed-audit 和 ./tools/check-independence source。运行时门覆盖 174 个整数形态、22 个文本参数桥产物、5 个文本所有权返回产物、149 个成功文本输入、298 个编译诊断、118 个运行时拒绝样例。活动种子 9762/12000 行，C-1 为 6362/9350（68.0%）。",
       "status": "settled",
-      "source": "docs/decisions/0115-runtime-owned-text-return-abi.md"
+      "source": "docs/decisions/0115-runtime-owned-text-return-abi.md",
+      "makeTarget": "stage0"
     },
     {
       "id": "D-0116",
@@ -894,7 +1005,8 @@
       "decision": "textByteLength 返回 UTF-8 字节数。textByteAt 按从 0 开始的字节下标读取 0–255 的整数。运行时先校验范围再加载字节。行简编写的解码模块与扫描验证程序位于 compiler/。",
       "check": "macOS arm64 的 make test-p1b-scan 通过 8 个原生产物、16 个编译诊断和 6 个文件扫描场景。实际读取 16 MiB−1 字节文件的末字节，并扫描 14344 字节的混合三字节与四字节标量文件。Go 种子 9898/12000 行，C-1 为 6497/9478（68.5%），归因和源码独立性通过。 make stage0 test-p0b-scope test-p1b-static test-p1b-modules test-p1b-runtime test-p1b-scan doctor license seed-audit 退出 0。",
       "status": "settled",
-      "source": "docs/decisions/0116-utf8-byte-access-and-source-scan.md"
+      "source": "docs/decisions/0116-utf8-byte-access-and-source-scan.md",
+      "makeTarget": "test-p1b-scan"
     },
     {
       "id": "D-0117",
@@ -902,7 +1014,8 @@
       "decision": "行简前端以 UTF-8 字节游标读取词元，返回类别与独占结束偏移。控制台 Mach-O 根据实际代码和常量长度按 16 KiB 对齐文本段，布局确定后回填系统导入地址，文本段上限 1 MiB。",
       "check": "macOS arm64 的 make test-p1b-lex 通过 6 个正例的 59 个词元、词法器源码的 1052 个词元与 11 个诊断位置的 stage0 差分比对。词法器 __TEXT 为 32 KiB，通过 dyld、导入白名单、签名及同路径字节复现。非法 UTF-8 与超出 1 MiB 的文本段均被拒绝。活动种子 9912/12000 行，C-1 6496/9491（68.4%）。 make stage0 test-p0b-scope test-p1b-static test-p1b-modules test-p1b-runtime test-p1b-scan test-p1b-lex doctor license seed-audit 退出 0。",
       "status": "settled",
-      "source": "docs/decisions/0117-serica-lexer-and-multipage-macho.md"
+      "source": "docs/decisions/0117-serica-lexer-and-multipage-macho.md",
+      "makeTarget": "test-p1b-lex"
     },
     {
       "id": "D-0118",
@@ -910,7 +1023,8 @@
       "decision": "行简表达式解析器通过词元游标构建整数节点表，保存 AST 类别、字节范围、子节点与列表链接。支持字面量、引用、优先级、分组、调用及记录。stage0 检查循环体前将包含循环赋值的状态标为动态，数组下标仍在运行时检查。",
       "check": "macOS arm64 的 make test-p1b-parse 通过 14 棵表达式树、252 个节点、13 个与 stage0 匹配的诊断位置，以及循环下标成功和失败回归。覆盖 512 层分组和 96 项左结合加法。活动 Go 种子 9915/12000 行，C-1 为 6498/9493（68.5%）。 macOS arm64 整组回归 `make stage0 test-p0b-scope test-p1b-static test-p1b-modules test-p1b-runtime test-p1b-scan test-p1b-lex test-p1b-parse doctor license seed-audit` 退出 0。另复跑新增的 120 个确定性生成表达式，接受与拒绝结果均与 stage0 相同。",
       "status": "settled",
-      "source": "docs/decisions/0118-serica-expression-parser-and-arena.md"
+      "source": "docs/decisions/0118-serica-expression-parser-and-arena.md",
+      "makeTarget": "test-p1b-parse"
     },
     {
       "id": "D-0119",
@@ -918,7 +1032,8 @@
       "decision": "行简解析器以同一词元游标和四槽节点表接受表达式、程序或模块。程序和模块模式以动作栈解析导入、声明、根绑定与各自允许的语句或块，嵌入表达式沿用 D-0118 归约。名称、类型和效果检查由后续语义阶段处理。",
       "check": "macOS arm64 的 make test-p1b-program 通过 4 棵完整树、75 个节点、15 个与 stage0 对齐的诊断和 7 份编译器自身源码。解析器产物通过 Mach-O、dyld、系统导入白名单和签名检查。",
       "status": "settled",
-      "source": "docs/decisions/0119-serica-compilation-unit-parser.md"
+      "source": "docs/decisions/0119-serica-compilation-unit-parser.md",
+      "makeTarget": "test-p1b-program"
     },
     {
       "id": "D-0120",
@@ -926,7 +1041,8 @@
       "decision": "在 D-0119 语法树上建立绑定表，解析同文件常量、变量、形参、函数调用与循环控制。按声明顺序处理初值和词法作用域，调用检查同文件形参数量，跨文件候选保留为显式待链接状态。",
       "check": "macOS arm64 的 make test-p1b-bind 通过 26 个节点绑定、19 个与 stage0 对齐的诊断、两条待链接引用及 8 份编译器源码。两个正例以 stage0 原生产物执行作为参照。",
       "status": "settled",
-      "source": "docs/decisions/0120-serica-local-name-binding.md"
+      "source": "docs/decisions/0120-serica-local-name-binding.md",
+      "makeTarget": "test-p1b-bind"
     },
     {
       "id": "D-0121",
@@ -934,7 +1050,8 @@
       "decision": "从编译单元的 AST 验证模块导入字面量。每条导入记录保留原导入节点、规范化排序键与项目内相对路径。已知模块位置时检查根目录层级。读取实际文件与解析依赖闭包由后续实现负责。",
       "check": "macOS arm64 的 make test-p1b-import-paths 验证 30 条排序和规范化记录、18 个路径拒绝场景。两种导入顺序的 stage0 参照产物均输出 42 且字节一致。",
       "status": "settled",
-      "source": "docs/decisions/0121-serica-import-path-planning.md"
+      "source": "docs/decisions/0121-serica-import-path-planning.md",
+      "makeTarget": "test-p1b-import-paths"
     },
     {
       "id": "D-0122",
@@ -942,7 +1059,8 @@
       "decision": "通过只读 readModule 消费规范化路径范围。以项目目录描述符限定查找，拒绝符号链接、大小写不符、非普通文件、超限与无效 UTF-8。行简前端可实际查询排序导入对应文件的正文。",
       "check": "macOS arm64 的 make test-p1b-module-read 覆盖 5 个读取正例、25 个运行时拒绝和 6 类编译诊断；源码独立性、原生系统符号白名单和种子逐行归因通过。",
       "status": "settled",
-      "source": "docs/decisions/0122-project-confined-native-module-read.md"
+      "source": "docs/decisions/0122-project-confined-native-module-read.md",
+      "makeTarget": "test-p1b-module-read"
     },
     {
       "id": "D-0123",
@@ -950,7 +1068,8 @@
       "decision": "行简前端在同一进程按规范化导入键进行深度优先遍历，保存依赖完成顺序、边来源、每文件语法树和源码快照。共享模块按项目内路径复用，环和导出冲突定位到源文件与字节偏移。",
       "check": "macOS arm64 的 make test-p1b-module-graph 通过 5 节点共享图、72 层导入、编译器的 7 文件闭包、10 条与 stage0 对齐的位置诊断及三种读取失败。",
       "status": "settled",
-      "source": "docs/decisions/0123-serica-module-graph-and-exports.md"
+      "source": "docs/decisions/0123-serica-module-graph-and-exports.md",
+      "makeTarget": "test-p1b-module-graph"
     },
     {
       "id": "D-0124",
@@ -958,7 +1077,8 @@
       "decision": "按模块完成顺序绑定常量、函数和局部名字，跨文件引用保留声明文件与节点，检查常量先后和实参数量。模块图使用 readModuleResult 清理读取资源并将失败定位到导入源。文本结果复制使用可扩容目标。",
       "check": "macOS arm64 的 make test-p1b-module-bind 通过 11 个绑定查询、6 个绑定诊断、4 个读取位置诊断和大文本读取恢复。编译器自身闭包解析 71 个跨文件引用。",
       "status": "settled",
-      "source": "docs/decisions/0124-cross-file-binding-and-located-module-errors.md"
+      "source": "docs/decisions/0124-cross-file-binding-and-located-module-errors.md",
+      "makeTarget": "test-p1b-module-bind"
     },
     {
       "id": "D-0125",
@@ -966,7 +1086,8 @@
       "decision": "在已绑定的调用图上核验逐层函数能力声明，按不动点计算实际可达的效果并保留内建调用位置。程序入口按实际需求声明能力。",
       "check": "macOS arm64 的 make test-p1b-module-effect 通过全部七种能力、四个正例图、13 个与 stage0 对齐的位置诊断和编译器自身闭包检查。",
       "status": "settled",
-      "source": "docs/decisions/0125-bound-call-effects.md"
+      "source": "docs/decisions/0125-bound-call-effects.md",
+      "makeTarget": "test-p1b-module-effect"
     },
     {
       "id": "D-0126",
@@ -974,7 +1095,8 @@
       "decision": "行简前端沿绑定声明传播已知类型形态，核验已知运算、内建实参、控制条件、选择分支、再赋值与输出。保留需进一步推断的类型，允许直接返回形参的函数按调用分别求型。",
       "check": "macOS arm64 的 make test-p1b-module-type 通过 26 个类型查询、20 个与 stage0 对齐的位置诊断、3 个运行的原生参照产物和编译器自身闭包。",
       "status": "settled",
-      "source": "docs/decisions/0126-bound-type-shapes.md"
+      "source": "docs/decisions/0126-bound-type-shapes.md",
+      "makeTarget": "test-p1b-module-type"
     },
     {
       "id": "D-0127",
@@ -982,7 +1104,8 @@
       "decision": "行简前端按模块完成顺序求值已支持的常量及入口字段，保存可查询的标量和聚合值，按源位置报告数值或索引错误。stage0 修复原生运行时表达式读取常量数组长度。",
       "check": "macOS arm64 的 make test-p1b-module-const 通过 10 个窗口文本、9 个边界值、5 个运行参照产物、19 个位置诊断、跨文件常量及编译器闭包。",
       "status": "settled",
-      "source": "docs/decisions/0127-bound-constant-evaluation.md"
+      "source": "docs/decisions/0127-bound-constant-evaluation.md",
+      "makeTarget": "test-p1b-module-const"
     },
     {
       "id": "D-0128",
@@ -990,7 +1113,8 @@
       "decision": "在绑定图上展开无环纯表达式函数，按调用求型并共享求值节点，校验效果实参和原源码位置。控制台能力字段可由静态文本数组求值。stage0 修正同名实参展开，分段发射大栈帧和高偏移暂存地址。",
       "check": "macOS arm64 的 make test-p1b-module-const 新增 5 个运行参照产物、6 个调用位置诊断、5 个能力位置诊断、7 种计算得出的能力和 45 层共享实参。",
       "status": "settled",
-      "source": "docs/decisions/0128-pure-call-expansion.md"
+      "source": "docs/decisions/0128-pure-call-expansion.md",
+      "makeTarget": "test-p1b-module-const"
     },
     {
       "id": "D-0129",
@@ -998,7 +1122,8 @@
       "decision": "在绑定调用中对无环纯块建立局部版本和延迟初值，隔离若否分支并按实参检查返回形态。循环与借用文本保留运行时路径，局部效果和不完整返回保留源位置诊断。",
       "check": "macOS arm64 的 make test-p1b-module-const 新增 3 个运行参照产物和 11 个与 stage0 对齐的位置诊断。",
       "status": "settled",
-      "source": "docs/decisions/0129-pure-block-lowering.md"
+      "source": "docs/decisions/0129-pure-block-lowering.md",
+      "makeTarget": "test-p1b-module-const"
     },
     {
       "id": "D-0130",
@@ -1006,7 +1131,8 @@
       "decision": "在绑定调用图上识别递归与运行时块，依据形参与调用点复算类型，登记四种返回约定及参数、调用和局部槽布局。校验展平寄存器、函数状态槽和文本所有权边界。",
       "check": "macOS arm64 的 make test-p1b-module-abi 验证 6 个原生参照产物、4 种返回约定、8 个位置诊断、混合 8 寄存器、81 个运行时示例和编译器闭包。",
       "status": "settled",
-      "source": "docs/decisions/0130-runtime-abi-descriptors.md"
+      "source": "docs/decisions/0130-runtime-abi-descriptors.md",
+      "makeTarget": "test-p1b-module-abi"
     },
     {
       "id": "D-0131",
@@ -1014,7 +1140,8 @@
       "decision": "行简前端生成静态输出载荷，行简发射器写出 macOS arm64 指令和 Mach-O。临时种子桥在目标文件打开前校验字节范围，系统签名验证通过后才替换目标。动态控制流和调用发射继续推进。",
       "check": "macOS arm64 的 make test-p1b-native-emit 验证 9 个签名运行产物、8 个 stage0 参照、72801 字节多页输出、8 个拒绝场景、字节写入及原位重建。",
       "status": "settled",
-      "source": "docs/decisions/0131-serica-static-native-emission.md"
+      "source": "docs/decisions/0131-serica-static-native-emission.md",
+      "makeTarget": "test-p1b-native-emit"
     },
     {
       "id": "D-0132",
@@ -1022,7 +1149,8 @@
       "decision": "由行简消费绑定树和整数 ABI，生成运行时整数、布尔、控制流、函数和递归调用的 ARM64 指令。通过行简编码控制台读写例程和系统导入，保留平台、签名和错误边界。",
       "check": "make test-p1b-native-emit 在 macOS arm64 上通过 10 个动态签名产物及 stage0 对照，覆盖 47 次输入与退出状态对照、嵌套循环、递归、跨模块八寄存器调用、同路径重建与多页指令段。",
       "status": "settled",
-      "source": "docs/decisions/0132-serica-arm64-scalar-control-flow.md"
+      "source": "docs/decisions/0132-serica-arm64-scalar-control-flow.md",
+      "makeTarget": "test-p1b-native-emit"
     },
     {
       "id": "D-0133",
@@ -1030,7 +1158,8 @@
       "decision": "行简发射非空标量数组、索引、计长、更新及几何扩容，所有者在重入声明及帧退场时释放映射。写入先检查索引，沿用绑定和 array.write 约束。",
       "check": "macOS arm64 的 make test-p1b-native-emit 验证 5 个 stage0 对照产物、1 个局部数组所有权产物和 4 个编译拒绝场景，覆盖 20003 个元素、越界求值顺序及同路径重建。",
       "status": "settled",
-      "source": "docs/decisions/0133-serica-native-scalar-arrays.md"
+      "source": "docs/decisions/0133-serica-native-scalar-arrays.md",
+      "makeTarget": "test-p1b-native-emit"
     },
     {
       "id": "D-0134",
@@ -1038,7 +1167,8 @@
       "decision": "行简发射拥有型 UTF-8 输入、几何扩容、按帧清理和原生输出，提供字节长度、字节索引、标量计数及独立临时描述符。",
       "check": "make test-p1b-native-emit 验证 UTF-8 编码边界、文本隔离和重赋值、越界拒绝、补充平面字符、16 MiB 读入边界及同路径重建。",
       "status": "settled",
-      "source": "docs/decisions/0134-serica-native-utf8-input.md"
+      "source": "docs/decisions/0134-serica-native-utf8-input.md",
+      "makeTarget": "test-p1b-native-emit"
     },
     {
       "id": "D-0135",
@@ -1046,7 +1176,8 @@
       "decision": "在签名 Mach-O 的只读常量池寻址文本字面量及命名文本常量，按指针与字节数展开运行时借用形参。调用方保留所有权。在 stdin 驱动的词法探针中验证现有行简词法与 UTF-8 模块。",
       "check": "macOS arm64 的 make test-p1b-native-emit 验证 6 个签名产物、16 次 stage0 对照、3 个源码拒绝和 3 个载荷拒绝，覆盖跨页常量池、八寄存器调用、既有产物保护及词元位置。",
       "status": "settled",
-      "source": "docs/decisions/0135-serica-native-borrowed-text.md"
+      "source": "docs/decisions/0135-serica-native-borrowed-text.md",
+      "makeTarget": "test-p1b-native-emit"
     },
     {
       "id": "D-0136",
@@ -1054,7 +1185,8 @@
       "decision": "由行简发射 argc、借用 argv 文本及有界 readFile。文件读取关闭描述符后校验 UTF-8，文本槽按容量清理映射。保持 args 与 filesystem.read 的能力检查及项目限界模块读取的独立约定。",
       "check": "macOS arm64 的 make test-p1b-native-emit 验证 6 个签名产物、29 次 stage0 对照、7 个源码拒绝和 4 个载荷拒绝，运行原始文件词法探针，并在 32 个描述符限额下连续读取 80 次。",
       "status": "settled",
-      "source": "docs/decisions/0136-serica-native-arguments-file-read.md"
+      "source": "docs/decisions/0136-serica-native-arguments-file-read.md",
+      "makeTarget": "test-p1b-native-emit"
     },
     {
       "id": "D-0137",
@@ -1062,7 +1194,8 @@
       "decision": "行简发射目录描述符锚定的模块读取、普通文件校验、实际路径核对、有界正文和可恢复结果。路径错误保持 41，正文和读取错误保持 42。",
       "check": "macOS arm64 的 make test-p1b-native-emit 验证 7 个签名产物、60 次 stage0 对照和 4 个源码拒绝，覆盖三文件导入链及来源位置、符号链接、跨页 GOT、大小边界及连续失败恢复。",
       "status": "settled",
-      "source": "docs/decisions/0137-serica-native-confined-module-read.md"
+      "source": "docs/decisions/0137-serica-native-confined-module-read.md",
+      "makeTarget": "test-p1b-native-emit"
     },
     {
       "id": "D-0138",
@@ -1070,7 +1203,8 @@
       "decision": "行简发射原始字节文件写入与动态 UTF-8 逐字节比较。完整检查后才打开目标，短写续写并分别报告创建、写入和关闭错误。修正 stage0 文件读写循环回跳。",
       "check": "macOS arm64 的 make test-p1b-native-emit 验证 7 个签名产物、23 次 stage0 对照、5 个源码拒绝和 4 个载荷拒绝。验证短读短写、关闭错误和实际发射载荷重放。",
       "status": "settled",
-      "source": "docs/decisions/0138-serica-native-byte-write-text-compare.md"
+      "source": "docs/decisions/0138-serica-native-byte-write-text-compare.md",
+      "makeTarget": "test-p1b-native-emit"
     },
     {
       "id": "D-0139",
@@ -1078,7 +1212,8 @@
       "decision": "行简发射拥有独立快照的动态文本数组、转发借用形态并分段编码高偏移帧地址。使用原始分析器与发射器源码复跑原生工具自编译链。",
       "check": "macOS arm64 通过 5 个数组签名产物、10 次 stage0 对照、4 个源码拒绝。两对工具的载荷和未签名 Mach-O 逐字节一致，重建工具通过 8 个分析器查询或诊断及一个跨文件成品运行。",
       "status": "settled",
-      "source": "docs/decisions/0139-serica-text-arrays-self-emission.md"
+      "source": "docs/decisions/0139-serica-text-arrays-self-emission.md",
+      "makeTarget": "none"
     },
     {
       "id": "D-0140",
@@ -1086,7 +1221,8 @@
       "decision": "顶层变量声明或赋值可以接管无效果块函数返回的已拥有文本映射；先保存返回描述符，再释放目标旧映射，避免 _munmap 破坏调用方保存寄存器。语义限定为整条右值就是文本返回调用，嵌套与容器消费继续拒绝。",
       "check": "make test-p1b-runtime 在 macOS arm64 上通过 6 个调用方存储正例及全部既存整数、诊断与拒绝场景；make seed-audit 报 10403/12000 行、C-1 3781/9944（38.0%）。",
       "status": "settled",
-      "source": "docs/decisions/0140-caller-owned-text-return-storage.md"
+      "source": "docs/decisions/0140-caller-owned-text-return-storage.md",
+      "makeTarget": "test-p1b-runtime"
     },
     {
       "id": "D-0141",
@@ -1094,7 +1230,8 @@
       "decision": "当前产品落地采用可解压运行的源码运行时包，附示例、验收清单、逐文件校验和和 SBOM；不宣称安装器、应用包、公证或正式语言版本。",
       "check": "make release 生成发布目录、压缩包与压缩包校验和；在解压目录内 make verify 通过结构、二进制、签名、构建与运行检查。",
       "status": "settled",
-      "source": "docs/decisions/0141-developer-preview-release-bundle.md"
+      "source": "docs/decisions/0141-developer-preview-release-bundle.md",
+      "makeTarget": "release"
     },
     {
       "id": "D-0142",
@@ -1102,7 +1239,8 @@
       "decision": "发布包提供可选的 POSIX shell 安装/卸载脚本；安装先验证 SHA-256，再复制到 SERICA_PREFIX/lib/serica/<版本> 并建立 SERICA_PREFIX/bin/serica 链接；卸载只删除本版本目录和自身链接。",
       "check": "发布目录内 make verify 通过 tools/test_install.py：隔离 HOME 安装、PATH 运行 serica check/build、控制台输出核对、卸载无残留。",
       "status": "settled",
-      "source": "docs/decisions/0142-local-prefix-install.md"
+      "source": "docs/decisions/0142-local-prefix-install.md",
+      "makeTarget": "verify"
     },
     {
       "id": "D-0143",
@@ -1110,7 +1248,8 @@
       "decision": "无效果块函数的已拥有文本返回值可直接作为 textLength、equals、notEquals 的只读文本操作数，比较结果可经整数 ifElse 选择输出；调用前预留描述符保存槽，调用后立即保存 x1/x2，比较在映射释放前完成并将结果写入保存槽。嵌套拼接、独立条件、函数体、容器与结果载荷继续拒绝。",
       "check": "make test-p1b-runtime 通过 4 个借用操作数正例（textLength 行简→2、𠮷野家→3；equals/notEquals 经 ifElse→1），共 10 个文本返回调用方消费产物；306 个编译诊断、118 个运行时拒绝样例通过。make seed-audit 报 10565/12000 行、C-1 3855/10090（38.2%）。",
       "status": "settled",
-      "source": "docs/decisions/0143-owned-text-return-borrowed-operand.md"
+      "source": "docs/decisions/0143-owned-text-return-borrowed-operand.md",
+      "makeTarget": "test-p1b-runtime"
     },
     {
       "id": "D-0144",
@@ -1118,7 +1257,8 @@
       "decision": "函数效果在函数展开阶段统一检查逐层声明和程序根能力；直接内建效果调用与跨函数效果调用缺少根能力时均报 S-4106，避免后段 capability walker 造成同类错误分裂。",
       "check": "make test-p1b-runtime 覆盖嵌套函数隐藏根能力反例；make test-p1b-module-effect 覆盖跨文件根能力反例、13 个位置诊断与编译器自检；make seed-audit 报 10565/12000 行、C-1 3855/10090（38.2%）。",
       "status": "settled",
-      "source": "docs/decisions/0144-root-capability-consistency.md"
+      "source": "docs/decisions/0144-root-capability-consistency.md",
+      "makeTarget": "test-p1b-runtime"
     },
     {
       "id": "D-0145",
@@ -1126,7 +1266,8 @@
       "decision": "递归运行时函数以相邻两个整数寄存器传入已有结果值的标签和值，调用帧按 16 字节固定槽位保存；函数体可读取是否失败和错误码并重新构造结果返回。文本载荷结果跨函数传参与完整跨函数恢复仍未实现。",
       "check": "make stage0、make test-p1b-runtime、make test-p1b-module-abi 与 make seed-audit 通过；种子 10937/12000 行、C-1 4141/10432（39.7%），归因完整。",
       "status": "settled",
-      "source": "docs/decisions/0145-runtime-result-parameter-abi.md"
+      "source": "docs/decisions/0145-runtime-result-parameter-abi.md",
+      "makeTarget": "stage0"
     },
     {
       "id": "D-0146",
@@ -1134,7 +1275,8 @@
       "decision": "含结果状态查询的无效果块体函数保留语句形态；仅被是否失败、错误码或结果值观察的局部登记为运行时结果，成功和失败组合本身不再决定参数 ABI。整数结果可恢复为成功、原失败状态或由若/否分支跨函数返回，文本参数直接返回仍拒绝。",
       "check": "make stage0、全部 P1b/P0b 门、make test-p1b-native-emit、make seed-audit、make license 与源码独立性检查通过；运行时门实测恢复成功输出 6、错误码整数 31。当前种子 11897/12000 行、C-1 4838/11334（42.7%）。",
       "status": "settled",
-      "source": "docs/decisions/0146-block-function-result-recovery.md"
+      "source": "docs/decisions/0146-block-function-result-recovery.md",
+      "makeTarget": "stage0"
     },
     {
       "id": "D-0147",
@@ -1142,7 +1284,8 @@
       "decision": "带 stdin 效果的有语句体函数保留运行时函数 ABI，循环不进入纯函数块 lowering；进入函数体时按状态槽数建立帧内暂存区并临时切换读取偏移，使 readInteger 不再越过当前函数帧。运行时结果参数按相邻标签/值双寄存器计入展平 ABI 预算；函数体失败补丁与结果槽按帧隔离，不继承调用方同名槽。readInteger 显式保存并恢复调用方 x20，不再借用 x28 缓存栈地址。",
       "check": "make stage0、test-p1b-runtime、test-p1b-static、test-p1b-modules、test-p1b-native-emit 与 doctor 通过；运行时门实测嵌套效果循环输出 15、直接读取循环输出 6、readInteger（）作为加法左操作数时循环输出 6、混合整数/结果参数转发输出 9 或 36、缺失 stdin 能力反例 S-4106；运行时门、静态/模块/原生门与 doctor 在状态边界收紧后复跑通过。readInteger 修复后全量门复跑通过；当前种子 11897/12000 行、C-1 4838/11334（42.7%）。",
       "status": "settled",
-      "source": "docs/decisions/0147-effect-function-runtime-frame-scratch.md"
+      "source": "docs/decisions/0147-effect-function-runtime-frame-scratch.md",
+      "makeTarget": "stage0"
     },
     {
       "id": "D-0148",
@@ -1150,7 +1293,8 @@
       "decision": "成功（arrayGet（文本数组，运行时索引））从动态文本数组读取元素并深复制到独立结果映射；索引仍在执行时检查，负索引与越界无 stdout 并非零退出。",
       "check": "make test-p1b-runtime 新增索引 0/1 正例和 2/-1 反例，运行时门完整通过；当前 make seed-audit 为 11897 行，C-1 4838/11334（42.7%），归因完整。",
       "status": "settled",
-      "source": "docs/decisions/0148-runtime-text-array-result-payload.md"
+      "source": "docs/decisions/0148-runtime-text-array-result-payload.md",
+      "makeTarget": "test-p1b-runtime"
     },
     {
       "id": "D-0149",
@@ -1158,7 +1302,8 @@
       "decision": "无效果块体函数只要通过是否失败、错误码或结果值观察参数，就保留语句形态和真实 ARM64 调用帧；结果状态参数按相邻标签/值双寄存器进入展平 ABI。成功（参数）和失败（参数）不再单独决定参数类型，根级状态查询仍只接受结果变量引用。",
       "check": "make test-p1b-runtime 通过混合整数/结果参数转发输入 3 输出 9、输入 -1 输出 36，并恢复 examples/p1b-runtime-recursive-result.serica 的 check；全部 P0b/P1b 门、doctor、许可与源码独立性通过。种子 11897/12000 行、C-1 4838/11334（42.7%）。",
       "status": "settled",
-      "source": "docs/decisions/0149-result-state-parameter-runtime-abi.md"
+      "source": "docs/decisions/0149-result-state-parameter-runtime-abi.md",
+      "makeTarget": "test-p1b-runtime"
     },
     {
       "id": "D-0150",
@@ -1166,7 +1311,8 @@
       "decision": "无效果纯函数可以原样转发结果引用、在结果分支间选择并观察结果参数状态；有界 AST 替换保留实参的结果描述符。移除把运行时文本结果实参整体视为嵌套消费的过宽 S-3023，但非引用结果查询、效果函数结果 ABI 与嵌套结果消费继续拒绝。",
       "check": "make test-p1b-runtime 通过 181 个 arm64 整数形态产物、1 个静态 UTF-8 文本产物、10 个静态文本结果产物、40 个运行时文本结果产物、11 个函数结果边界产物、309 个编译诊断和 118 个运行时拒绝样例；文本转发、成功/失败选择、失败码保留和文本状态查询均有 macOS arm64 实测。种子 11897/12000 行、C-1 4838/11334（42.7%）。",
       "status": "settled",
-      "source": "docs/decisions/0150-pure-function-text-result-reference-forwarding.md"
+      "source": "docs/decisions/0150-pure-function-text-result-reference-forwarding.md",
+      "makeTarget": "test-p1b-runtime"
     },
     {
       "id": "D-0151",
@@ -1174,7 +1320,8 @@
       "decision": "带效果且局部直接构造成功/失败结果，或以同型结果分支初始化的语句体函数保留真实运行时函数帧，不进入会展开局部初值的纯表达式 lowering；整数结果继续使用相邻标签/值双槽，失败路径保持原错误码。",
       "check": "make test-p1b-runtime 通过效果函数整数结果局部的成功与失败 2 个 macOS arm64 正例；当前 183 个整数形态产物、13 个函数结果边界产物、309 个编译诊断和 118 个运行时拒绝样例。静态、模块、模块 ABI、绑定、原生发射和种子门通过；种子 11938/12000 行、C-1 4879/11371（42.9%）。",
       "status": "settled",
-      "source": "docs/decisions/0151-effectful-result-local-runtime-abi.md"
+      "source": "docs/decisions/0151-effectful-result-local-runtime-abi.md",
+      "makeTarget": "test-p1b-runtime"
     },
     {
       "id": "D-0152",
@@ -1182,7 +1329,8 @@
       "decision": "纯函数展开允许含直接效果调用或显式效果函数调用的实参，但目标形参在函数体中必须恰好引用一次；效果在唯一引用位置求值，并继续接受逐层函数效果声明和程序根能力复核。零次沿用 S-3065，重复引用继续以 S-4106 拒绝。",
       "check": "make test-p1b-runtime 新增 readInteger 与显式效果函数实参两个正例，输入 41 均输出 42；重复引用反例保持 S-4106。当前 185 个整数形态产物、13 个函数结果边界产物、309 个编译诊断和 118 个运行时拒绝样例；种子 11939/12000 行、C-1 4880/11372（42.9%）。",
       "status": "settled",
-      "source": "docs/decisions/0152-single-use-effect-arguments.md"
+      "source": "docs/decisions/0152-single-use-effect-arguments.md",
+      "makeTarget": "test-p1b-runtime"
     },
     {
       "id": "D-0153",
@@ -1190,7 +1338,8 @@
       "decision": "带效果的语句体函数可直接以成功（readText（））构造运行时文本结果局部，或在文本成功与失败结果分支间选择；文本结果按标签、值、指针和长度四槽分配，函数入口清零结果局部，返回时通过 x0/x1/x2/x3 交给调用方。普通文本局部初始化和其他效果位置仍保持原拒绝边界。",
       "check": "make test-p1b-runtime 新增三个效果函数文本结果局部的成功与失败两个 macOS arm64 正例，开关 1 读取三行并输出跨函数文本结果局部，开关 0 无 stdout 以 9 退出；成功产物连续 8 次同路径构建字节一致。当前 187 个整数形态产物、15 个函数结果边界产物、309 个编译诊断和 118 个运行时拒绝样例。种子 11999/12000 行、C-1 4916/11433（43.0%）。",
       "status": "settled",
-      "source": "docs/decisions/0153-effectful-text-result-local-runtime-abi.md"
+      "source": "docs/decisions/0153-effectful-text-result-local-runtime-abi.md",
+      "makeTarget": "test-p1b-runtime"
     },
     {
       "id": "D-0154",
@@ -1198,7 +1347,8 @@
       "decision": "带 stdin 效果的语句体函数可把 readText（） 的受支持 textConcat 或 substring 结果放入成功载荷，并保留文本结果四槽返回；含切片时函数帧保留 360 字节临时区，含拼接时按嵌套层数扩展帧内 scratch。效果检查仅在成功载荷子树内放行 readText，普通文本局部初始化仍由 S-3068 拒绝。",
       "check": "make test-p1b-runtime 新增拼接成功输出行简尾、切片成功输出简语及两者失败无 stdout 以 9 退出的 4 个 macOS arm64 正反例；两种成功产物各连续 8 次同路径构建字节一致，普通文本局部反例保持 S-3068。当前 191 个整数形态产物、19 个函数结果边界产物、311 个编译诊断和 118 个运行时拒绝样例。种子 11999/12000 行、C-1 4917/11437（43.0%）。",
       "status": "settled",
-      "source": "docs/decisions/0154-effectful-concatenated-sliced-text-result-locals.md"
+      "source": "docs/decisions/0154-effectful-concatenated-sliced-text-result-locals.md",
+      "makeTarget": "test-p1b-runtime"
     },
     {
       "id": "D-0155",
@@ -1206,7 +1356,8 @@
       "decision": "带效果的运行时函数可接收、观察、转发并返回文本结果形参；文本结果形参使用标签、值、UTF-8 指针和字节长度四槽 ABI，整数结果形参继续使用双槽 ABI。分类阶段从调用实参推断载荷形态，同一形参混用整数与文本载荷时报告 S-3062，内联结果操作数一并保存指针和长度。",
       "check": "make test-p1b-runtime 新增文本结果参数转发、失败码保留、拼接载荷、内联结果、空文本和补充平面文本 6 个 macOS arm64 场景，并新增混合载荷 S-3062 与文本结果传入整数形参 S-3023 反例；新增成功产物各连续 8 次同路径构建字节一致。完整串行门通过 197 个整数形态产物、25 个函数结果边界产物、315 个编译诊断和 118 个运行时拒绝样例。种子 11979/12000 行、C-1 4856/11417（42.5%）。",
       "status": "settled",
-      "source": "docs/decisions/0155-effectful-runtime-text-result-parameter-abi.md"
+      "source": "docs/decisions/0155-effectful-runtime-text-result-parameter-abi.md",
+      "makeTarget": "test-p1b-runtime"
     },
     {
       "id": "D-0156",
@@ -1214,7 +1365,8 @@
       "decision": "将开发者预览版本从 v0.1.0-dev.1 递增到 v0.1.0-dev.2，确保 D-0155 之后的内容不装入旧版本标识。继续使用 D-0141/D-0142 的源码运行时目录、压缩包、逐文件 SHA-256、SBOM、本地 prefix 安装/卸载与解压后 make verify；不增加系统安装器、Apple 公证、多机支持或正式版本声明。",
       "check": "make release 生成 serica-v0.1.0-dev.2-macos-arm64 目录、tar.gz 与 SHA256SUMS.archives；tools/test_release.py 验证逐文件摘要、SBOM、arm64 Mach-O、签名、示例构建/运行和隔离安装/卸载。归档 SHA-256 以 dist/SHA256SUMS.archives 为准；解压归档后 make verify 通过。P1b 阶段门仍未通过。",
       "status": "settled",
-      "source": "docs/decisions/0156-developer-preview-dev2.md"
+      "source": "docs/decisions/0156-developer-preview-dev2.md",
+      "makeTarget": "release"
     },
     {
       "id": "D-0157",
@@ -1222,7 +1374,8 @@
       "decision": "是否失败、错误码和结果值直接接受运行时结果调用、ifElse 结果表达式、成功/失败构造和模块读取结果；单层观察只求值一次，成功运行时文本映射由观察路径释放，失败路径无 stdout 并保留错误码。修复文本结果返回描述符覆盖参数、直接是否失败条件码反向和结果观察临时帧栈不平衡。",
       "check": "make test-p1b-runtime 实际执行直接文本结果成功/失败、文本长度、整数结果状态/错误码及静态结果；无参数或非结果操作数继续返回 S-3013。运行时门覆盖 202 个整数形态产物、43 个运行时文本结果产物、27 个函数结果边界产物、315 个编译诊断和 118 个运行时拒绝样例。",
       "status": "settled",
-      "source": "docs/decisions/0157-direct-result-observation.md"
+      "source": "docs/decisions/0157-direct-result-observation.md",
+      "makeTarget": "test-p1b-runtime"
     },
     {
       "id": "D-0158",
@@ -1230,7 +1383,8 @@
       "decision": "将标点扫描和源码独立性检查从 bootstrap/tools/*.go 迁至 Python 标准库工具；tools/doctor 和 tools/check-independence 保持原命令与输出，Python 版权归属纳入独立性检查。该迁移不改变语言语义、不进入编译产物，也不代表 P4b 工具链完成。",
       "check": "make doctor、./tools/check-independence source 与 make seed-audit 通过；活动 Go 种子为 10 个文件、11996/12000 行、归因完整，C-1 为 4850/11615（41.8%）。",
       "status": "settled",
-      "source": "docs/decisions/0158-checker-tool-migration.md"
+      "source": "docs/decisions/0158-checker-tool-migration.md",
+      "makeTarget": "doctor"
     },
     {
       "id": "D-0159",
@@ -1238,7 +1392,8 @@
       "decision": "将开发者预览版本从 v0.1.0-dev.2 递增到 v0.1.0-dev.3，重新生成发布目录、压缩包、逐文件 SHA-256、SBOM 和归档 SHA-256，并复跑解压后自动验收与隔离 prefix 安装/卸载。包格式和平台边界沿用 D-0141/D-0142。",
       "check": "全量源码门与 make test-p1b-runtime 通过；运行时门为 202 个 arm64 整数形态产物、43 个运行时文本结果产物、27 个函数结果边界产物、315 个编译诊断和 118 个运行时拒绝样例。make release 生成 serica-v0.1.0-dev.3-macos-arm64 目录、tar.gz 与 SHA256SUMS.archives；tools/test_release.py 和解压后 make verify 通过。P1b 阶段门仍未通过。",
       "status": "settled",
-      "source": "docs/decisions/0159-developer-preview-dev3.md"
+      "source": "docs/decisions/0159-developer-preview-dev3.md",
+      "makeTarget": "test-p1b-runtime"
     },
     {
       "id": "D-0160",
@@ -1246,7 +1401,8 @@
       "decision": "新增 appendFile（路径，文本）：目标不存在时创建，已存在时保留原内容并追加 UTF-8 文本，返回实际写入字节数。路径接受静态文本或 argumentText，调用要求 filesystem.write，参数路径另要求 args。macOS 后端按调用区分 _creat 覆盖写入与 _open 追加写入；_open 使用 O_WRONLY|O_CREAT|O_APPEND 和 0644，并按平台可变参数 ABI 把权限模式放在调用栈。",
       "check": "make test-p1b-runtime 在 macOS arm64 实测保留已有内容追加、缺失文件创建、参数文本动态路径追加及缺根能力 S-4102；覆盖写入继续只导入 _creat，追加产物导入 _open。完整源码门通过；运行时门为 202 个整数形态产物、43 个运行时文本结果产物、27 个函数结果边界产物、317 个编译诊断和 118 个运行时拒绝样例。活动种子 11999/12000 行、C-1 4850/11618（41.7%）。P1b 阶段门仍未通过。",
       "status": "settled",
-      "source": "docs/decisions/0160-append-file-boundary.md"
+      "source": "docs/decisions/0160-append-file-boundary.md",
+      "makeTarget": "test-p1b-runtime"
     },
     {
       "id": "D-0161",
@@ -1254,7 +1410,8 @@
       "decision": "将开发者预览版本从 v0.1.0-dev.3 递增到 v0.1.0-dev.4，重新生成发布目录、压缩包、逐文件 SHA-256、SBOM 和归档 SHA-256，并复跑解压后自动验收与隔离 prefix 安装/卸载。包格式和平台边界沿用 D-0141/D-0142。",
       "check": "全量源码门与 make test-p1b-runtime 通过；运行时门为 202 个 arm64 整数形态产物、43 个运行时文本结果产物、27 个函数结果边界产物、317 个编译诊断和 118 个运行时拒绝样例。make release 生成 serica-v0.1.0-dev.4-macos-arm64 目录、tar.gz 与 SHA256SUMS.archives；tools/test_release.py 和解压后 make verify 通过。P1b 阶段门仍未通过。",
       "status": "settled",
-      "source": "docs/decisions/0161-developer-preview-dev4.md"
+      "source": "docs/decisions/0161-developer-preview-dev4.md",
+      "makeTarget": "test-p1b-runtime"
     },
     {
       "id": "D-0162",
@@ -1262,7 +1419,8 @@
       "decision": "新增 removeFile（路径）与 renameFile（源路径，目标路径），成功返回 0，失败无输出退出 1；路径接受静态文本或 argumentText，调用要求 filesystem.write，参数路径另要求 args。行简绑定编号登记 appendFile=38、removeFile=39、renameFile=40，效果表统一映射 filesystem.write，类型表补齐元数、路径检查和整数结果。macOS arm64 后端分别导入 _unlink 与 _rename。",
       "check": "make test-p1b-runtime 实测动态路径删除、重命名、缺失目标失败和 _unlink/_rename 导入；make test-p1b-module-effect 验证 append/remove/rename 效果、缺根能力与隐藏效果；make test-p1b-module-type 验证元数、路径类型、整数结果和 S-3075/S-3076 位置诊断。完整源码门通过；运行时门为 203 个整数形态产物、43 个运行时文本结果产物、27 个函数结果边界产物、327 个编译诊断和 120 个运行时拒绝样例。活动种子 11946/12000 行、C-1 4861/11703（41.5%）。P1b 阶段门仍未通过。",
       "status": "settled",
-      "source": "docs/decisions/0162-file-mutation-and-frontend-parity.md"
+      "source": "docs/decisions/0162-file-mutation-and-frontend-parity.md",
+      "makeTarget": "test-p1b-runtime"
     },
     {
       "id": "D-0163",
@@ -1270,7 +1428,8 @@
       "decision": "将开发者预览版本从 v0.1.0-dev.4 递增到 v0.1.0-dev.5，重新生成发布目录、压缩包、逐文件 SHA-256、SBOM 和归档 SHA-256，并复跑解压后自动验收与隔离 prefix 安装/卸载。包格式和平台边界沿用 D-0141/D-0142。",
       "check": "全量源码门、运行时门、模块效果/类型门、行简原生发射、doctor、许可、种子审计和独立性检查通过；运行时门为 203 个 arm64 整数形态产物、43 个运行时文本结果产物、27 个函数结果边界产物、327 个编译诊断和 120 个运行时拒绝样例。make release 生成 serica-v0.1.0-dev.5-macos-arm64 目录、tar.gz 与 SHA256SUMS.archives；tools/test_release.py 和解压后 make verify 通过。P1b 阶段门仍未通过。",
       "status": "settled",
-      "source": "docs/decisions/0163-developer-preview-dev5.md"
+      "source": "docs/decisions/0163-developer-preview-dev5.md",
+      "makeTarget": "release"
     },
     {
       "id": "D-0164",
@@ -1278,7 +1437,8 @@
       "decision": "新增 createDirectory（路径）与 removeDirectory（路径），成功返回 0，失败无 stdout 并以 1 退出；路径接受静态文本或 argumentText，要求 filesystem.write，参数路径另要求 args。macOS arm64 后端分别导入 _mkdir 与 _rmdir；行简前端登记编号 41/42 并同步效果与类型表。",
       "check": "模块效果门为 7 种能力、4 个正例图、18 个位置诊断、编译器自检；模块类型门为 29 个类型查询、25 个位置诊断、3 个原生参照产物、编译器自检；runtime 门为 203 个 arm64 整数形态产物、43 个运行时文本结果产物、27 个函数结果边界产物、335 个编译诊断和 122 个运行时拒绝样例。种子 11991/12000 行、C-1 4871/11748（41.5%）。P1b 阶段门仍未通过。",
       "status": "settled",
-      "source": "docs/decisions/0164-directory-boundary.md"
+      "source": "docs/decisions/0164-directory-boundary.md",
+      "makeTarget": "none"
     },
     {
       "id": "D-0165",
@@ -1286,7 +1446,8 @@
       "decision": "新增 setFileMode（路径，权限）与 changeFileMode（路径，权限），权限整数限定 0..511；静态和 argumentText 路径均要求 filesystem.write，参数路径另要求 args。macOS arm64 后端分别导入 _chmod 和 _open/_fchmod/_close；行简前端登记 43/44 并同步效果与类型表。",
       "check": "make test-p1b-runtime 实测 chmod/fchmod 权限分别变为 0o640/0o740、缺失路径无输出退出和 512 越界 S-3079；模块效果门新增缺根与隐藏效果诊断，为 7 种能力、4 个正例图、20 个位置诊断；模块类型门覆盖 43/44 元数与类型诊断，为 29 个类型查询、25 个位置诊断。种子 11984/12000 行、C-1 4907/11826（41.5%）。P1b 阶段门仍未通过。",
       "status": "settled",
-      "source": "docs/decisions/0165-file-mode-boundary.md"
+      "source": "docs/decisions/0165-file-mode-boundary.md",
+      "makeTarget": "test-p1b-runtime"
     },
     {
       "id": "D-0166",
@@ -1294,7 +1455,8 @@
       "decision": "新增 fileSize（路径），返回已有文件字节数；路径为静态文本或 argumentText，要求 filesystem.read，参数路径另要求 args，诊断码 S-3080。macOS arm64 后端导入 _open/_fstat/_close，行简前端登记 45 并同步效果与类型表。",
       "check": "运行时门为 204 个 arm64 整数形态产物、43 个运行时文本结果产物、27 个函数结果边界产物、335 个编译诊断和 123 个运行时拒绝样例；模块效果门 22 个位置诊断、模块类型门 27 个位置诊断；种子 11965/12000 行、C-1 4915/11807（41.6%）。P1b 阶段门仍未通过。",
       "status": "settled",
-      "source": "docs/decisions/0166-file-size-boundary.md"
+      "source": "docs/decisions/0166-file-size-boundary.md",
+      "makeTarget": "none"
     },
     {
       "id": "D-0167",
@@ -1302,7 +1464,8 @@
       "decision": "新增 exists（路径），静态文本或 argumentText 路径返回存在 1、缺失 0；要求 filesystem.read，参数路径另要求 args，诊断码 S-3081。macOS arm64 后端使用 _open/_fstat/_close，只把缺失当作正常否定结果，其他系统错误无 stdout 退出 1；行简前端登记 46。",
       "check": "运行时门新增文件/目录/缺失三种场景，产物导入限定 _open/_fstat/_close，当前为 204 个 arm64 整数形态产物、43 个运行时文本结果产物、27 个函数结果边界产物、335 个编译诊断和 123 个运行时拒绝样例；模块效果门 24 个位置诊断、模块类型门 28 个位置诊断；种子 11997/12000 行、C-1 4923/11839（41.6%）。P1b 阶段门仍未通过。",
       "status": "settled",
-      "source": "docs/decisions/0167-path-exists-boundary.md"
+      "source": "docs/decisions/0167-path-exists-boundary.md",
+      "makeTarget": "none"
     },
     {
       "id": "D-0168",
@@ -1310,7 +1473,8 @@
       "decision": "将开发者预览版本从 v0.1.0-dev.7 递增到 v0.1.0-dev.8，同步修正开发手册与路线图的当前基线计数，重新生成发布目录、压缩包、逐文件 SHA-256、SBOM 和归档 SHA-256，并复跑解压后自动验收与隔离 prefix 安装/卸载。包格式和平台边界沿用 D-0141/D-0142。",
       "check": "全量源码门、运行时门、模块效果/类型门、行简原生发射、doctor、许可、种子审计和独立性检查通过；运行时门为 204 个 arm64 整数形态产物、43 个运行时文本结果产物、27 个函数结果边界产物、335 个编译诊断和 123 个运行时拒绝样例。make release 生成 serica-v0.1.0-dev.8-macos-arm64 目录、tar.gz 与 SHA256SUMS.archives；tools/test_release.py 和解压后 make verify 通过。P1b 阶段门仍未通过。",
       "status": "settled",
-      "source": "docs/decisions/0168-developer-preview-dev8.md"
+      "source": "docs/decisions/0168-developer-preview-dev8.md",
+      "makeTarget": "release"
     },
     {
       "id": "D-0169",
@@ -1318,7 +1482,8 @@
       "decision": "新增 replaceFile（源路径，目标路径），静态或 argumentText 路径均须 filesystem.write，参数路径另须 args；macOS arm64 复用 _rename 实现同卷原子覆盖，成功返回 0，失败无 stdout 退出非零，诊断码 S-3082。行简前端登记 47 并同步效果与类型表。",
       "check": "运行时门新增参数文本路径替换产物，源文件消失、目标取得源内容、stdout 为 0，产物导入限定 _rename，源缺失时无 stdout 非零退出；模块效果门 26 个位置诊断，模块类型门 28 个位置诊断。全量源码门通过，活动种子 12000/12000 行、C-1 4927/11842（41.6%）。P1b 阶段门仍未通过。",
       "status": "settled",
-      "source": "docs/decisions/0169-atomic-file-replacement.md"
+      "source": "docs/decisions/0169-atomic-file-replacement.md",
+      "makeTarget": "none"
     },
     {
       "id": "D-0170",
@@ -1326,7 +1491,8 @@
       "decision": "开发者预览版本从 v0.1.0-dev.8 递增到 v0.1.0-dev.9，重新生成发布目录、压缩包、逐文件 SHA-256、SBOM 和归档 SHA-256，并复跑解压后自动验收与隔离 prefix 安装/卸载；包格式和平台边界沿用 D-0141/D-0142。",
       "check": "全量源码门、运行时门、模块效果/类型门、doctor、许可、种子审计和独立性检查通过；活动种子 12000/12000 行、C-1 4927/11842（41.6%）。版本递增不改变 P1b 未通过、未公证、未多机验证和未法务复核的事实。",
       "status": "settled",
-      "source": "docs/decisions/0170-developer-preview-dev9.md"
+      "source": "docs/decisions/0170-developer-preview-dev9.md",
+      "makeTarget": "none"
     },
     {
       "id": "D-0171",
@@ -1334,7 +1500,8 @@
       "decision": "新增 readEnvironment（静态文本名称），仅限编译期非空且不含 NUL/等号的固定名称，借用当前进程的只读 UTF-8 值；要求 args 能力，非法名称 S-3083，缺能力 S-4102，隐藏效果 S-4106。macOS arm64 导入 _getenv，缺失/空值返回空文本，精确长度输出避免读取借用指针末尾。",
       "check": "运行时门新增直接输出、textLength、中文 UTF-8、缺失/空值及三类诊断反例，限定产物只导入 _exit/_getenv/_write；模块效果与类型门通过。全量门通过，活动种子 11798/12000 行、C-1 4786/11641（41.1%）。P1b 阶段门仍未通过。",
       "status": "settled",
-      "source": "docs/decisions/0171-environment-read-boundary.md"
+      "source": "docs/decisions/0171-environment-read-boundary.md",
+      "makeTarget": "none"
     },
     {
       "id": "D-0172",
@@ -1342,15 +1509,17 @@
       "decision": "新增 isDirectory（静态文本或 argumentText 路径），目录返回 1，文件或缺失返回 0；要求 filesystem.read，参数路径另须 args；非法参数 S-3081，缺能力 S-4102，隐藏效果 S-4106；macOS arm64 使用 _open/_fstat/_close 检测 Darwin st_mode 的 S_IFDIR 位。",
       "check": "运行时门新增目录/文件/缺失、静态路径、导入白名单和三类诊断反例；模块效果门覆盖共享 filesystem.read 能力图，模块类型门新增 S-3081 位置诊断。全量门通过，活动种子 11860/12000 行、C-1 4794/11702（41.0%）。P1b 阶段门仍未通过。",
       "status": "settled",
-      "source": "docs/decisions/0172-directory-type-metadata.md"
+      "source": "docs/decisions/0172-directory-type-metadata.md",
+      "makeTarget": "none"
     },
     {
       "id": "D-0173",
-      "title": "临时自举桥行数预算扩至 12200",
-      "decision": "按所有者对临时种子预算可随必要实现扩额的一贯授权，将活动 Go 种子上限由 12000 行提高至 12200 行。调整只覆盖临时自举桥的机器行数上限，不放宽 Go 子集、逐行归因、许可证、依赖、源码/产物独立性、平台符号、C-1 复核和 P3b 整体删除硬门；后续接近上限仍须优先压缩或重构并另立决策。",
+      "title": "临时自举桥行数预算扩至 12260（原 12200）",
+      "decision": "按所有者对临时种子预算可随必要实现扩额的一贯授权，将活动 Go 种子上限由 12000 行提高至 12200 行，D-0190 后提高至 12260 行。调整只覆盖临时自举桥的机器行数上限，不放宽 Go 子集、逐行归因、许可证、依赖、源码/产物独立性、平台符号、C-1 复核和 P3b 整体删除硬门；后续接近上限仍须优先压缩或重构并另立决策。",
       "check": "python3 tools/check_seed_subset.py 与 make seed-audit 对 10 个活动源码文件、12077 行报通过且归因完整；全量源码门与 P1b 原生运行时门复跑通过。本决定不代表 P1b、P2b 或自举不动点完成。",
       "status": "settled",
-      "source": "docs/decisions/0173-bootstrap-budget-12200.md"
+      "source": "docs/decisions/0173-bootstrap-budget-12200.md",
+      "makeTarget": "seed-audit"
     },
     {
       "id": "D-0174",
@@ -1358,7 +1527,8 @@
       "decision": "在 D-0173 的种子预算调整与环境变量名称枚举测试边界修正后，将开发者预览版本从 v0.1.0-dev.9 递增至 v0.1.0-dev.10，重新生成发布目录、压缩包、逐文件 SHA-256、SBOM 和归档 SHA-256，并复跑发布包、隔离 prefix 安装与卸载；包格式和平台边界沿用 D-0141/D-0142。",
       "check": "22 个源码/构建/文档硬门串行通过；make release 与 make test-release 通过；活动种子 12077/12200 行、归因完整，C-1 4799/11906（40.3%）。版本递增不改变 P1b 未通过、未公证、未多机验证和未法务复核的事实。",
       "status": "settled",
-      "source": "docs/decisions/0174-developer-preview-dev10.md"
+      "source": "docs/decisions/0174-developer-preview-dev10.md",
+      "makeTarget": "release"
     },
     {
       "id": "D-0175",
@@ -1366,7 +1536,8 @@
       "decision": "在环境变量名称枚举测试边界修正与临时自举桥死代码清理后，将开发者预览版本从 v0.1.0-dev.10 递增至 v0.1.0-dev.11，重新生成发布目录、压缩包、逐文件 SHA-256、SBOM 和归档 SHA-256，并复跑发布包、隔离 prefix 安装与卸载；包格式和平台边界沿用 D-0141/D-0142。",
       "check": "22 个源码/构建/文档硬门串行通过；make release、make test-release 与 tools/test_install.py 通过；活动种子 12077/12200 行、归因完整，C-1 4799/11906（40.3%）。版本递增不改变 P1b 未通过、未公证、未多机验证和未法务复核的事实。",
       "status": "settled",
-      "source": "docs/decisions/0175-developer-preview-dev11.md"
+      "source": "docs/decisions/0175-developer-preview-dev11.md",
+      "makeTarget": "release"
     },
     {
       "id": "D-0176",
@@ -1374,7 +1545,8 @@
       "decision": "在环境变量名称枚举测试改为按实际 _environ 顺序验收后，将开发者预览版本从 v0.1.0-dev.11 递增至 v0.1.0-dev.12，重新生成发布目录、压缩包、逐文件 SHA-256、SBOM 和归档 SHA-256，并复跑发布包、隔离 prefix 安装与卸载；包格式和平台边界沿用 D-0141/D-0142。",
       "check": "22 个源码/构建/文档硬门串行通过；make release、make test-release 与 tools/test_install.py 通过；活动种子 12077/12200 行、归因完整，C-1 4799/11906（40.3%）。版本递增不改变 P1b 未通过、未公证、未多机验证和未法务复核的事实。",
       "status": "settled",
-      "source": "docs/decisions/0176-developer-preview-dev12.md"
+      "source": "docs/decisions/0176-developer-preview-dev12.md",
+      "makeTarget": "release"
     },
     {
       "id": "D-0177",
@@ -1382,7 +1554,8 @@
       "decision": "在同步中英文首页和发布说明的当前版本、种子行数与文件/环境边界后，将开发者预览版本从 v0.1.0-dev.12 递增至 v0.1.0-dev.13，重新生成发布目录、压缩包、逐文件 SHA-256、SBOM 和归档 SHA-256，并复跑发布包、隔离 prefix 安装与卸载；包格式和平台边界沿用 D-0141/D-0142。",
       "check": "22 个源码/构建/文档硬门串行通过；make release、make test-release 与 tools/test_install.py 通过；活动种子 12077/12200 行、归因完整，C-1 4799/11906（40.3%）。版本递增不改变 P1b 未通过、未公证、未多机验证和未法务复核的事实。",
       "status": "settled",
-      "source": "docs/decisions/0177-developer-preview-dev13.md"
+      "source": "docs/decisions/0177-developer-preview-dev13.md",
+      "makeTarget": "release"
     },
     {
       "id": "D-0178",
@@ -1390,7 +1563,8 @@
       "decision": "在修正中英文首页种子徽标、临时上限和审计样例并同步发布说明后，将开发者预览版本从 v0.1.0-dev.13 递增至 v0.1.0-dev.14，重新生成发布目录、压缩包、逐文件 SHA-256、SBOM 和归档 SHA-256，并复跑发布包、隔离 prefix 安装与卸载；包格式和平台边界沿用 D-0141/D-0142。",
       "check": "22 个源码/构建/文档硬门串行通过；make release、make test-release 与 tools/test_install.py 通过；活动种子 12077/12200 行、归因完整，C-1 4799/11906（40.3%）。版本递增不改变 P1b 未通过、未公证、未多机验证和未法务复核的事实。",
       "status": "settled",
-      "source": "docs/decisions/0178-developer-preview-dev14.md"
+      "source": "docs/decisions/0178-developer-preview-dev14.md",
+      "makeTarget": "release"
     },
     {
       "id": "D-0179",
@@ -1398,7 +1572,8 @@
       "decision": "新增 .github/workflows/preflight.yml 与 tools/ci-preflight.py：GitHub Actions 在 Linux 上校验 DECISIONS.json 编号与记录文件、种子子集机器边界和源码独立性；新增 make ci-preflight 供本地复跑。该 job 只覆盖跨平台零知识前置检查，不替代 macOS 原生门、窗口交互、签名公证或多机验证。",
       "check": "python3 tools/ci-preflight.py 通过；python3 tools/check_seed_subset.py 报 10 个活动源码文件、12077 行、归因完整；./tools/check-independence source 通过；README 中英文风险表同步说明剩余 CI 缺口。",
       "status": "settled",
-      "source": "docs/decisions/0179-ci-zero-preflight.md"
+      "source": "docs/decisions/0179-ci-zero-preflight.md",
+      "makeTarget": "none"
     },
     {
       "id": "D-0180",
@@ -1406,7 +1581,8 @@
       "decision": "扩展 .github/workflows/preflight.yml：除 Linux 的 zero 前置检查外，在 macOS arm64 运行 shell 门。工作流下载并校验 DEPENDENCIES.md 登记的 Go go1.27.4 tarball 摘要，然后串行执行 doctor、许可、种子审计、CI 前置检查、stage0 与全部 P0b/P1b 静态、模块、运行时和原生发射门。本门不替代窗口交互、真实安装器、签名公证、多机验证或正式法务复核。",
       "check": "工作流 YAML 中 zero 与 shell 两个 job 均在 push、pull_request、workflow_dispatch 上触发；shell job 固定 go1.27.4，逐字校验 91a44a2b8a716600ad94a4f143e156116620db8828086a6e3602291be9bd0bb4 后构建；本地同一命令序列通过，CI 远端执行仍需工作流实际运行记录证明。",
       "status": "settled",
-      "source": "docs/decisions/0180-ci-native-gates.md"
+      "source": "docs/decisions/0180-ci-native-gates.md",
+      "makeTarget": "none"
     },
     {
       "id": "D-0181",
@@ -1414,7 +1590,8 @@
       "decision": "在 .github/workflows/preflight.yml 增加 independence job：Linux 上运行 python3 tools/check_independence.py source 与 make license，使源码独立性和许可原文检查进入自动门；窗口交互、签名公证和多机验证继续单列。",
       "check": "zero、independence、shell 三个 job 均在 push、pull_request、workflow_dispatch 上触发；本地 python3 tools/ci-preflight.py、make license、git diff --check 通过，远端 CI 运行结果仍需实际运行记录证明。",
       "status": "settled",
-      "source": "docs/decisions/0181-ci-independence-job.md"
+      "source": "docs/decisions/0181-ci-independence-job.md",
+      "makeTarget": "license"
     },
     {
       "id": "D-0182",
@@ -1422,7 +1599,8 @@
       "decision": "本地已提交 codex/serica-ci-and-doc-sync 并配置 zero、independence、shell 三个 GitHub Actions job；git push 返回 Invalid username or token，远端分支和工作流运行未创建。不把本地命令序列写成远端 CI 已通过；提供可用 HTTPS 凭据或 SSH 权限后推送该分支并读取三个 job 结果。窗口交互、签名公证和多机验证继续分别验收。",
       "check": "git push -u origin codex/serica-ci-and-doc-sync 返回认证失败；本地 ci-preflight、license、全量源码门通过。远端运行记录尚未取得。",
       "status": "pending",
-      "source": "docs/decisions/0182-remote-ci-credential-blocker.md"
+      "source": "docs/decisions/0182-remote-ci-credential-blocker.md",
+      "makeTarget": "none"
     },
     {
       "id": "D-0183",
@@ -1430,7 +1608,8 @@
       "decision": "将 CI 前置检查、三个 GitHub Actions job、远端凭据阻塞记录与中英文文档同步纳入当前开发者预览版本，重新生成发布目录、压缩包、逐文件 SHA-256、SBOM 和归档 SHA-256，并复跑发布包、隔离 prefix 安装与卸载；包格式和平台边界沿用 D-0141/D-0142。",
       "check": "本地完整源码门、CI 前置检查、许可检查、make release、make test-release 与 tools/test_install.py 通过；远端 CI 运行因推送凭据被拒仍未证明。P1b 阶段门仍未闭合，不是正式版本、安装器或已公证分发。",
       "status": "settled",
-      "source": "docs/decisions/0183-developer-preview-dev16.md"
+      "source": "docs/decisions/0183-developer-preview-dev16.md",
+      "makeTarget": "release"
     },
     {
       "id": "D-0184",
@@ -1438,7 +1617,8 @@
       "decision": "新增 删映射键（映射，整数键） 语句并要求 map.write；删除沿桶链断开命中条目，将旧条目标记为墓碑以保持后续查找与插入语义，-1 键和空键不作为用户键参与查找。保留仅整数键的当前边界，不扩张到通用键类型。",
       "check": "make test-p1b-runtime 通过 209 个 arm64 产物，其中 13 个映射用例覆盖删除存在键、缺失键、删除后复用、碰撞链保持和扩容后删除；make seed-audit、test-p1b-static、test-p1b-modules、test-p1b-module-effect、test-p1b-module-type、test-p1b-native-emit 通过。P1b 阶段门仍未通过。",
       "status": "settled",
-      "source": "docs/decisions/0184-map-delete.md"
+      "source": "docs/decisions/0184-map-delete.md",
+      "makeTarget": "test-p1b-runtime"
     },
     {
       "id": "D-0185",
@@ -1446,7 +1626,8 @@
       "decision": "readEnvironment 的名称参数继续保持编译期静态文本：argumentText 和任意运行时字符串均在 check 阶段以 S-3083 拒绝；不引入依赖 memset/getenv 的动态 C 字符串后端，避免未证明的寄存器与栈槽ABI。新增正反例锁定该边界。",
       "check": "make test-p1b-runtime 通过，新增三个诊断反例覆盖任意运行时文本、argumentText 名称和隐藏效果；make seed-audit 报 12188/12200 行、归因完整，C-1 4834/12016（40.2%）；test-p1b-static、test-p1b-modules、test-p1b-module-effect、test-p1b-module-type、test-p1b-native-emit、test-p0b-scope 通过。P1b 阶段门仍未通过。",
       "status": "settled",
-      "source": "docs/decisions/0185-environment-name-static-boundary.md"
+      "source": "docs/decisions/0185-environment-name-static-boundary.md",
+      "makeTarget": "test-p1b-runtime"
     },
     {
       "id": "D-0186",
@@ -1454,7 +1635,8 @@
       "decision": "删映射键 的碰撞链断链改为写回桶槽地址本身（x3+0），不再写 x3+16 破坏相邻桶；后继仍从节点 +16 读取，墓哨节点后继为 -1 时跳过不断链。只支持有符号 64 位整数键，删除后长度减一。",
       "check": "make test-p1b-runtime 通过 210 个 arm64 整数形态产物，其中 14 个映射产物覆盖存在键、缺失键、同键重复删除、碰撞链保持和扩容后删除；349 个编译诊断和 123 个运行时拒绝样例；make seed-audit 报 12189/12200 行、归因完整，C-1 4834/12016（40.2%）；test-p1b-static、test-p1b-modules、test-p1b-module-effect、test-p1b-module-type、test-p1b-native-emit、test-p0b-scope、ci-preflight 通过。P1b 阶段门仍未通过。",
       "status": "settled",
-      "source": "docs/decisions/0186-map-delete-bucket-slot-root-cause.md"
+      "source": "docs/decisions/0186-map-delete-bucket-slot-root-cause.md",
+      "makeTarget": "test-p1b-runtime"
     },
     {
       "id": "D-0187",
@@ -1462,7 +1644,8 @@
       "decision": "emitRuntimeMapGrow 在调用 mmap 前把旧桶数组指针和旧容量保存到 sp+72/sp+80，重散列遍历旧桶而非被 x2 覆盖的新映射地址；跳过已被先前碰撞链清空的旧桶槽，避免重复插入和加载因子误判。只改扩容发射，不改变整数键边界和 3/4 负载策略。",
       "check": "make test-p1b-runtime 通过 211 个 arm64 整数形态产物，其中 15 个映射产物新增 2000 键扩容回归；349 个编译诊断、123 个运行时拒绝样例；make seed-audit 报 12196/12200 行、归因完整、C-1 4834/12022（40.2%）；其余源码前端/模块/原生门、doctor/license/ci-preflight 通过。P1b 阶段门仍未通过。",
       "status": "settled",
-      "source": "docs/decisions/0187-map-grow-rehash-old-bucket-root-cause.md"
+      "source": "docs/decisions/0187-map-grow-rehash-old-bucket-root-cause.md",
+      "makeTarget": "test-p1b-runtime"
     },
     {
       "id": "D-0188",
@@ -1470,7 +1653,8 @@
       "decision": "保留 D-0187 旧桶指针/容量保存与空槽跳过意图；空槽探测必须读取 sp+72 保存的旧桶数组并按 8 字节指针槽寻址，不再误读新表；映射写入帧扩到 96 字节，覆盖扩容例程写入 sp+80 的旧容量槽。哈希常量、节点布局、扩容阈值与负载因子不变。",
       "check": "make test-p1b-runtime 通过 212 个 arm64 整数形态产物，其中 16 个映射用例含 2000 键扩容后采样键 0/1/1000/1999 查询、200 键覆盖与尾键、删除与碰撞链；349 个编译诊断、123 个运行时拒绝样例。增量探针覆盖 48/100/200/512/1000/1536/1600/2000 键映射长度与采样键查询。P1b 阶段门仍未通过。",
       "status": "settled",
-      "source": "docs/decisions/0188-map-rehash-scratch-clobber.md"
+      "source": "docs/decisions/0188-map-rehash-scratch-clobber.md",
+      "makeTarget": "test-p1b-runtime"
     },
     {
       "id": "D-0189",
@@ -1478,7 +1662,440 @@
       "decision": "emitRuntimeMapGrow 的碰撞链尾必须跳到 nextBucket 继续遍历旧桶；只有外层计数耗尽才进入重散列收束与旧表释放。保留 D-0187/D-0188 的旧桶保存、旧桶探测和 96 字节写入帧，不改变哈希常量、节点布局、扩容阈值与整数键边界。",
       "check": "make test-p1b-runtime 通过 213 个 arm64 整数形态产物，其中 17 个映射用例；2000 键真实全量求和为 1644968；349 个编译诊断、123 个运行时拒绝样例。10/48/2000 键增量探针与 12198/12200 行种子审计通过。源码、模块、原生发射、doctor、license 与 ci-preflight 全门复跑通过。P1b 阶段门仍未通过。",
       "status": "settled",
-      "source": "docs/decisions/0189-map-rehash-chain-tail-root-cause.md"
+      "source": "docs/decisions/0189-map-rehash-chain-tail-root-cause.md",
+      "makeTarget": "test-p1b-runtime"
+    },
+    {
+      "id": "D-0190",
+      "title": "运行时文本返回调用进入成功载荷",
+      "decision": "迭代传播文本返回标记并在函数展开时同步 runtimeFunctionText；文本返回调用可进入成功载荷和结果值边界，代码生成以所有权转移把 x1/x2/x3 返回描述符交给结果变量。嵌套表达式、独立条件、函数体和容器仍拒绝。",
+      "check": "make test-p1b-runtime 通过 213 个 arm64 整数形态产物、16 个文本返回调用方存储产物（含 4 个新成功载荷用例）、162 个成功文本输入、349 个编译诊断和 123 个运行时拒绝样例；嵌套 textConcat 仍以 S-3023 拒绝。种子审计通过 10 个活动源码文件、12259/12260 行，C-1 4869/12078（40.3%）。P1b 阶段门仍未通过。",
+      "status": "settled",
+      "source": "docs/decisions/0190-runtime-text-return-success-payload.md",
+      "makeTarget": "test-p1b-runtime"
+    },
+    {
+      "id": "D-0191",
+      "title": "开发者预览 v0.1.0-dev.19 发布复验",
+      "decision": "将开发者预览版本递增为 v0.1.0-dev.19，从当前源码重新生成发布目录、压缩包、逐文件摘要、SBOM、归档摘要，并复跑解压验收与隔离安装/卸载；仍不是 P1b 通过或正式发布。",
+      "check": "全量源码门、make test-p1b-runtime（16 个文本返回调用方存储产物）、make release、make test-release 与 tools/test_install.py 通过；活动种子 12259/12260 行、C-1 4869/12078（40.3%）。",
+      "status": "settled",
+      "source": "docs/decisions/0191-developer-preview-dev19.md",
+      "makeTarget": "test-p1b-runtime"
+    },
+    {
+      "id": "D-0192",
+      "title": "动态环境变量名称与文本描述符安全桥",
+      "decision": "readEnvironment 接受 argumentText 整数下标直接名称及由参数文本初始化或赋值的文本变量；动态名称复制到 4 KiB 对齐栈区并 NUL 终止，拒绝空名称、内嵌 NUL、等号和超长名称，缺失变量返回空文本，结果经完整 UTF-8 校验后以缓冲区/长度描述符进入现有文本消费者。任意文本表达式仍拒绝，完整通用 IO 不在本决定范围内。",
+      "check": "make test-p1b-runtime 新增直接/存储参数文本名称的中文输出、textLength 和 equals 四个成功产物，并验证 _getenv 或 _mmap/_munmap 导入白名单与 S-3069 非法下标诊断；全量 P0b/P1b 源码门、doctor、许可、CI 前置检查和种子审计通过。活动种子逐行归因后为 12419/12500 行，C-1 4887/12235（39.9%）。P1b 阶段门仍未通过。",
+      "status": "settled",
+      "source": "docs/decisions/0192-dynamic-environment-names.md",
+      "makeTarget": "test-p1b-runtime"
+    },
+    {
+      "id": "D-0193",
+      "title": "开发者预览 v0.1.0-dev.20 发布复验",
+      "decision": "将开发者预览版本递增为 v0.1.0-dev.20，从当前源码重新生成发布目录、压缩包、逐文件摘要、SBOM、归档摘要，并复跑解压验收与隔离安装/卸载；仍不是 P1b 通过或正式发布。",
+      "check": "全量源码门、动态环境名称运行时用例、make release、make test-release 与 tools/test_install.py 通过；活动种子 12419/12500 行，C-1 4887/12235（39.9%）。",
+      "status": "settled",
+      "source": "docs/decisions/0193-developer-preview-dev20.md",
+      "makeTarget": "release"
+    },
+    {
+      "id": "D-0194",
+      "title": "文本返回调用借用消费的 ABI 根因修复",
+      "decision": "保持文本返回借用边界不变，按 x1=buffer、x2=byte length、x3=capacity 保存 owned 描述符；调用参数在 bl 前、返回描述符在 bl 后均落到临时栈，避免寄存器覆盖；owned 文本比较生成真实 false 补丁，textLength 在 unmap 后恢复长度/缓冲区；比较路径另保留一级 scratch 并同步帧预算。",
+      "check": "make test-p1b-runtime 通过 213 个 arm64 整数形态产物、19 个文本返回调用方存储产物、168 个成功文本输入、349 个编译诊断和 123 个运行时拒绝样例；全量源码门、doctor、license、ci-preflight 与 seed-audit 通过，活动种子 12421/12500 行、C-1 4887/12237（39.9%）。P1b 阶段门仍未通过。",
+      "status": "settled",
+      "source": "docs/decisions/0194-runtime-owned-text-return-borrow.md",
+      "makeTarget": "test-p1b-runtime"
+    },
+    {
+      "id": "D-0195",
+      "title": "开发者预览 v0.1.0-dev.21 发布复验",
+      "decision": "将开发者预览版本递增为 v0.1.0-dev.21，从当前源码重新生成发布目录、压缩包、逐文件 SHA-256、SBOM 和归档 SHA-256，并复跑解压验收、示例构建运行与隔离 prefix 安装/卸载；仍不是 P1b 通过或正式发布。",
+      "check": "全量源码门、D-0194 三组变形文本返回借用运行用例、make release、make test-release 与 tools/test_install.py 通过；活动种子 12421/12500 行，C-1 4887/12237（39.9%）。",
+      "status": "settled",
+      "source": "docs/decisions/0195-developer-preview-dev21.md",
+      "makeTarget": "release"
+    },
+    {
+      "id": "D-0196",
+      "title": "运行时条件选择静态文本分支",
+      "decision": "ifElse 的两个分支均为编译期字符串且条件含运行时值时，语义层推导为运行时字符串，代码生成在两个独立数据常量上生成条件跳转并分别写出对应 UTF-8 文本与换行，不复用相邻数据或扩大运行时文本 ABI。",
+      "check": "make test-p1b-runtime 通过输入 1 输出甲、输入 2 输出乙两个 arm64 产物；全量源码门、doctor、license、ci-preflight 与 seed-audit 通过，活动种子 12465/12500 行、C-1 4890/12281（39.8%）。P1b 阶段门仍未通过。",
+      "status": "settled",
+      "source": "docs/decisions/0196-runtime-static-text-ifelse.md",
+      "makeTarget": "test-p1b-runtime"
+    },
+    {
+      "id": "D-0197",
+      "title": "运行时文本分支作为长度操作数",
+      "decision": "ifElse 的运行时条件与两个编译期文本分支共享可复用文本操作数发射：条件跳转选择独立 UTF-8 常量、缓冲区与字节长度，textLength 随后按 Unicode 码位返回运行时整数；控制台根输出复用同一选择并单独写出换行，不读取常量边界外数据。动态文本分支仍拒绝；比较和切片由 D-0198/D-0199 后续开放。",
+      "check": "make test-p1b-runtime 新增输入 1 输出 2、输入 2 输出 1 两个 textLength 产物，D-0196 根输出回归精确为甲换行、乙换行；运行时门为 217 个 arm64 整数形态产物、168 个成功文本输入、349 个编译诊断和 123 个运行时拒绝样例。全量源码门、doctor、license、ci-preflight 与 seed-audit 通过，活动种子 12471/12500 行、C-1 4890/12287（39.8%）。P1b 阶段门仍未通过。",
+      "status": "settled",
+      "source": "docs/decisions/0197-runtime-static-text-ifelse-operand.md",
+      "makeTarget": "test-p1b-runtime"
+    },
+    {
+      "id": "D-0198",
+      "title": "运行时文本分支作为比较操作数",
+      "decision": "ifElse 的运行时条件与两个编译期文本分支可进入 equals、notEquals 和文本排序的任一操作数位置；共享选择器生成真实条件跳转，比较路径在求值右操作数前保存左描述符，避免条件计算覆盖。动态分支及进入容器、函数调用或跨函数恢复仍拒绝；substring 由 D-0199 后续开放。",
+      "check": "make test-p1b-runtime 新增 equals 操作数输入 1 输出 -1、输入 2 输出 42 两例，D-0196/D-0197 四例继续通过；运行时门为 219 个 arm64 整数形态产物、168 个成功文本输入、349 个编译诊断和 123 个运行时拒绝样例。全量源码门、doctor、license、ci-preflight 与 seed-audit 通过，活动种子 12474/12500 行、C-1 4890/12290（39.8%）。P1b 阶段门仍未通过。",
+      "status": "settled",
+      "source": "docs/decisions/0198-runtime-static-text-ifelse-comparison.md",
+      "makeTarget": "test-p1b-runtime"
+    },
+    {
+      "id": "D-0199",
+      "title": "运行时文本分支作为有界切片源",
+      "decision": "ifElse 的运行时条件与两个编译期文本分支可作为 substring 源；条件可依赖运行时整数或文本比较，共享选择器生成独立 UTF-8 常量与真实条件跳转，既有切片逻辑保存源描述符后求值索引并执行码位扫描、边界检查和有界复制。动态分支及进入容器或跨函数恢复仍拒绝。",
+      "check": "make test-p1b-runtime 新增四个执行用例：整数条件切片输入 1/2 输出乙/丁，文本相等条件选择并切片后排序输入 x/y 输出 1/0；原 S-3013 反例转为正例。运行时门为 223 个 arm64 整数形态产物、168 个成功文本输入、349 个编译诊断和 123 个运行时拒绝样例。全量源码门、doctor、license、ci-preflight 与 seed-audit 通过，活动种子 12477/12500 行、C-1 4893/12293（39.8%）。P1b 阶段门仍未通过。",
+      "status": "settled",
+      "source": "docs/decisions/0199-runtime-static-text-ifelse-substring.md",
+      "makeTarget": "test-p1b-runtime"
+    },
+    {
+      "id": "D-0200",
+      "title": "运行时文本分支作为拼接操作数",
+      "decision": "ifElse 的运行时条件与两个编译期文本分支可作为 textConcat 的左或右操作数；共享选择器以真实条件跳转选出独立 UTF-8 常量，拼接路径保存左描述符后求值右侧，再执行既有 63 字节边界检查、复制和终止字节写入。动态分支及进入容器或跨函数恢复仍拒绝。",
+      "check": "make test-p1b-runtime 新增四个执行用例：左侧条件输入 1/2 输出甲丙/乙丙，右侧条件输入 1/2 输出丙甲/丙乙，D-0196 至 D-0199 十例继续通过。运行时门为 227 个 arm64 整数形态产物、168 个成功文本输入、349 个编译诊断和 123 个运行时拒绝样例。全量源码门、doctor、license、ci-preflight 与 seed-audit 通过，活动种子 12477/12500 行、C-1 4893/12293（39.8%）。P1b 阶段门仍未通过。",
+      "status": "settled",
+      "source": "docs/decisions/0200-runtime-static-text-ifelse-concat.md",
+      "makeTarget": "test-p1b-runtime"
+    },
+    {
+      "id": "D-0201",
+      "title": "运行时文本分支进入有界文本变量",
+      "decision": "ifElse 的运行时条件与两个编译期文本分支可作为普通文本变量的初始化和赋值来源；槽位分类分配固定有界文本缓冲，发射阶段通过共享选择器取得所选分支的 UTF-8 描述符，再经容量检查、复制和终止字节写入落到变量自己的缓冲区。变量不借用静态分支或共享选择器的栈描述符；动态文本分支仍拒绝，容器、无效果函数和成功载荷消费由 D-0202 后续开放。",
+      "check": "make test-p1b-runtime 新增四个执行用例：条件文本变量输入 1/2 输出甲乙/丙丁，读取文本后重赋值为条件文本并拼接输入 x/y 输出甲乙尾/丙丁尾；新增产物验证 _mmap/_munmap 导入与变量文本存储。D-0201 当时运行时门为 231 个 arm64 整数形态产物、168 个成功文本输入、349 个编译诊断和 123 个运行时拒绝样例；D-0202 后当前精确数字以 D-0202 为准。P1b 阶段门仍未通过。",
+      "status": "settled",
+      "source": "docs/decisions/0201-runtime-static-text-ifelse-variable.md",
+      "makeTarget": "test-p1b-runtime"
+    },
+    {
+      "id": "D-0202",
+      "title": "运行时文本分支进入容器、函数与成功结果载荷",
+      "decision": "ifElse 的运行时条件与两个编译期文本分支可初始化文本数组、经 arraySet/arrayPush 更新、作为无效果函数直接文本实参和函数局部返回，并作为成功结果的文本载荷；数组和结果缓冲复制选中分支，函数参数保持只读借用。结果发射器抽出通用条件文本操作数复制辅助，数组元素与成功载荷共用容量检查、复制和终止字节写入。动态文本分支、通用容器结果载荷、容器逃逸、完整效果函数 ABI 与跨函数结果恢复仍未开放。",
+      "check": "make test-p1b-runtime 新增 14 个实际执行用例：数组构造/替换/追加各 2 例，函数实参 2 例，函数局部返回 2 例，直接和结果变量成功载荷各 2 例；输入 1/2 验证甲乙/丙丁或函数长度 2/1。运行时门为 245 个 arm64 整数形态产物、182 个成功文本输入、349 个编译诊断和 123 个运行时拒绝样例；活动种子 12490/12500 行、C-1 4893/12306（39.8%）。P1b 阶段门仍未通过。",
+      "status": "settled",
+      "source": "docs/decisions/0202-runtime-static-text-ifelse-consumers-result.md",
+      "makeTarget": "test-p1b-runtime"
+    },
+    {
+      "id": "D-0203",
+      "title": "普通运行时文本变量进入成功结果载荷",
+      "decision": "已存在的运行时文本变量可作为成功载荷；结果变量和直接结果观察使用独立四槽文本缓冲并深复制源内容，源变量后续修改不影响载荷。直接结果值、textLength、是否失败和错误码观察均复用既有临时结果释放路径。无效果纯函数文本形参可包装为成功结果返回调用方；效果语句体函数局部成功文本构造、递归结果 ABI、通用容器结果载荷、容器逃逸和跨函数错误恢复仍未开放。",
+      "check": "make test-p1b-runtime 新增 5 个实际执行用例：结果变量深复制、直接结果输出、长度、状态/错误码和文本形参包装返回；直接输出含补充平面文本𠮷直接载荷。运行时门为 250 个 arm64 整数形态产物、28 个函数结果边界产物、182 个成功文本输入、349 个编译诊断和 123 个运行时拒绝样例；活动种子 12500/12500 行、C-1 4896/12318（39.7%）。P1b 阶段门仍未通过。",
+      "status": "settled",
+      "source": "docs/decisions/0203-runtime-text-variable-success-payload.md",
+      "makeTarget": "test-p1b-runtime"
+    },
+    {
+      "id": "D-0204",
+      "title": "效果语句体文本局部与成功载荷",
+      "decision": "效果语句体函数的运行时文本局部可在声明初值和后续赋值中直接使用 readText，并包装为成功结果返回调用方；函数与程序根仍须声明 stdin，文本局部映射按既有函数收束路径释放，结果局部拥有独立深复制缓冲。直接效果文本返回、递归结果 ABI、容器结果载荷、跨函数错误恢复和完整效果函数 ABI 仍未开放。",
+      "check": "make test-p1b-runtime 新增 1 个执行用例：文本局部先读第一行、再重赋值为含补充平面的𠮷第二行，包装成功结果后根输出精确为𠮷第二行。运行时门为 251 个 arm64 整数形态产物、29 个函数结果边界产物、182 个成功文本输入、349 个编译诊断和 123 个运行时拒绝样例；活动种子 12498/12500 行、C-1 4894/12316（39.7%）。P1b 阶段门仍未通过。",
+      "status": "settled",
+      "source": "docs/decisions/0204-effectful-text-local-success-payload.md",
+      "makeTarget": "test-p1b-runtime"
+    },
+    {
+      "id": "D-0205",
+      "title": "效果语句体文本局部直接返回",
+      "decision": "效果语句体函数可在末尾直接返回由 readText 初始化的文本局部，继续使用 x1/x2/x3 所有权返回 ABI，调用方接管缓冲区、有效字节长度和映射容量。函数展开在局部类型标注前识别该运行时证据，避免误入纯块 lowering；函数与程序根仍须声明 stdin。嵌套效果文本返回、递归结果 ABI、容器结果载荷、跨函数错误恢复和完整效果函数 ABI 仍未开放。",
+      "check": "make test-p1b-runtime 新增 1 个补充平面执行用例：输入𠮷效果返回，效果函数直接返回文本局部，调用方存入变量并精确输出同一文本。运行时门为 251 个 arm64 整数形态产物、29 个函数结果边界产物、43 个运行时文本结果产物、183 个成功文本输入、349 个编译诊断和 123 个运行时拒绝样例；活动种子 12499/12500 行、C-1 4895/12317（39.7%）。P1b 阶段门仍未通过。",
+      "status": "settled",
+      "source": "docs/decisions/0205-effectful-text-local-direct-return.md",
+      "makeTarget": "test-p1b-runtime"
+    },
+    {
+      "id": "D-0206",
+      "title": "标准输出精确写入边界",
+      "decision": "新增 writeText（文本）内建表达式，精确写出有效 UTF-8 字节且不追加换行，返回实际写入字节数；程序根与调用链须声明 stdout，缺失时以 S-3084 拒绝。macOS arm64 以 _write 循环处理短写，只累计已写字节；自编前端同步登记内建编号 52、效果、类型、元数和诊断。文件句柄、stderr、二进制流、缓冲配置和通用 IO 仍未开放。",
+      "check": "make test-p1b-runtime 新增静态补充平面、空文本、多次有序写入及计数求和、运行时 readText、效果表达式函数、效果语句体局部和 stat 后返回值保持等执行用例；缺 stdout、隐藏效果、元数和参数类型反例通过。模块效果门与模块类型门同步覆盖。运行时门为 260 个 arm64 整数形态产物、29 个函数结果边界产物、43 个运行时文本结果产物、184 个成功文本输入、357 个编译诊断和 123 个运行时拒绝样例；活动种子 12574/12600 行、C-1 4915/12392（39.7%）。P1b 阶段门仍未通过。",
+      "status": "settled",
+      "source": "docs/decisions/0206-stdout-write-boundary.md",
+      "makeTarget": "test-p1b-runtime"
+    },
+    {
+      "id": "D-0207",
+      "title": "Darwin stat 缓冲区覆盖根因",
+      "decision": "fileSize、exists 与 isDirectory 的 Darwin arm64 原生桥原先从 sp+32 写 struct stat，覆盖 sp+0 保存的调用方返回值；isDirectory 还未在临时帧后恢复 sp。三条路径统一使用 176 字节临时帧，stat 缓冲区保持在 sp+32，并在成功与失败出口恢复栈指针，不改变系统调用、能力或返回语义。",
+      "check": "D-0206 的组合回归暴露该缺陷；新增 writeText 结果跨越 isDirectory、fileSize 和 exists 仍保持正确的执行用例，既有元数据分支、导入白名单、拒绝样例以及模块效果/类型测试继续通过。该修复由 D-0207 独立定案，不静默归入 writeText。",
+      "status": "settled",
+      "source": "docs/decisions/0207-darwin-stat-frame-root-cause.md",
+      "makeTarget": "none"
+    },
+    {
+      "id": "D-0208",
+      "title": "临时自举桥预算调整为 12600 行",
+      "decision": "活动 Go 临时自举桥机器上限由 12500 行调整为 12600 行，只容纳 D-0206/D-0207 已验证的必要实现与 P1b 后续桥接修正；不放宽 Go 子集、依赖、逐行归因、独立性、许可、平台符号或 P3b 删除门。后续仍须先压缩，超限必须单独记录实际行数、压缩尝试和不可删除原因。",
+      "check": "make seed-audit 实测 10 个活动源码文件、12574/12600 行且归因完整；C-1 为 4915/12392（39.7%），未触发 40% 比例复核条件。P1b 阶段门仍未通过。",
+      "status": "settled",
+      "source": "docs/decisions/0208-seed-budget-12600.md",
+      "makeTarget": "seed-audit"
+    },
+    {
+      "id": "D-0209",
+      "title": "标准错误精确写入边界",
+      "decision": "新增 writeError（文本）内建表达式，向文件描述符 2 精确写出有效 UTF-8 字节且不追加换行，返回实际写入字节数；程序根与调用链须声明 stderr，缺少根能力以 S-4102 拒绝，隐藏或漏传函数效果以 S-4106 拒绝，错误元数与非文本参数以 S-3085 拒绝。macOS arm64 复用 D-0206 的 _write 短写循环，只切换文件描述符；自编前端登记内建编号 53、效果位 128、文本参数和整数结果。八项能力名称会增加一个自编译根槽，根因修复让冗余效果根布尔标志复用效果根记录的非零状态，释放一个槽而不提高 502 槽硬上限。标准输入字节流、文件句柄、缓冲配置、信号、子进程和通用进程 IO 仍未开放。",
+      "check": "make test-p1b-runtime 分别捕获 stdout 与 stderr，新增补充平面 UTF-8、空文本、多次有序写入及计数求和、运行时 readText、效果表达式函数和效果语句体局部五个执行用例；缺 stderr、隐藏效果、错误元数和参数类型反例通过。模块效果门通过 8 种能力、4 个正例图、28 个位置诊断；模块类型门通过 31 个类型查询和 31 个位置诊断。运行时门为 265 个 arm64 整数形态产物、29 个函数结果边界产物、43 个运行时文本结果产物、185 个成功文本输入、365 个编译诊断和 123 个运行时拒绝样例；活动种子 12581/12600 行、C-1 4921/12399（39.7%）。P1b 阶段门仍未通过。",
+      "status": "settled",
+      "source": "docs/decisions/0209-standard-error-write-boundary.md",
+      "makeTarget": "test-p1b-runtime"
+    },
+    {
+      "id": "D-0210",
+      "title": "UTF-8 校验失败路径恢复与临时桥预算 12800 行",
+      "decision": "修复 ARM64 UTF-8 校验器非法字节分支跳过寄存器恢复和栈调整的根因：29 个失败分支汇合到单一蹦床，成功与失败出口都恢复 x20..x26 并执行 add sp, #80，再以 b.al 补丁进入调用方错误收束。该共享蹦床避免为每个分支复制恢复序列。活动 Go 临时自举桥上限由 12600 行调整为 12800 行，只容纳已验证的必要 P1b 桥接修正；Go 子集、依赖白名单、逐行归因、独立性、许可、平台符号和 P3b 删除门不变。",
+      "check": "非法 UTF-8 模块的 module-graph 最小复现输出 -137438957474 并以 0 退出；make test-p1b-module-graph、test-p1b-module-bind、test-p1b-native-emit 与 test-p1b-runtime 通过。make seed-audit 实测 10 个活动源码文件、12779/12800 行且归因完整；C-1 为 4929/12583（39.2%），未触发 40% 语言复核条件。P1b 阶段门仍未通过。",
+      "status": "settled",
+      "source": "docs/decisions/0210-utf8-failure-register-restore.md",
+      "makeTarget": "test-p1b-module-graph"
+    },
+    {
+      "id": "D-0211",
+      "title": "种子预算口径统一为掩码代码行",
+      "decision": "活动 Go 临时自举桥预算统一按掩码代码行计量：只统计 bootstrap/ 下 10 个活动文件，排除 archive、空白、注释和字符串字面量内容；逐行归因仍使用物理行范围。机器上限保持 12800，seed-audit 必须打印口径、已用、上限、余量和物理行参考。",
+      "check": "make seed-audit 实测 10 个活动源码文件、12558/12800 个掩码代码行、余量 242，物理行参考 12779；C-1 为 4929/12583（39.2%）。该口径统一解决 M0/S0.2 的差额解释，不表示 P1b 完成。",
+      "status": "settled",
+      "source": "docs/decisions/0211-seed-budget-masked-code-lines.md",
+      "makeTarget": "seed-audit"
+    },
+    {
+      "id": "D-0212",
+      "title": "决策索引增加机器可查的验收目标",
+      "decision": "DECISIONS.json 每条记录增加 makeTarget；能从 check 文本识别 Make 调用时保存第一个目标，否则保存 none。新增 tools/check_decisions.py 校验编号唯一、字段完整、来源文件存在、编号与文件名一致、目标存在于 Makefile 或为 none。",
+      "check": "python3 tools/check_decisions.py",
+      "status": "settled",
+      "source": "docs/decisions/0212-machine-readable-decision-index.md",
+      "makeTarget": "none"
+    },
+    {
+      "id": "D-0213",
+      "title": "源码 NFC 诊断进入编译器门",
+      "decision": "在种子词法入口拒绝源码中的 Unicode 组合标记（Mn/Mc/Me），以 S-1004 报告首个标记所在行列、实际码位并建议直接输入合成字符或由编辑器在保存前规范化；不自动改写源码，不执行 NFKC。模块读取复用同一入口，运行时文本比较不做归一化。",
+      "check": "make test-p1b-lex 新增一个 NFC 正例与三个组合标记反例，覆盖字符串、注释及标识符；make verify 完整门链通过。本决策落实 D-0012 冻结符号表和词法规范，不增加语言特性。",
+      "status": "settled",
+      "source": "docs/decisions/0213-source-nfc-diagnostic.md",
+      "makeTarget": "test-p1b-lex"
+    },
+    {
+      "id": "D-0214",
+      "title": "文本返回借用上下文递归开放",
+      "decision": "文本所有权返回调用的借用判定改为递归识别直接消费上下文：借用消费者实参、textLength/equals/notEquals 的比较、ifElse 条件与分支、条件语句和函数体局部均可直接借用；裸文本返回仍不得进入 textConcat、容器、绑定或逃逸到任意表达式。修正此前只按顶层调用形态白名单造成的误拒，根输出边界同样使用递归判定。",
+      "check": "make test-p1b-runtime 新增条件、函数体局部借用与条件内相等执行用例，拒绝样例保持 textConcat 嵌套不通过；make verify 完整门链通过。",
+      "status": "settled",
+      "source": "docs/decisions/0214-recursive-text-return-borrow-contexts.md",
+      "makeTarget": "test-p1b-runtime"
+    },
+    {
+      "id": "D-0215",
+      "title": "一致性套件与语法实现快照落地",
+      "decision": "conformance/ 建立机器可跑的语言一致性语料，cases.json 逐例声明正例/反例、输入、精确 stdout、退出码或 S-code；make conformance 通过 stage0 逐例 check/build/execute。docs/spec/grammar.md 按 parser 的真实优先级、全角记录与删映射键语句修正为当前实现快照，不宣称规范冻结。",
+      "check": "make conformance 通过 41 例（32 正例、9 反例）；make verify 完整门链通过。",
+      "status": "settled",
+      "source": "docs/decisions/0215-conformance-corpus-and-grammar-snapshot.md",
+      "makeTarget": "conformance"
+    },
+    {
+      "id": "D-0216",
+      "title": "兼容策略与诊断格式草案成文",
+      "decision": "新增 docs/spec/compatibility.md，定义开发者预览、语言/编译器/种子三层版本，1.0 后新增能力用 MINOR、行为变化与删除用 MAJOR、弃用至少一个 MINOR 警告，并明确平台事实；新增 docs/spec/diagnostics.md，固化 file:line:col、S-code、期望/实际/建议四段诊断格式与运行时失败无 stdout 边界。",
+      "check": "make conformance 的反例覆盖 9 个 S-code；make verify 完整门链通过。",
+      "status": "settled",
+      "source": "docs/decisions/0216-compatibility-and-diagnostics-draft.md",
+      "makeTarget": "conformance"
+    },
+    {
+      "id": "D-0217",
+      "title": "保守型 serica fmt 与格式门",
+      "decision": "stage0 新增 serica fmt [--check] <源码>：先 lex 保证源码合法，再只修剪行尾空白与文件末尾空行，最后统一补一个换行；不重排 token、不触碰字符串内容，因此不会改变语义。新增 make format 在 conformance/ 与 examples/ 下 186 份合法源码上执行 --check，NFC 反例外例由一致性套件单独覆盖。",
+      "check": "make format 通过 186 份源码；make conformance 与 make verify 完整门链通过。",
+      "status": "settled",
+      "source": "docs/decisions/0217-conservative-formatter.md",
+      "makeTarget": "format"
+    },
+    {
+      "id": "D-0218",
+      "title": "开发者预览 dev.22 发布包",
+      "decision": "在 P1b 阶段门仍未通过但本机完整验证门已绿的事实基线上生成 v0.1.0-dev.22 macOS arm64 开发者预览包，包含种子编译器、示例、一致性语料、兼容/诊断/语法文档、校验和与 SBOM；包内 make verify 与隔离安装/卸载验收通过。发布包不宣称 P1b 完成、Apple 公证、安装器或多机验证。",
+      "check": "make test-release 通过；发布目录内 shasum -a 256 -c SHA256SUMS 全 OK。",
+      "status": "settled",
+      "source": "docs/decisions/0218-developer-preview-dev22.md",
+      "makeTarget": "test-release"
+    },
+    {
+      "id": "D-0219",
+      "title": "一致性与格式门进入原生 CI",
+      "decision": "CI 原生门与 make verify 同时纳入 make conformance 和 make format；conformance 基线从 conformance/cases.json 读取，禁止把 41 例初始基线硬编码为上限。",
+      "check": "make ci-conformance 通过；make verify 完整门链通过。",
+      "status": "settled",
+      "source": "docs/decisions/0219-conformance-in-ci.md",
+      "makeTarget": "ci-conformance"
+    },
+    {
+      "id": "D-0220",
+      "title": "平台矩阵写入已验证事实",
+      "decision": "docs/spec/platform-matrix.md 将 macOS arm64 行标为当前唯一验证平台，记录本机中文显示、可编辑窗口与 arm64 CI 产物；macOS x64、其他系统仍为未构建/未验证目标，输入法候选框与渲染黄金图仍未验。",
+      "check": "python3 tools/check_independence.py source；make verify 完整门链通过。",
+      "status": "settled",
+      "source": "docs/decisions/0220-platform-matrix-verified-facts.md",
+      "makeTarget": "verify"
+    },
+    {
+      "id": "D-0221",
+      "title": "社区风格移植样例与一致性覆盖",
+      "decision": "examples/community/ 增加三个独立于作者示例的移植样例：FizzBuzz 汇总、欧几里得最大公约数与中文文本码位计数。三者只用当前已开放能力并进入 conformance 正例，分别断言 75、21、10。",
+      "check": "make conformance 通过 44 例；make verify 完整门链通过。",
+      "status": "settled",
+      "source": "docs/decisions/0221-community-style-samples.md",
+      "makeTarget": "conformance"
+    },
+    {
+      "id": "D-0222",
+      "title": "一致性样例路径修正与发布包内可运行套件",
+      "decision": "把社区样例在 conformance/cases.json 中的相对路径改为 ../../examples/community/，checker 解析后统一规范化；发布包复制 conformance/ 与 examples/community/，check_conformance.py 支持 SERICA 覆写和 bin/serica 回退，包内 make verify 与 test_release.py 均运行 44 例一致性套件。",
+      "check": "make conformance 通过 44 例；make release、make test-release、包内 shasum -a 256 -c SHA256SUMS 和 make verify 通过。",
+      "status": "settled",
+      "source": "docs/decisions/0222-release-conformance-corpus.md",
+      "makeTarget": "conformance"
+    },
+    {
+      "id": "D-0223",
+      "title": "dev.23 开发者预览发布包",
+      "decision": "将旧 dev.22 目录、压缩包与归档 checksum 按时间戳重命名保留，不删除历史证据；VERSION 提升到 v0.1.0-dev.23，用包含社区样例和发布包内一致性套件的当前树重新生成 macOS arm64 预览包。该包仍不宣称 P1b 阶段门通过、公证、安装器或多机验证。",
+      "check": "make test-release 通过；发布目录内 shasum -a 256 -c SHA256SUMS 与 make verify 全通过。",
+      "status": "settled",
+      "source": "docs/decisions/0223-developer-preview-dev23.md",
+      "makeTarget": "test-release"
+    },
+    {
+      "id": "D-0224",
+      "title": "行简源码的 format 入口与归因同步",
+      "decision": "除 `serica fmt` 外新增 `serica format` 别名，供行简源码工具链使用同一保守格式检查；因新增 CLI 分支，同步更新 bootstrap/main.go 的逐行归因。掩码代码行预算更新为 12696/12800、余量 104。",
+      "check": "make verify 完整门链通过；python3 tools/check_seed_subset.py 通过。",
+      "status": "settled",
+      "source": "docs/decisions/0224-format-entry-and-attribution.md",
+      "makeTarget": "verify"
+    },
+    {
+      "id": "D-0225",
+      "title": "种子归因行号与实测口径同步",
+      "decision": "按当前树修正 bootstrap/console_macho.go 与 bootstrap/window_macho.go 的逐行归因范围；不新增能力、不调整 12800 行上限。当前 11 个活动源码文件共 12698 个掩码代码行，余量 102，物理行参考 12936，C-1 为 4992/12726（39.2%）。",
+      "check": "make verify 通过；python3 tools/check_seed_subset.py 输出 12698/12800 余量 102 且归因完整。",
+      "status": "settled",
+      "source": "docs/decisions/0225-seed-attribution-sync.md",
+      "makeTarget": "verify"
+    },
+    {
+      "id": "D-0226",
+      "title": "目录名称只读枚举",
+      "decision": "新增 directoryNames（路径），接受静态文本或 argumentText 路径，仅作为根输出逐行枚举目录项并排除 . 与 ..；要求 filesystem.read，动态路径另要求 args。macOS arm64 使用 _opendir/_readdir/_closedir，先校验全部名称 UTF-8 再重新遍历输出，失败不产生部分 stdout。",
+      "check": "make test-p1b-runtime、test-p1b-module-effect、test-p1b-module-type 通过；静态和动态路径、空目录、缺失目录、UTF-8 与诊断边界由自动门覆盖。",
+      "status": "settled",
+      "source": "docs/decisions/0226-directory-names-enumeration.md",
+      "makeTarget": "test-p1b-runtime"
+    },
+    {
+      "id": "D-0227",
+      "title": "发布验收产物隔离与清单严格核对",
+      "decision": "发布验收在系统临时目录构建控制台和窗口产物，不再写入发布目录；SHA256SUMS 与发布目录全部普通文件严格一致，任何意外残留或摘要不匹配直接失败。",
+      "check": "make test-release、make release、解压目录校验和、包内 make verify 与重复发布验收通过，验收前后发布目录文件集合不变。",
+      "status": "settled",
+      "source": "docs/decisions/0227-release-test-temporary-artifacts.md",
+      "makeTarget": "test-release"
+    },
+    {
+      "id": "D-0228",
+      "title": "进程命令执行与退出状态规范化",
+      "decision": "新增 runCommand（静态文本或 argumentText 命令），通过 /bin/sh -c 执行并继承 stdin/stdout/stderr；正常退出返回 0..255，信号终止返回 128 加 signal。根与每层调用链须声明 process，效果出处表扩为九槽并遍历九位。",
+      "check": "make test-p1b-runtime 覆盖静态/动态命令、真实副作用、信号退出、空命令与诊断；test-p1b-module-effect、test-p1b-module-type、test-p1b-module-const 覆盖第九位效果传播。",
+      "status": "settled",
+      "source": "docs/decisions/0228-process-command-status.md",
+      "makeTarget": "test-p1b-runtime"
+    },
+    {
+      "id": "D-0229",
+      "title": "临时自举桥预算调整为 13200 行",
+      "decision": "因目录枚举与进程命令执行的已验证原生桥实现，活动掩码代码行为 12875 行；将 tools/check_seed_subset.py 的 MAX_SEED_LINES 由 12800 调整为 13200，不改变 Go 子集、依赖、归因、独立性、许可或 P3b 删除门。",
+      "check": "make seed-audit 通过并报告 11 个活动源码文件、当前行数、13200 行上限和非负余量。",
+      "status": "settled",
+      "source": "docs/decisions/0229-seed-budget-13200.md",
+      "makeTarget": "seed-audit"
+    },
+    {
+      "id": "D-0230",
+      "title": "开发者预览 dev.24 发布包",
+      "decision": "将 VERSION 提升为 v0.1.0-dev.24，保留旧发布证据，用包含动态环境名修复、目录枚举、runCommand/process、九位效果传播和发布隔离的当前树生成 macOS arm64 开发者预览包；文档和验收清单同步版本。 包内 smoke test 与 make console/window 均改为系统临时目录构建，复验前后发布目录文件集合不变。",
+      "check": "make test-release 与 make verify 通过；make release 通过；发布目录内 shasum -a 256 -c SHA256SUMS 与 make verify 通过，复验前后文件集合不变。",
+      "status": "settled",
+      "source": "docs/decisions/0230-developer-preview-dev24.md",
+      "makeTarget": "test-release"
+    },
+    {
+      "id": "D-0231",
+      "title": "语义规范与 101 例一致性语料",
+      "decision": "新建 docs/spec/semantics.md，用可测试规则描述类型、作用域、求值、效果、常量和运行时边界。把一致性语料扩充到 101 例（80 正例、21 反例），覆盖算术优先级、短路逻辑、文本/数组内建、函数与控制流、结果载荷、运行时输入/参数能力以及能力缺失、重复名称、未声明变量、越界、类型不匹配和非法错误码；checker 对每个反例校验非零退出、S-code 与 file:line:col（显示列）/期望/实际/建议四段格式。",
+      "check": "make conformance 通过并输出 101 例（80 个正例、21 个反例）；21 个反例满足四段诊断格式；语义规范规则标注对应用例或 Make 目标。",
+      "status": "settled",
+      "source": "docs/decisions/0231-semantics-conformance-101.md",
+      "makeTarget": "conformance"
+    },
+    {
+      "id": "D-0232",
+      "title": "文本数组复制的调用约定根因修复",
+      "decision": "修复 emitRuntimeTextArrayCopy 的调用者保存寄存器冲突：通用文本操作数描述符先保存到帧槽，UTF-8 校验和内存分配返回后再恢复；原生桥源码增加 2 个掩码代码行并同步归因范围。文本返回调用现可进入数组初始化、追加和更新三个受支持边界。",
+      "check": "make test-p1b-runtime 通过，新增 3 个文本返回进入数组元素的执行用例，成功文本输入增至 191；make seed-audit 通过并报告 12877/13200、余量 323、归因完整。",
+      "status": "settled",
+      "source": "docs/decisions/0232-text-array-copy-register-spill.md",
+      "makeTarget": "test-p1b-runtime"
+    },
+    {
+      "id": "D-0233",
+      "title": "迁移工具、回归语料与 LTS 策略的自动部分",
+      "decision": "登记判等→equals 的弃用与迁移路径，新增 tools/migrate；用 10 例一致性历史语料建立 make regression 并接入 CI/verify；RELEASE.md 写明预览期与 1.0 后 12 个月 MAJOR 支持窗口。",
+      "check": "make regression 通过 10 例；make ci-conformance 通过；python3 tools/migrate --check legacy-equality 对已迁移样例 exits 0、旧拼写 exits 1；docs/spec/compatibility.md 与 RELEASE.md 写明对应条目。",
+      "status": "settled",
+      "source": "docs/decisions/0233-migration-regression-lts.md",
+      "makeTarget": "regression"
+    },
+    {
+      "id": "D-0234",
+      "title": "直接跨函数返回结果调用的根因修复",
+      "decision": "annotateRuntimeFunctionResults 与 blockFunctionReturnsResult 改为接收完整函数表，块体函数直接返回已标注为结果形态的普通函数调用时同样标记为结果函数；运行时候选集合与调用帧 ABI 不变。",
+      "check": "make test-p1b-runtime 通过 274 个整数形态产物、31 个函数结果边界产物、411 个编译诊断、125 个运行时拒绝样例；最小正向复现输出 3、失败路径退出 9 无 stdout。",
+      "status": "settled",
+      "source": "docs/decisions/0234-cross-function-result-forwarding.md",
+      "makeTarget": "test-p1b-runtime"
+    },
+    {
+      "id": "D-0235",
+      "title": "受限整数数组结果载荷的调用帧 ABI",
+      "decision": "成功（array（…））作为运行时结果载荷时占四槽描述符，调用帧以 x0=tag、x1=capacity、x2=data、x3=length 返回；表达式体结果函数在帧尾分配 32 字节描述符暂存区，结果声明先清零旧描述符，arrayLength/arrayGet 直接读描述符，statementsUseRuntimeArray 识别数组结果函数调用以导入 _mmap/_munmap。仅限整数元素。",
+      "check": "make test-p1b-runtime 通过 281 个整数形态产物、38 个函数结果边界产物、411 个编译诊断、125 个运行时拒绝样例；跨函数转发最小复现输出 2 退出 0，失败路径退出 12 且无 stdout。 种子归因 13020/13200、余量 180，C-1 5022/13048（38.5%）。",
+      "status": "settled",
+      "source": "docs/decisions/0235-integer-array-result-payload.md",
+      "makeTarget": "test-p1b-runtime"
+    },
+    {
+      "id": "D-0236",
+      "title": "文本数组结果载荷与复制隔离",
+      "decision": "成功（array（文本…））可作为受限运行时结果载荷，沿用四槽描述符和调用帧 ABI；文本元素按指针加长度 16 字节布局，arrayLength/arrayGet 按载荷选择步长。结果变量复制为目标重新映射并深复制文本元素，函数返回仍转移所有权；复制结束恢复四槽描述符寄存器，并修正数组复制与结果暂存循环的回跳偏移。",
+      "check": "make test-p1b-runtime 通过 289 个整数形态产物、46 个函数结果边界产物；6 个文本数组结果用例覆盖直接读取、运行时元素、码点长度、跨函数转发、复制隔离和失败边界；make test-p1b-module-effect test-p1b-module-type test-p1b-module-const 与 seed-audit 通过。",
+      "status": "settled",
+      "source": "docs/decisions/0236-text-array-result-payload.md",
+      "makeTarget": "test-p1b-runtime"
+    },
+    {
+      "id": "D-0237",
+      "title": "根整数与文本输出终止指令的发射顺序",
+      "decision": "根整数输出和静态文本输出的 _exit(0) 终止指令以及失败块必须作为实际指令发射，不能位于 // 注释之后或依赖注释行末尾的代码。终止指令先发射，失败块随后发射，确保成功路径以退出码 0 结束、所有运行时失败补丁都指向 _exit(1)；同一规则覆盖根整数与静态 UTF-8 文本。动态环境变量名称读取的临时帧、参数下标和 UTF-8 校验寄存器隔离继续由 D-0192/D-0210 约束。",
+      "check": "make test-p1b-runtime 通过 289 个 arm64 整数形态产物、43 个运行时文本结果产物和 46 个函数结果边界产物；失败结果样例退出指定错误码且无 stdout，成功样例退出 0；make verify 完整门通过。",
+      "status": "settled",
+      "source": "docs/decisions/0237-root-output-termination.md",
+      "makeTarget": "test-p1b-runtime"
     }
   ]
 }

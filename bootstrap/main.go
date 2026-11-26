@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"strings"
 )
 
 func main() {
@@ -21,11 +22,19 @@ func main() {
 		runCheck(os.Args[2])
 		return
 	}
+	if len(os.Args) == 3 && os.Args[1] == "format" {
+		runFmt([]string{"--check", os.Args[2]})
+		return
+	}
 	if len(os.Args) >= 2 && os.Args[1] == "build" {
 		runBuild(os.Args[2:])
 		return
 	}
-	fmt.Fprintln(os.Stderr, "用法：serica --version | serica lex [--stats] <源码> | serica check <源码> | serica build <源码> -o <产物>")
+	if len(os.Args) >= 2 && os.Args[1] == "fmt" {
+		runFmt(os.Args[2:])
+		return
+	}
+	fmt.Fprintln(os.Stderr, "用法：serica --version | serica lex [--stats] <源码> | serica check <源码> | serica build <源码> -o <产物> | serica fmt [--check] <源码>")
 	os.Exit(2)
 }
 
@@ -90,6 +99,60 @@ func runBuild(args []string) {
 		os.Exit(1)
 	}
 	fmt.Printf("已生成 macOS arm64 程序：%s\n", args[2])
+}
+
+// runFmt is deliberately conservative: it only trims trailing whitespace and
+// trailing blank lines, so formatting cannot change tokens or string contents.
+func runFmt(args []string) {
+	check := false
+	path := ""
+	for _, arg := range args {
+		if arg == "--check" {
+			check = true
+			continue
+		}
+		if path != "" {
+			fmt.Fprintln(os.Stderr, "用法：serica fmt [--check] <源码>")
+			os.Exit(2)
+		}
+		path = arg
+	}
+	if path == "" {
+		fmt.Fprintln(os.Stderr, "用法：serica fmt [--check] <源码>")
+		os.Exit(2)
+	}
+	source := readSource(path)
+	tokens, problem := lex(source)
+	if problem != nil {
+		problem.pos.file = filepath.Base(path)
+		printIssue(problem)
+		os.Exit(1)
+	}
+	if len(tokens) == 0 {
+		fmt.Fprintln(os.Stderr, "源码没有可格式化的词元")
+		os.Exit(1)
+	}
+	lines := strings.Split(source, "\n")
+	for index, line := range lines {
+		lines[index] = strings.TrimRight(line, " \t\r")
+	}
+	for len(lines) > 1 && lines[len(lines)-1] == "" {
+		lines = lines[:len(lines)-1]
+	}
+	formatted := strings.Join(lines, "\n") + "\n"
+	if formatted == source {
+		fmt.Println("格式正确")
+		return
+	}
+	if check {
+		fmt.Fprintf(os.Stderr, "格式不符：%s\n", path)
+		os.Exit(1)
+	}
+	if err := os.WriteFile(path, []byte(formatted), 0o644); err != nil {
+		fmt.Fprintln(os.Stderr, "无法写入源码文件：", path, err)
+		os.Exit(1)
+	}
+	fmt.Printf("已格式化：%s\n", path)
 }
 
 func outputExpression(root value) value {

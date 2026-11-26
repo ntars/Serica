@@ -20,7 +20,7 @@ type addressReference struct {
 }
 type arraySlot struct{ data, length, capacity uint32; text bool }
 type mapSlot struct{ data, length, capacity uint32 }
-type resultSlot struct{ tag, value, pointer, length uint32; text, runtimeText bool }
+type resultSlot struct{ tag, value, pointer, length uint32; text, runtimeText, array, textArray bool }
 type loopTarget struct{ continueAt int; breaks []int }
 type runtimeCallPatch struct{ position int; name string }
 type windowCode struct {
@@ -55,6 +55,10 @@ type windowCode struct {
 	fileRmdirIndex        int
 	fileChmodIndex        int
 	fileFchmodIndex       int
+	directoryOpenIndex    int
+	directoryReadIndex    int
+	directoryCloseIndex   int
+	systemIndex           int
 	textBuffers           map[string]uint32
 	textLengths           map[string]uint32
 	textCapacities        map[string]uint32
@@ -65,6 +69,7 @@ type windowCode struct {
 	argumentCountOffset   uint32
 	argumentVectorOffset  uint32
 	temporaryBufferOffset uint32
+	environmentNameBufferOffset uint32
 	slotCount             uint32
 	runtimeFunctions      map[string]functionDecl
 	runtimeFunctionOrder  []string

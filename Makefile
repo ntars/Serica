@@ -2,7 +2,14 @@
 # Copyright (c) 2026 行简（Serica）贡献者
 GO ?= go
 
-.PHONY: doctor ci-preflight prototype stage0 native-tools serica-tools license clean seed-audit test-p0b-scope test-p1b-static test-p1b-modules test-p1b-runtime test-p1b-scan test-p1b-lex test-p1b-parse test-p1b-program test-p1b-bind test-p1b-import-paths test-p1b-module-read test-p1b-module-graph test-p1b-module-bind test-p1b-module-effect test-p1b-module-type test-p1b-module-const test-p1b-module-abi test-p1b-native-emit release test-release
+.PHONY: verify doctor ci-preflight prototype stage0 native-tools serica-tools license clean seed-audit test-p0b-scope test-p1b-static test-p1b-modules test-p1b-runtime test-p1b-scan test-p1b-lex test-p1b-parse test-p1b-program test-p1b-bind test-p1b-import-paths test-p1b-module-read test-p1b-module-graph test-p1b-module-bind test-p1b-module-effect test-p1b-module-type test-p1b-module-const test-p1b-module-abi test-p1b-native-emit conformance format regression release test-release
+
+verify: ci-preflight ci-conformance doctor conformance format regression test-p0b-scope test-p1b-static test-p1b-modules test-p1b-runtime test-p1b-scan test-p1b-lex test-p1b-parse test-p1b-program test-p1b-bind test-p1b-import-paths test-p1b-module-read test-p1b-module-graph test-p1b-module-bind test-p1b-module-effect test-p1b-module-type test-p1b-module-const test-p1b-module-abi test-p1b-native-emit license
+	@python3 tools/check_decisions.py
+	@python3 -m json.tool DECISIONS.json >/dev/null
+	@./tools/check-independence source
+	@git diff --check
+	@echo "本机完整验证门通过"
 
 doctor: seed-audit ; @GO="$(GO)" ./tools/doctor
 ci-preflight: ; @python3 tools/ci-preflight.py
@@ -25,6 +32,10 @@ serica-tools: native-tools
 license: ; @cmp -s LICENSE LICENSES/Apache-2.0.txt && cmp -s LICENSE-MIT LICENSES/MIT.txt && echo "许可原文：一致" || { echo "根目录许可副本与 LICENSES/ 不一致" >&2; exit 1; }
 clean: ; @rm -rf build
 seed-audit: ; @GO="$(GO)" python3 tools/check_seed_subset.py
+conformance: stage0 ; @python3 tools/check_conformance.py
+ci-conformance: ; @python3 tools/check_ci_conformance.py
+format: stage0 ; @python3 tools/check_fmt.py
+regression: ; @python3 tools/check_regression.py
 test-p0b-scope: stage0 ; @python3 tools/test_p0b_scope.py
 test-p1b-static: stage0 ; @python3 tools/test_p1b_static.py
 test-p1b-modules: stage0 ; @python3 tools/test_modules.py

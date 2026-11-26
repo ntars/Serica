@@ -74,16 +74,20 @@ def main() -> int:
                 print(failure, file=sys.stderr)
                 return 1
 
-        decomposed = "e\u0301"
+        # Source text must be NFC (D-0213). Use a compatibility character that
+        # is already NFC so the test still proves runtime strings are not
+        # normalised with NFKC.
+        compatibility = "\ufb01"
+        plain = "fi"
         unicode_source = pathlib.Path(temp) / "unicode-order.serica"
         unicode_source.write_text(
-            f"窗口=【标题=『顺序』，文本=ifElse（『{decomposed}』<『é』 且 textLength（『{decomposed}』）==2 且 textLength（『é』）==1，『码位序列』，『被归一化』）】。\n",
+            f"窗口=【标题=『顺序』，文本=ifElse（『{compatibility}』>『{plain}』 且 textLength（『{compatibility}』）==1 且 textLength（『{plain}』）==2，『码位序列』，『被归一化』）】。\n",
             encoding="utf-8",
         )
         checked = run("check", str(unicode_source))
         if checked.returncode != 0:
             sys.stderr.write(checked.stdout + checked.stderr)
-            print("静态字符串比较或码位长度未接受非归一化测试输入", file=sys.stderr)
+            print("静态字符串比较或码位长度未接受 NFC 兼容字符测试输入", file=sys.stderr)
             return 1
         unicode_output = pathlib.Path(temp) / "unicode-order"
         built = run("build", str(unicode_source), "-o", str(unicode_output))
@@ -92,7 +96,7 @@ def main() -> int:
             print("无法构建静态字符串码位顺序测试", file=sys.stderr)
             return 1
         if "码位序列".encode("utf-8") not in unicode_output.read_bytes():
-            print("静态字符串比较或码位长度意外地执行了 Unicode 归一化", file=sys.stderr)
+            print("静态字符串比较或码位长度意外地执行了 NFKC 归一化", file=sys.stderr)
             return 1
         try:
             verify_native_artifact(unicode_output)
@@ -109,7 +113,7 @@ def main() -> int:
             return 1
 
     print(
-        f"P1b 编译期子集通过：{len(ACCEPTED)} 个正例产物、1 个 Unicode 非归一化边界、"
+        f"P1b 编译期子集通过：{len(ACCEPTED)} 个正例产物、1 个 NFC 正例与 NFKC 非归一化边界、"
         f"{len(REJECTED)} 个诊断反例"
     )
     print("此结果不证明运行时、动态容器、哈希表、IO 或模块门通过")

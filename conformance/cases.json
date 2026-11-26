@@ -1,0 +1,824 @@
+{
+  "schema": "serica-conformance-v1",
+  "description": "Each case has a source file, expected exit status and exact stdout. Negative cases must report the named S-code instead.",
+  "cases": [
+    {
+      "id": "integer-literal",
+      "kind": "positive",
+      "source": "literal.serica",
+      "stdin": "",
+      "stdout": "42\n",
+      "exit": 0
+    },
+    {
+      "id": "integer-add",
+      "kind": "positive",
+      "source": "add.serica",
+      "stdin": "",
+      "stdout": "5\n",
+      "exit": 0
+    },
+    {
+      "id": "integer-sub",
+      "kind": "positive",
+      "source": "sub.serica",
+      "stdin": "",
+      "stdout": "5\n",
+      "exit": 0
+    },
+    {
+      "id": "integer-mul",
+      "kind": "positive",
+      "source": "mul.serica",
+      "stdin": "",
+      "stdout": "42\n",
+      "exit": 0
+    },
+    {
+      "id": "integer-div",
+      "kind": "positive",
+      "source": "div.serica",
+      "stdin": "",
+      "stdout": "4\n",
+      "exit": 0
+    },
+    {
+      "id": "integer-mod",
+      "kind": "positive",
+      "source": "mod.serica",
+      "stdin": "",
+      "stdout": "1\n",
+      "exit": 0
+    },
+    {
+      "id": "integer-shift-left",
+      "kind": "positive",
+      "source": "shift-left.serica",
+      "stdin": "",
+      "stdout": "12\n",
+      "exit": 0
+    },
+    {
+      "id": "integer-shift-right",
+      "kind": "positive",
+      "source": "shift-right.serica",
+      "stdin": "",
+      "stdout": "4\n",
+      "exit": 0
+    },
+    {
+      "id": "comparison-eq",
+      "kind": "positive",
+      "source": "eq.serica",
+      "stdin": "",
+      "stdout": "1\n",
+      "exit": 0
+    },
+    {
+      "id": "comparison-lt",
+      "kind": "positive",
+      "source": "lt.serica",
+      "stdin": "",
+      "stdout": "1\n",
+      "exit": 0
+    },
+    {
+      "id": "comparison-le",
+      "kind": "positive",
+      "source": "le.serica",
+      "stdin": "",
+      "stdout": "1\n",
+      "exit": 0
+    },
+    {
+      "id": "comparison-gt",
+      "kind": "positive",
+      "source": "gt.serica",
+      "stdin": "",
+      "stdout": "1\n",
+      "exit": 0
+    },
+    {
+      "id": "comparison-ge",
+      "kind": "positive",
+      "source": "ge.serica",
+      "stdin": "",
+      "stdout": "1\n",
+      "exit": 0
+    },
+    {
+      "id": "logic-and",
+      "kind": "positive",
+      "source": "and.serica",
+      "stdin": "",
+      "stdout": "1\n",
+      "exit": 0
+    },
+    {
+      "id": "logic-or",
+      "kind": "positive",
+      "source": "or.serica",
+      "stdin": "",
+      "stdout": "1\n",
+      "exit": 0
+    },
+    {
+      "id": "if-else",
+      "kind": "positive",
+      "source": "if-else.serica",
+      "stdin": "",
+      "stdout": "7\n",
+      "exit": 0
+    },
+    {
+      "id": "text-literal",
+      "kind": "positive",
+      "source": "text.serica",
+      "stdin": "",
+      "stdout": "行简\n",
+      "exit": 0
+    },
+    {
+      "id": "text-length-codepoints",
+      "kind": "positive",
+      "source": "text-length.serica",
+      "stdin": "",
+      "stdout": "3\n",
+      "exit": 0
+    },
+    {
+      "id": "text-concat",
+      "kind": "positive",
+      "source": "concat.serica",
+      "stdin": "",
+      "stdout": "行简\n",
+      "exit": 0
+    },
+    {
+      "id": "text-substring",
+      "kind": "positive",
+      "source": "substring.serica",
+      "stdin": "",
+      "stdout": "简语\n",
+      "exit": 0
+    },
+    {
+      "id": "text-equals",
+      "kind": "positive",
+      "source": "equals.serica",
+      "stdin": "",
+      "stdout": "1\n",
+      "exit": 0
+    },
+    {
+      "id": "text-not-equals",
+      "kind": "positive",
+      "source": "not-equals.serica",
+      "stdin": "",
+      "stdout": "1\n",
+      "exit": 0
+    },
+    {
+      "id": "array-index",
+      "kind": "positive",
+      "source": "array-get.serica",
+      "stdin": "",
+      "stdout": "2\n",
+      "exit": 0
+    },
+    {
+      "id": "array-length",
+      "kind": "positive",
+      "source": "array-length.serica",
+      "stdin": "",
+      "stdout": "3\n",
+      "exit": 0
+    },
+    {
+      "id": "function-expression",
+      "kind": "positive",
+      "source": "function-expression.serica",
+      "stdin": "",
+      "stdout": "7\n",
+      "exit": 0
+    },
+    {
+      "id": "function-block",
+      "kind": "positive",
+      "source": "function-block.serica",
+      "stdin": "",
+      "stdout": "25\n",
+      "exit": 0
+    },
+    {
+      "id": "variable-declaration",
+      "kind": "positive",
+      "source": "variable.serica",
+      "stdin": "",
+      "stdout": "7\n",
+      "exit": 0
+    },
+    {
+      "id": "variable-assignment",
+      "kind": "positive",
+      "source": "assignment.serica",
+      "stdin": "",
+      "stdout": "8\n",
+      "exit": 0
+    },
+    {
+      "id": "result-payload",
+      "kind": "positive",
+      "source": "result.serica",
+      "stdin": "",
+      "stdout": "5\n",
+      "exit": 0
+    },
+    {
+      "id": "runtime-integer-input",
+      "kind": "positive",
+      "source": "read-integer.serica",
+      "stdin": "41\n",
+      "stdout": "42\n",
+      "exit": 0
+    },
+    {
+      "id": "runtime-text-input",
+      "kind": "positive",
+      "source": "read-text.serica",
+      "stdin": "行简\n",
+      "stdout": "行简\n",
+      "exit": 0
+    },
+    {
+      "id": "stdout-write-no-newline",
+      "kind": "positive",
+      "source": "write-text.serica",
+      "stdin": "",
+      "stdout": "行简6\n",
+      "exit": 0
+    },
+    {
+      "id": "division-by-zero",
+      "kind": "negative",
+      "source": "bad-division.serica",
+      "diagnostic": "S-3024"
+    },
+    {
+      "id": "mismatched-operands",
+      "kind": "negative",
+      "source": "bad-types.serica",
+      "diagnostic": "S-3023"
+    },
+    {
+      "id": "unknown-name",
+      "kind": "negative",
+      "source": "bad-name.serica",
+      "diagnostic": "S-3022"
+    },
+    {
+      "id": "malformed-program-record",
+      "kind": "negative",
+      "source": "bad-record.serica",
+      "diagnostic": "S-2001"
+    },
+    {
+      "id": "invalid-function-arity",
+      "kind": "negative",
+      "source": "bad-arity.serica",
+      "diagnostic": "S-3061"
+    },
+    {
+      "id": "break-outside-loop",
+      "kind": "negative",
+      "source": "bad-break.serica",
+      "diagnostic": "S-3067"
+    },
+    {
+      "id": "undeclared-capability",
+      "kind": "negative",
+      "source": "bad-capability.serica",
+      "diagnostic": "S-4102"
+    },
+    {
+      "id": "invalid-utf8-combining-mark",
+      "kind": "negative",
+      "source": "bad-nfc.serica",
+      "diagnostic": "S-1004"
+    },
+    {
+      "id": "text-return-escapes-into-concat",
+      "kind": "negative",
+      "source": "bad-text-escape.serica",
+      "diagnostic": "S-3023"
+    },
+    {
+      "id": "community-fizzbuzz",
+      "kind": "positive",
+      "source": "../../examples/community/fizzbuzz.serica",
+      "stdin": "",
+      "stdout": "75\n",
+      "exit": 0
+    },
+    {
+      "id": "community-gcd",
+      "kind": "positive",
+      "source": "../../examples/community/gcd.serica",
+      "stdin": "",
+      "stdout": "21\n",
+      "exit": 0
+    },
+    {
+      "id": "community-text-counter",
+      "kind": "positive",
+      "source": "../../examples/community/text-counter.serica",
+      "stdin": "",
+      "stdout": "10\n",
+      "exit": 0
+    },
+    {
+      "id": "arith-add-assoc",
+      "kind": "positive",
+      "source": "arith-add-assoc.serica",
+      "stdin": "",
+      "stdout": "6\n",
+      "exit": 0
+    },
+    {
+      "id": "arith-add-precedence",
+      "kind": "positive",
+      "source": "arith-add-precedence.serica",
+      "stdin": "",
+      "stdout": "14\n",
+      "exit": 0
+    },
+    {
+      "id": "arith-paren-precedence",
+      "kind": "positive",
+      "source": "arith-paren-precedence.serica",
+      "stdin": "",
+      "stdout": "20\n",
+      "exit": 0
+    },
+    {
+      "id": "arith-sub-negative",
+      "kind": "positive",
+      "source": "arith-sub-negative.serica",
+      "stdin": "",
+      "stdout": "-5\n",
+      "exit": 0
+    },
+    {
+      "id": "arith-mul-negative",
+      "kind": "positive",
+      "source": "arith-mul-negative.serica",
+      "stdin": "",
+      "stdout": "-12\n",
+      "exit": 0
+    },
+    {
+      "id": "arith-div-trunc",
+      "kind": "positive",
+      "source": "arith-div-trunc.serica",
+      "stdin": "",
+      "stdout": "-3\n",
+      "exit": 0
+    },
+    {
+      "id": "arith-mod-positive",
+      "kind": "positive",
+      "source": "arith-mod-positive.serica",
+      "stdin": "",
+      "stdout": "2\n",
+      "exit": 0
+    },
+    {
+      "id": "arith-shift-zero",
+      "kind": "positive",
+      "source": "arith-shift-zero.serica",
+      "stdin": "",
+      "stdout": "1\n",
+      "exit": 0
+    },
+    {
+      "id": "arith-shift-chain",
+      "kind": "positive",
+      "source": "arith-shift-chain.serica",
+      "stdin": "",
+      "stdout": "32\n",
+      "exit": 0
+    },
+    {
+      "id": "logic-eq-int",
+      "kind": "positive",
+      "source": "logic-eq-int.serica",
+      "stdin": "",
+      "stdout": "1\n",
+      "exit": 0
+    },
+    {
+      "id": "logic-ne-int",
+      "kind": "positive",
+      "source": "logic-ne-int.serica",
+      "stdin": "",
+      "stdout": "0\n",
+      "exit": 0
+    },
+    {
+      "id": "logic-lt-true",
+      "kind": "positive",
+      "source": "logic-lt-true.serica",
+      "stdin": "",
+      "stdout": "1\n",
+      "exit": 0
+    },
+    {
+      "id": "logic-lt-false",
+      "kind": "positive",
+      "source": "logic-lt-false.serica",
+      "stdin": "",
+      "stdout": "0\n",
+      "exit": 0
+    },
+    {
+      "id": "logic-le-equal",
+      "kind": "positive",
+      "source": "logic-le-equal.serica",
+      "stdin": "",
+      "stdout": "1\n",
+      "exit": 0
+    },
+    {
+      "id": "logic-ge-equal",
+      "kind": "positive",
+      "source": "logic-ge-equal.serica",
+      "stdin": "",
+      "stdout": "1\n",
+      "exit": 0
+    },
+    {
+      "id": "logic-gt-false",
+      "kind": "positive",
+      "source": "logic-gt-false.serica",
+      "stdin": "",
+      "stdout": "0\n",
+      "exit": 0
+    },
+    {
+      "id": "text-byte-length",
+      "kind": "positive",
+      "source": "text-byte-length.serica",
+      "stdin": "",
+      "stdout": "6\n",
+      "exit": 0
+    },
+    {
+      "id": "text-byte-at",
+      "kind": "positive",
+      "source": "text-byte-at.serica",
+      "stdin": "",
+      "stdout": "232\n",
+      "exit": 0
+    },
+    {
+      "id": "text-concat-empty",
+      "kind": "positive",
+      "source": "text-concat-empty.serica",
+      "stdin": "",
+      "stdout": "简\n",
+      "exit": 0
+    },
+    {
+      "id": "text-substring-start",
+      "kind": "positive",
+      "source": "text-substring-start.serica",
+      "stdin": "",
+      "stdout": "行简\n",
+      "exit": 0
+    },
+    {
+      "id": "text-equals-false",
+      "kind": "positive",
+      "source": "text-equals-false.serica",
+      "stdin": "",
+      "stdout": "0\n",
+      "exit": 0
+    },
+    {
+      "id": "text-not-equals-true",
+      "kind": "positive",
+      "source": "text-not-equals-true.serica",
+      "stdin": "",
+      "stdout": "1\n",
+      "exit": 0
+    },
+    {
+      "id": "text-ifelse-text",
+      "kind": "positive",
+      "source": "text-ifelse-text.serica",
+      "stdin": "",
+      "stdout": "甲\n",
+      "exit": 0
+    },
+    {
+      "id": "array-empty",
+      "kind": "positive",
+      "source": "array-empty.serica",
+      "stdin": "",
+      "stdout": "1\n",
+      "exit": 0
+    },
+    {
+      "id": "array-first",
+      "kind": "positive",
+      "source": "array-first.serica",
+      "stdin": "",
+      "stdout": "7\n",
+      "exit": 0
+    },
+    {
+      "id": "array-last",
+      "kind": "positive",
+      "source": "array-last.serica",
+      "stdin": "",
+      "stdout": "8\n",
+      "exit": 0
+    },
+    {
+      "id": "array-push-length",
+      "kind": "positive",
+      "source": "array-push-length.serica",
+      "stdin": "",
+      "stdout": "4\n",
+      "exit": 0
+    },
+    {
+      "id": "array-set-get",
+      "kind": "positive",
+      "source": "array-set-get.serica",
+      "stdin": "",
+      "stdout": "9\n",
+      "exit": 0
+    },
+    {
+      "id": "func-nested",
+      "kind": "positive",
+      "source": "func-nested.serica",
+      "stdin": "",
+      "stdout": "7\n",
+      "exit": 0
+    },
+    {
+      "id": "func-block-if",
+      "kind": "positive",
+      "source": "func-block-if.serica",
+      "stdin": "",
+      "stdout": "7\n",
+      "exit": 0
+    },
+    {
+      "id": "loop-sum",
+      "kind": "positive",
+      "source": "loop-sum.serica",
+      "stdin": "",
+      "stdout": "6\n",
+      "exit": 0
+    },
+    {
+      "id": "loop-break",
+      "kind": "positive",
+      "source": "loop-break.serica",
+      "stdin": "",
+      "stdout": "2\n",
+      "exit": 0
+    },
+    {
+      "id": "loop-continue",
+      "kind": "positive",
+      "source": "loop-continue.serica",
+      "stdin": "",
+      "stdout": "4\n",
+      "exit": 0
+    },
+    {
+      "id": "result-success-value",
+      "kind": "positive",
+      "source": "result-success-value.serica",
+      "stdin": "",
+      "stdout": "9\n",
+      "exit": 0
+    },
+    {
+      "id": "result-failure-flag",
+      "kind": "positive",
+      "source": "result-failure-flag.serica",
+      "stdin": "",
+      "stdout": "1\n",
+      "exit": 0
+    },
+    {
+      "id": "result-failure-code",
+      "kind": "positive",
+      "source": "result-failure-code.serica",
+      "stdin": "",
+      "stdout": "7\n",
+      "exit": 0
+    },
+    {
+      "id": "result-success-flag",
+      "kind": "positive",
+      "source": "result-success-flag.serica",
+      "stdin": "",
+      "stdout": "0\n",
+      "exit": 0
+    },
+    {
+      "id": "result-success-text",
+      "kind": "positive",
+      "source": "result-success-text.serica",
+      "stdin": "",
+      "stdout": "甲\n",
+      "exit": 0
+    },
+    {
+      "id": "io-read-int-twice",
+      "kind": "positive",
+      "source": "io-read-int-twice.serica",
+      "stdin": "2\n3\n",
+      "stdout": "5\n",
+      "exit": 0
+    },
+    {
+      "id": "io-write-text-empty",
+      "kind": "positive",
+      "source": "io-write-text-empty.serica",
+      "stdin": "",
+      "stdout": "0\n",
+      "exit": 0
+    },
+    {
+      "id": "io-args-count",
+      "kind": "positive",
+      "source": "io-args-count.serica",
+      "stdin": "",
+      "stdout": "1\n",
+      "exit": 0
+    },
+    {
+      "id": "reject-read-int-no-stdin",
+      "kind": "negative",
+      "source": "reject-read-int-no-stdin.serica",
+      "stdin": "",
+      "stdout": "",
+      "exit": 0,
+      "diagnostic": "S-4102"
+    },
+    {
+      "id": "reject-write-text-no-stdout",
+      "kind": "negative",
+      "source": "reject-write-text-no-stdout.serica",
+      "stdin": "",
+      "stdout": "",
+      "exit": 0,
+      "diagnostic": "S-4102"
+    },
+    {
+      "id": "reject-args-no-capability",
+      "kind": "negative",
+      "source": "reject-args-no-capability.serica",
+      "stdin": "",
+      "stdout": "",
+      "exit": 0,
+      "diagnostic": "S-4102"
+    },
+    {
+      "id": "reject-duplicate-local",
+      "kind": "negative",
+      "source": "reject-duplicate-local.serica",
+      "stdin": "",
+      "stdout": "",
+      "exit": 0,
+      "diagnostic": "S-3037"
+    },
+    {
+      "id": "reject-assign-unknown",
+      "kind": "negative",
+      "source": "reject-assign-unknown.serica",
+      "stdin": "",
+      "stdout": "",
+      "exit": 0,
+      "diagnostic": "S-3038"
+    },
+    {
+      "id": "reject-bad-array-index",
+      "kind": "negative",
+      "source": "reject-bad-array-index.serica",
+      "stdin": "",
+      "stdout": "",
+      "exit": 0,
+      "diagnostic": "S-3032"
+    },
+    {
+      "id": "reject-text-length-int",
+      "kind": "negative",
+      "source": "reject-text-length-int.serica",
+      "stdin": "",
+      "stdout": "",
+      "exit": 0,
+      "diagnostic": "S-3044"
+    },
+    {
+      "id": "reject-array-get-text",
+      "kind": "negative",
+      "source": "reject-array-get-text.serica",
+      "stdin": "",
+      "stdout": "",
+      "exit": 0,
+      "diagnostic": "S-3034"
+    },
+    {
+      "id": "reject-bad-result-code",
+      "kind": "negative",
+      "source": "reject-bad-result-code.serica",
+      "stdin": "",
+      "stdout": "",
+      "exit": 0,
+      "diagnostic": "S-3013"
+    },
+    {
+      "id": "reject-unknown-builtin",
+      "kind": "negative",
+      "source": "reject-unknown-builtin.serica",
+      "stdin": "",
+      "stdout": "",
+      "exit": 0,
+      "diagnostic": "S-3023"
+    },
+    {
+      "id": "reject-bad-shift",
+      "kind": "negative",
+      "source": "reject-bad-shift.serica",
+      "stdin": "",
+      "stdout": "",
+      "exit": 0,
+      "diagnostic": "S-3041"
+    },
+    {
+      "id": "reject-malformed-expr",
+      "kind": "negative",
+      "source": "reject-malformed-expr.serica",
+      "stdin": "",
+      "stdout": "",
+      "exit": 0,
+      "diagnostic": "S-2001"
+    },
+    {
+      "id": "logic-and-chain",
+      "kind": "positive",
+      "source": "logic-and-chain.serica",
+      "stdin": "",
+      "stdout": "1\n",
+      "exit": 0
+    },
+    {
+      "id": "logic-or-chain",
+      "kind": "positive",
+      "source": "logic-or-chain.serica",
+      "stdin": "",
+      "stdout": "1\n",
+      "exit": 0
+    },
+    {
+      "id": "io-write-text-one",
+      "kind": "positive",
+      "source": "io-write-text-one.serica",
+      "stdin": "",
+      "stdout": "甲3\n",
+      "exit": 0
+    },
+    {
+      "id": "arith2-negative-add",
+      "kind": "positive",
+      "source": "arith2-negative-add.serica",
+      "stdin": "",
+      "stdout": "8\n",
+      "exit": 0
+    },
+    {
+      "id": "result-text-array-length",
+      "kind": "positive",
+      "source": "result-text-array-length.serica",
+      "stdin": "",
+      "stdout": "2\n",
+      "exit": 0
+    },
+    {
+      "id": "result-text-array-element",
+      "kind": "positive",
+      "source": "result-text-array-element.serica",
+      "stdin": "",
+      "stdout": "乙\n",
+      "exit": 0
+    }
+  ]
+}

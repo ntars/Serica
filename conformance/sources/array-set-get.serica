@@ -1,0 +1,3 @@
+变量 甲=array（1，2，3）。
+赋值 甲=arraySet（甲，1，9）。
+程序=【能力=array（『stdout』，『array.write』），输出=arrayGet（甲，1）】。

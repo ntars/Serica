@@ -74,6 +74,8 @@ def verify_builtins(parser, work):
     replace_from.write_text("替", encoding="utf-8")
     removed_directory.mkdir()
     program = (
+        "变量 屏=writeText（『模』）。\n"
+        "变量 警=writeError（『误』）。\n"
         "变量 文=argumentText（1）。\n"
         "变量 环境=readEnvironment（『SERICA_MODULE_EFFECT_PROBE』）。\n"
         "变量 目录=isDirectory（『/』）。\n"
@@ -86,20 +88,21 @@ def verify_builtins(parser, work):
         f"变量 换=replaceFile（『{replace_from}』，『{replace_to}』）。\n"
         f"变量 建目录=createDirectory（『{created_directory}』）。\n"
         f"变量 删目录=removeDirectory（『{removed_directory}』）。\n"
-        "程序=【能力=array（『stdout』，『stdin』，『filesystem.read』，『filesystem.write』"
-        "，『array.write』，『map.write』，『args』），"
+        "变量 状态=runCommand（『true』）。\n"
+        "程序=【能力=array（『stdout』，『stderr』，『stdin』，『filesystem.read』，『filesystem.write』"
+        "，『array.write』，『map.write』，『args』，『process』），"
         f"输出=writeFile（『{destination}』，文）+textByteLength（源）+arrayGet（表，1）"
         "+映射取（对，1，0）+追+删+改+换+readInteger（）+建目录+删目录"
-        "+textByteLength（环境）+目录】。\n"
+        "+textByteLength（环境）+目录+屏+警+状态】。\n"
     )
     path.write_text(program, encoding="utf-8")
     read = read_graph(parser, work, path.name, "module-effect")
-    assert masks(read) == (127, 127)
+    assert masks(read) == (511, 511)
     artifact = work / "all"
     compile_source(path, artifact)
     env = dict(os.environ)
     env["SERICA_MODULE_EFFECT_PROBE"] = "环境变量"
-    expect_run(artifact, b"34\n", stdin=b"3\n", args=("字",), env=env)
+    expect_run(artifact, "模40\n".encode(), stdin=b"3\n", args=("字",), env=env, stderr="误".encode())
     assert destination.read_text(encoding="utf-8") == "字"
     assert appended.read_text(encoding="utf-8") == "字"
     assert not removed.exists() and rename_to.read_text(encoding="utf-8") == "移"
@@ -192,6 +195,50 @@ def verify_append_diagnostics(parser, project):
             "程序=【能力=array（『stdout』，『filesystem.write』），输出=存在（）】。\n",
             4106,
         ),
+        (
+            "stderr-write-missing-root",
+            "变量 结果=writeError（『错误』）。\n程序=【能力=array（『stdout』），输出=结果】。\n",
+            4102,
+        ),
+        (
+            "function-hidden-stderr-write",
+            "函数 警告（）=writeError（『错误』）。\n"
+            "程序=【能力=array（『stdout』，『stderr』），输出=警告（）】。\n",
+            4106,
+        ),
+        (
+            "read-byte-missing-root",
+            "变量 结果=readByte（）。\n程序=【能力=array（『stdout』），输出=结果】。\n",
+            4102,
+        ),
+        (
+            "function-hidden-read-byte",
+            "函数 取（）=readByte（）。\n"
+            "程序=【能力=array（『stdout』，『stdin』），输出=取（）】。\n",
+            4106,
+        ),
+        (
+            "directory-names-missing-root",
+            "程序=【能力=array（『stdout』），输出=directoryNames（『.』）】。\n",
+            4102,
+        ),
+        (
+            "function-hidden-directory-names",
+            "函数 列目录（）=directoryNames（『.』）。\n"
+            "程序=【能力=array（『stdout』，『filesystem.read』），输出=列目录（）】。\n",
+            4106,
+        ),
+        (
+            "process-missing-root",
+            "程序=【能力=array（『stdout』），输出=runCommand（『true』）】。\n",
+            4102,
+        ),
+        (
+            "function-hidden-process",
+            "函数 执行（）=runCommand（『true』）。\n"
+            "程序=【能力=array（『stdout』，『process』），输出=执行（）】。\n",
+            4106,
+        ),
     )
     for name, source, expected in cases:
         (project / name).mkdir(parents=True, exist_ok=True)
@@ -218,7 +265,7 @@ def verify_diagnostics(parser, project):
         ({"main.serica": OUTPUT.replace("，输出", "，能力=array（『stdout』），输出")}, 1, "main.serica", "能力=array（『stdout』），输出", 4104, 43),
         ({"main.serica": OUTPUT.replace("『stdout』", "1")}, 1, "main.serica", "array", 4105, 17),
         ({"main.serica": source_text(["A.serica"]) + OUTPUT,
-          "A.serica": "函数 取（）能力=array（『stdout』）=0。\n"}, 2, "A.serica", "『stdout』", 4103, 31),
+          "A.serica": "函数 取（）能力=array（『filesystem.execute』）=0。\n"}, 2, "A.serica", "『filesystem.execute』", 4103, 31),
         ({"main.serica": source_text(["A.serica"]) + OUTPUT,
           "A.serica": "函数 取（）能力=array（『stdin』，『stdin』）=0。\n"}, 2, "A.serica", "『stdin』）", 4104, 45),
         ({"main.serica": source_text(["A.serica"]) + OUTPUT,
@@ -267,7 +314,7 @@ def main():
         diagnostics += verify_append_diagnostics(parser, work / "append-diagnostics")
         own = read_graph(parser, ROOT / "compiler", "parse-expression.serica", "module-effect")
         assert own(-1) == 11 and masks(own) == (127, 95)
-        print(f"P1b 模块效果通过：7 种能力、4 个正例图、{diagnostics} 个位置诊断、编译器自检")
+        print(f"P1b 模块效果通过：9 种能力、4 个正例图、{diagnostics} 个位置诊断、编译器自检")
 
 
 if __name__ == "__main__":

@@ -49,6 +49,14 @@ jobs:
           EOF
           mkdir -p "$RUNNER_TEMP/go1.27.4"
           tar -xzf go1.27.4.darwin-arm64.tar.gz -C "$RUNNER_TEMP/go1.27.4" --strip-components=1
+      - name: Warn when seed margin is under 50 lines
+        run: |
+          margin=$(python3 tools/check_seed_subset.py | sed -n 's/.*余量 \([0-9-]*\).*/\1/p')
+          if [ -z "$margin" ] || [ "$margin" -lt 50 ]; then
+            echo "::warning::临时自举桥余量不足 50 行（当前 ${margin:-未知}）；新增实现前须先置换或按决策提高上限"
+          fi
+      - name: Check conformance gate wiring
+        run: python3 tools/check_ci_conformance.py
       - name: Run native gates
         env:
           GO: ${{ runner.temp }}/go1.27.4/bin/go
@@ -59,4 +67,4 @@ jobs:
             test-p1b-program test-p1b-bind test-p1b-import-paths \
             test-p1b-module-read test-p1b-module-graph test-p1b-module-bind \
             test-p1b-module-effect test-p1b-module-type test-p1b-module-const \
-            test-p1b-module-abi test-p1b-native-emit
+            test-p1b-module-abi test-p1b-native-emit conformance format regression

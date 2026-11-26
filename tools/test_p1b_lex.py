@@ -116,6 +116,28 @@ def main():
                 raise RuntimeError((text, seed.stdout, seed.stderr))
             if token_at(scanner, source, 0) != (kind, len(before.encode()), 0):
                 raise RuntimeError((text, kind, before))
+        nfc_cases = [
+            ("甲=『é』。\n", None),
+            ("甲=『e\u0301』。\n", (5, "U+0301")),
+            ("# 注释 e\u0301\n甲=『甲』。\n", (7, "U+0301")),
+            ("甲e\u0301=『甲』。\n", (3, "U+0301")),
+        ]
+        for text, failure in nfc_cases:
+            source.write_text(text, encoding="utf-8")
+            seed = seed_lex(source)
+            if failure is None:
+                if seed.returncode:
+                    raise RuntimeError((text, seed.stdout, seed.stderr))
+                continue
+            column, actual = failure
+            expected = f"错误 S-1004：第 1 行第 {column} 列".encode()
+            if (
+                seed.returncode != 1
+                or expected not in seed.stderr
+                or actual.encode() not in seed.stderr
+                or seed.stdout
+            ):
+                raise RuntimeError((text, seed.stdout, seed.stderr))
         source.write_bytes(b"\xc0\x8a")
         expect_run(scanner, b"", status=1, args=(source,), stdin=b"0\n")
 
@@ -126,7 +148,8 @@ def main():
             raise RuntimeError((result.returncode, result.stderr))
         print(
             f"P1b 词元门通过：{len(streams)} 个正例、{count} 个词元、"
-            f"词法器自身 {self_tokens} 个词元、{len(errors)} 个诊断位置、多页 Mach-O 同路径重建"
+            f"词法器自身 {self_tokens} 个词元、{len(errors)} 个诊断位置、"
+            f"{len(nfc_cases)} 个 NFC 边界、多页 Mach-O 同路径重建"
         )
 
 

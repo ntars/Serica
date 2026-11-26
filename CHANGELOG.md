@@ -1,3 +1,88 @@
+## [未发布] - 2026-11-26
+
+### 新增/修复
+
+- 复核并修复根整数与静态文本输出尾块的终止指令/失败块发射顺序，动态环境变量名称读取的中文非空值、空值、长度和比较继续通过；同步当前种子归因 12289/13200、余量 911，物理行 12571，C-1 为 5049/12324（41.0%），决策 D-0237 与 ADR 已登记。[D-0237](docs/decisions/0237-root-output-termination.md)
+- 新增受限文本数组结果载荷：`成功（array（文本…））` 现可作为运行时结果保存、跨函数转发并由 `arrayLength`/`arrayGet` 读取；文本元素按指针加长度 16 字节布局。结果变量复制会重新映射并深复制文本元素，函数返回继续转移所有权；同时修复复制与字面量暂存循环的分支偏移和复制后描述符寄存器丢失。新增 6 个文本数组结果用例，`make test-p1b-runtime` 通过（289 个整数形态产物、46 个函数结果边界产物）；通用容器参数、嵌套容器与通用键值类型仍未支持。[D-0236](docs/decisions/0236-text-array-result-payload.md)
+- 新增受限整数数组结果载荷：`成功（array（…））` 现可作为运行时结果保存、跨函数转发并由 `arrayLength（结果值（结果））`/`arrayGet（结果值（结果），索引）` 读取，调用帧以 `x0=tag、x1=capacity、x2=data、x3=length` 四槽描述符回传，失败分支继续按错误码退出且不产生 stdout。修复四处叠加根因：结果槽位缺描述符、表达式体结果函数未分配帧暂存区、`ifElse` 分支返回值被无条件清零 `x2/x3`、数组结果函数调用未触发 `_mmap/_munmap` 导入。新增 7 个运行时执行用例，`make test-p1b-runtime` 通过（38 个函数结果边界产物）；文本数组载荷、容器参数与通用容器结果载荷仍未支持。[D-0235](docs/decisions/0235-integer-array-result-payload.md)
+- 修复块体函数直接返回另一结果函数调用时结果形态丢失的缺陷：`annotateRuntimeFunctionResults` 与 `blockFunctionReturnsResult` 改为接收完整函数表，`函数 甲（数）【返回 乙（数）。】` 现可作为结果函数被 `结果值`/`错误码`/`是否失败` 观察，成功输出与失败退出码均实测通过。新增 2 个运行时执行用例，`make test-p1b-runtime` 与 `make verify` 通过；通用容器结果载荷、完整跨函数恢复与 P1b 阶段门仍未完成。[D-0234](docs/decisions/0234-cross-function-result-forwarding.md)
+- 补齐 S6.1–S6.4 的自动部分：新增 `tools/migrate` 检查/迁移 `判等（…）→ equals（…）`，`make regression` 以 10 例一致性历史语料建立只增不减基线并接入 CI/verify，`RELEASE.md` 写明预览期与 1.0 后 12 个月 MAJOR 支持窗口。S6.5 年度审计、人工签字与 P1b 完整阶段门仍未完成。[D-0233](docs/decisions/0233-migration-regression-lts.md)
+- 修复文本数组复制的 ARM64 调用约定冲突：通用文本操作数描述符现在跨越 UTF-8 校验和内存分配调用保存到帧槽；文本返回调用可进入数组初始化、追加和更新，新增 3 个运行时执行用例。[D-0232](docs/decisions/0232-text-array-copy-register-spill.md)
+- 新增 `docs/spec/semantics.md`，按类型、作用域、求值、效果、常量和运行时边界组织 M4 语义约束，并为每条规则标注对应一致性用例或 Make 目标。
+- 一致性语料从 44 例扩展到 101 例（80 正例、21 反例）；检查器现在对每个反例校验四段诊断格式和 S-code，而不只校验错误退出。仍是约束稿，不表示规范冻结或 P1b 通过。[D-0231](docs/decisions/0231-semantics-conformance-101.md)
+- 发布 `v0.1.0-dev.24` macOS arm64 开发者预览包，包含目录枚举、`runCommand`/`process`、动态环境变量名修复、发布验收产物隔离与当前完整验证门证据；旧 dev.23 证据按时间戳保留。仍不宣称 P1b、公证、安装器或多机验证完成。
+- 新增 `runCommand（静态文本或 argumentText 命令）`：通过 `_system` 调用 `/bin/sh -c` 并继承标准流，正常退出返回 0–255，信号终止返回 `128 + signal`。根与每层调用链须声明 `process`；修复效果出处表按八槽切分导致第九位能力丢失的根因。运行时门为 411 个编译诊断和 125 个运行时拒绝样例，模块效果/类型/静态求值门通过；种子预算调整为 12875/13200、余量 325，C-1 5013/12903（38.9%）。P1b 阶段门仍未通过。[D-0228](docs/decisions/0228-process-command-status.md) [D-0229](docs/decisions/0229-seed-budget-13200.md)
+- 发布验收改为在临时目录构建 `console`/`window`，不再向发布目录写入测试产物；`SHA256SUMS` 与发布目录文件集合严格一致，残留文件不再被静默排除。[D-0227](docs/decisions/0227-release-test-temporary-artifacts.md)
+- 新增 `directoryNames（静态文本或 argumentText 路径）` 根输出：逐行枚举目录项并排除 `.` 与 `..`，要求 `filesystem.read`，动态路径另要求 `args`；macOS arm64 使用 `_opendir`/`_readdir`/`_closedir`，先校验全部名称 UTF-8 再输出，失败不产生部分 stdout。同步前端编号、模块效果/类型表、运行时与诊断门，种子 12787/12800、余量 13，C-1 5000/12815（39.0%）。[D-0226](docs/decisions/0226-directory-names-enumeration.md)
+- 修正动态环境变量名称读取的临时帧与参数下标复用问题，`readEnvironment（argumentText（1））` 的中文非空值、空值和比较用例继续通过；目录遍历半成品已撤回，避免保留不可验收能力。同步当前种子归因 12698/12800、余量 102。[D-0225](docs/decisions/0225-seed-attribution-sync.md)
+- 修正 `serica format` 别名与发布包安装验收：包内测试改用已冻结的 `fmt --check`，补齐安装/卸载幂等复跑；完整 `make verify` 与发布包 `make verify` 通过，当前掩码代码行 12696/12800、余量 104。[D-0224](docs/decisions/0224-format-entry-and-attribution.md)
+- 修正社区一致性样例的相对路径，使 `check_conformance.py` 在源码树与发布包内都能解析；发布包现包含 `conformance/`、社区样例和 checker，包内 `make verify` 实际执行 44 例。[D-0222](docs/decisions/0222-release-conformance-corpus.md)
+- 生成 `v0.1.0-dev.23` macOS arm64 开发者预览包，包含可运行一致性套件；旧 dev.22 证据按时间戳保留。仍不宣称 P1b、公证、安装器或多机验证完成。[D-0223](docs/decisions/0223-developer-preview-dev23.md)
+- 新增三个社区风格移植样例并纳入一致性正例（75/21/10），证明非作者示例可用当前已开放能力构建运行。[D-0221](docs/decisions/0221-community-style-samples.md)
+- 平台矩阵写入本机已验证事实：macOS arm64 为唯一发布与窗口交互验证平台，x64 与其他系统仍为未验目标。[D-0220](docs/decisions/0220-platform-matrix-verified-facts.md)
+- 平台矩阵写入本机已验证事实：macOS arm64 为唯一发布与窗口交互验证平台，x64 与其他系统仍为未验目标。[D-0220](docs/decisions/0220-platform-matrix-verified-facts.md)
+- 一致性套件与格式门进入原生 CI，`tools/check_ci_conformance.py` 校验接线并从 `cases.json` 读取用例基线。[D-0219](docs/decisions/0219-conformance-in-ci.md)
+- 生成 `v0.1.0-dev.22` macOS arm64 开发者预览包：包内运行、校验和、SBOM 与隔离安装/卸载验收通过；不宣称 P1b、公证、安装器或多机验证完成。[D-0218](docs/decisions/0218-developer-preview-dev22.md)
+- 新增保守型 `serica fmt [--check]`：只修剪行尾空白与末尾空行并统一结尾换行，不改变 token 或字符串；`make format` 检查 186 份源码。[D-0217](docs/decisions/0217-conservative-formatter.md)
+- 新增兼容策略与诊断格式草案：版本位按“既有合法程序行为是否变化”判定，诊断固定四段并纳入一致性反例断言；二者均为 1.0 前规则，不解除未完成阶段门。[D-0216](docs/decisions/0216-compatibility-and-diagnostics-draft.md)
+- 新增统一一致性套件 `conformance/`：41 例（32 正例、9 反例）逐例执行与诊断断言，`make conformance` 纳入 `make verify`；语法文档修正为与 parser 对齐的实现快照，仍非规范冻结。[D-0215](docs/decisions/0215-conformance-corpus-and-grammar-snapshot.md)
+- 修复文本所有权返回调用被包在条件、`ifElse` 分支或函数体局部上下文中时被误判为所有权逃逸的缺陷：借用判定改为递归识别受控消费者，根输出边界同步；新增条件长度、条件相等和函数体局部借用执行用例，`textConcat` 嵌套仍拒绝。活动种子 12692/12800 掩码代码行，余量 108。[D-0214](docs/decisions/0214-recursive-text-return-borrow-contexts.md)
+- 动态环境变量名称门补入“存储的参数文本指向空值环境变量”边界：运行时门现同时验证中文非空值、空值、`textLength` 与相等比较，`readEnvironment（argumentText（1））` 与 `readEnvironment（名称）` 均不输出陈旧文本或死循环；`make test-p1b-runtime` 通过。完整 P1b 阶段门仍未通过。
+- 模块规范补齐 `writeText`/`writeError` 精确写入边界：stdout/stderr 能力、短写累计、非法 UTF-8 前置失败和无自动换行，对应 D-0206/D-0209。
+- README_EN 的 `make doctor` 示例同步到当前掩码代码行口径：12574/12800、余量 226、C-1 39.1% 未触发。
+- 路线图补记 D-0204/D-0205 效果语句体文本局部与直接返回的子门证据；完整效果函数 ABI、跨函数恢复和通用容器仍缺。
+- 模块规范补齐环境变量读取与枚举边界：静态/参数文本名称、`_getenv` 4 KiB 栈暂存与 UTF-8 校验、`environmentNames（）` 只读顺序输出及能力约束，对应 D-0171/D-0192。
+- 明确示例目录边界：`examples/` 顶层仅保留已由 `make verify` 机器门构建并断言的程序，未过能力的复现留在门内，诊断与模块依赖分目录存放。
+- 源码 NFC 规则从仓库扫描进入编译器词法入口：`lex/check/build` 与模块读取遇到分解字符时以 `S-1004` 报告首个组合标记的行列和建议，不改写源码、不执行 NFKC；`make test-p1b-lex` 增加四个 NFC 正/反边界，静态文本门改用 NFC 兼容字符继续证明运行时不做 NFKC。活动种子为 11 个文件、12574/12800 个掩码代码行，余量 226，物理行参考 12803，C-1 4929/12601（39.1%）。[D-0213](docs/decisions/0213-source-nfc-diagnostic.md)
+- 种子治理补齐 S2.1/S2.4/S2.5：`docs/build/seed-attribution.md` 登记三项可置换候选及估算行数；CI 在余量不足 50 行时发 warning；决策索引守卫在 `MAX_SEED_LINES` 变更但缺少对应预算决策时失败。当前余量 226 行，未触发告警；本次不变更预算。
+- 新增 P1b 子门表，逐项列出 20 个 `test-p0b-scope` / `test-p1b-*` 目标、当前边界和机器证据；完整 `make verify` 复跑通过，但通用容器/结果载荷、完整效果 ABI、跨函数恢复和自编编译器仍缺，阶段门保持未通过。
+- 控制台根输出可用运行时整数条件在两个编译期 UTF-8 文本分支间选择，生成真实 ARM64 条件跳转；分支文本常量与换行分开写出，输入 `1`/`2` 分别精确输出 `甲\n`/`乙\n`。[D-0196](docs/decisions/0196-runtime-static-text-ifelse.md)
+- 同一动态文本选择已抽成可复用文本操作数并接入 `textLength`：`textLength（ifElse（数值==1，『甲乙』，『丙』））` 输入 `1`/`2` 分别输出 `2`/`1`；动态文本分支、比较/切片/容器消费和跨函数恢复仍拒绝。[D-0197](docs/decisions/0197-runtime-static-text-ifelse-operand.md)
+- 该文本选择现可进入 `equals`/`notEquals` 及文本排序的任一操作数位置；比较路径保存左描述符后再求值右操作数，避免条件分支覆盖。输入 `1`/`2` 的相等比较两例分别输出 `-1`/`42`。[D-0198](docs/decisions/0198-runtime-static-text-ifelse-comparison.md)
+- 条件选择的已知文本现可作为 `substring` 源；整数条件切片输入 `1`/`2` 输出 `乙`/`丁`，文本相等条件选择、切片与排序组合输入 `x`/`y` 输出 `1`/`0`。原 `S-3013` 动态条件切片反例转为四个执行正例。[D-0199](docs/decisions/0199-runtime-static-text-ifelse-substring.md)
+- 条件选择现可作为 `textConcat` 左或右操作数：左/右侧输入 `1`/`2` 分别输出 `甲丙`/`乙丙` 与 `丙甲`/`丙乙`；拼接路径保存左描述符后再求值右侧。[D-0200](docs/decisions/0200-runtime-static-text-ifelse-concat.md)
+- 条件选择的已知文本现可初始化和重赋值普通有界文本变量；变量取得独立缓冲并复制所选分支，输入 `1`/`2` 输出 `甲乙`/`丙丁`，动态条件重赋值并拼接输入 `x`/`y` 输出 `甲乙尾`/`丙丁尾`。[D-0201](docs/decisions/0201-runtime-static-text-ifelse-variable.md)
+- 审计并开放同一条件文本进入文本数组构造/替换/追加、无效果函数直接实参和顶层局部返回，以及 `成功` 文本载荷的直接/结果变量观察；修复 `check` 接受成功载荷但 `build` 报“无法生成运行时文本结果载荷”的发射缺口。新增 14 个执行用例，输入 `1`/`2` 验证 `甲乙`/`丙丁` 或函数长度 `2`/`1`。[D-0202](docs/decisions/0202-runtime-static-text-ifelse-consumers-result.md)
+- 普通运行时文本变量现可作为 `成功` 文本载荷：结果变量取得深复制缓冲，源变量随后修改不影响结果；直接 `结果值`、`textLength`、`是否失败` 和 `错误码` 均可观察，无效果纯函数文本形参也可包装后返回调用方。新增 5 个执行用例，含补充平面文本 `𠮷直接载荷`。[D-0203](docs/decisions/0203-runtime-text-variable-success-payload.md)
+- 效果语句体函数现可用 `readText（）` 初始化并重赋值文本局部，再包装为成功结果返回；语义白名单与既有原生动态读取/收束路径对齐。新增重读 `𠮷第二行` 的执行用例。[D-0204](docs/decisions/0204-effectful-text-local-success-payload.md)
+- 修复效果语句体函数直接返回文本局部时在局部类型标注前误入纯块 lowering 的根因；末尾返回由 `readText（）` 初始化的文本局部现可交给调用方，新增补充平面 `𠮷效果返回` 执行用例。[D-0205](docs/decisions/0205-effectful-text-local-direct-return.md)
+- 新增 `writeText（文本）`：精确写出有效 UTF-8 字节且不追加换行，返回实际字节数，要求 `stdout`；原生短写循环可继续写完全部剩余内容，自编前端同步效果、类型、元数与 `S-3084` 诊断。[D-0206](docs/decisions/0206-stdout-write-boundary.md)
+- 新增 `writeError（文本）`：向 stderr 精确写出有效 UTF-8 字节且不追加换行，返回实际字节数，要求 `stderr`；复用短写循环，自编前端同步编号 `53`、效果位 `128`、类型、元数与 `S-3085` 诊断。[D-0209](docs/decisions/0209-standard-error-write-boundary.md)
+- 修复 `fileSize`、`exists`、`isDirectory` 的 Darwin arm64 `stat` 临时帧覆盖调用方返回值以及 `isDirectory` 未恢复栈指针的根因，并新增 `writeText` 返回值跨越三类查询保持正确的回归。[D-0207](docs/decisions/0207-darwin-stat-frame-root-cause.md)
+- 临时自举桥因上述必要实现经逐行归因增至 12574 行，机器上限审查后调整为 12600 行；Go 子集、归因、依赖、独立性、平台与 P3b 删除门不变。[D-0208](docs/decisions/0208-seed-budget-12600.md)
+- 修复 ARM64 UTF-8 校验器非法字节分支跳过 `x20..x26` 恢复和 `sp` 调整的根因；29 个失败分支汇合到单一恢复蹦床后再进入调用方错误收束，非法 UTF-8 模块不再把只读文本指针带入整数输出路径。[D-0210](docs/decisions/0210-utf8-failure-register-restore.md)
+- 统一种子预算口径为掩码代码行：`make seed-audit` 打印口径、已用、上限、余量与物理行参考；当前为 11 个活动文件、12574/12800 行、余量 226，物理行 12803，解决手册 M0/S0.2 的数字差额。[D-0211](docs/decisions/0211-seed-budget-masked-code-lines.md)
+- `DECISIONS.json` 每条增加机器可查的 `makeTarget`，新增 `tools/check_decisions.py` 并在 CI 前置检查与完整验证门中校验编号、来源、状态和目标；新增根级 `make verify` 汇总全部本机门。[D-0212](docs/decisions/0212-machine-readable-decision-index.md)
+- 运行时门现为 272 个 arm64 整数形态产物、29 个函数结果边界产物、43 个运行时文本结果产物、185 个成功文本输入、371 个编译诊断和 123 个运行时拒绝样例；活动种子 12574/12800 个掩码代码行、C-1 4929/12601（39.1%）。P1b 完整阶段门仍未通过，本轮不创建发布包。
+
+## [v0.1.0-dev.21] - 2026-11-25
+
+### 修复
+
+- 修复函数内 `textConcat` 变形后再返回拥有所有权的文本时，`textLength` 因返回描述符顺序与调用寄存器覆盖而 SIGSEGV（139）的缺陷；返回调用的参数在 `bl` 前保存、返回描述符在 `bl` 后保存，unmap 后恢复长度与缓冲区。[D-0194](docs/decisions/0194-runtime-owned-text-return-borrow.md)
+- 修复 owned 文本返回进入 `equals`/`notEquals` 时比较 false 补丁缺失导致 `ifElse` 恒走真分支的缺陷；借用比较现在生成真实的长度与逐字节比较，并额外保留一级 scratch 防止保存区与操作数重叠。
+- 运行时门新增三组变形返回借用产物，文本返回调用方存储产物达到 19 个、成功文本输入达到 168 个；现有 213 个 arm64 整数形态产物、43 个运行时文本结果产物、349 个编译诊断和 123 个运行时拒绝样例继续通过。
+- 活动种子 12421/12500 行，C-1 为 4887/12237（39.9%）。P1b 完整阶段门仍未通过。
+- 重新生成 macOS arm64 开发者预览包，复跑发布验收和隔离安装/卸载。[D-0195](docs/decisions/0195-developer-preview-dev21.md)
+
+## [v0.1.0-dev.20] - 2026-11-25
+
+### 新增/修复
+
+- `readEnvironment` 现接受 `argumentText` 整数下标和存储参数文本变量；动态名称先复制到 4 KiB 对齐栈区并 NUL 终止，拒绝空名称、内嵌 NUL、`=` 与超长输入，缺失变量返回空文本，返回值经完整 UTF-8 校验后进入直接输出、长度、比较和成功载荷边界。[D-0192](docs/decisions/0192-dynamic-environment-names.md)
+- 修复环境变量原生桥的失败/成功栈恢复、名称终止和写调用描述符寄存器保存；直接动态名称只导入 `_getenv`，存储名称额外验证 `_mmap`/`_munmap` 白名单，非法下标继续以 `S-3069` 拒绝。
+- 运行时门新增直接/存储参数文本名称的中文输出、`textLength` 与相等比较四个成功产物；现有 213 个 arm64 整数形态产物、43 个运行时文本结果产物、27 个函数结果边界产物、165 个成功文本输入、349 个编译诊断和 123 个运行时拒绝样例继续通过。
+- 活动种子逐行归因后为 12419/12500 行，归因完整；C-1 为 4887/12235（39.9%）。P1b 完整阶段门仍未通过。
+- 重新生成 macOS arm64 开发者预览包，复跑发布验收和隔离安装/卸载。[D-0193](docs/decisions/0193-developer-preview-dev20.md)
+
+## [v0.1.0-dev.19] - 2026-11-25
+
+### 修复
+
+- 块体文本返回函数现在把 `runtimeReturnsText` 传播到调用点，文本参数保持 `运行时字符串` ABI；`成功（文本返回调用）` 与 `结果值（成功（文本返回调用））` 可通过文本返回调用方边界。[D-0190](docs/decisions/0190-runtime-text-return-success-payload.md)
+- 运行时文本成功载荷分支直接接管文本返回函数交出的 x1/x2/x3 描述符，避免重复 unmap 或读错返回寄存器；新增成功载荷实际执行用例，文本返回仍不得进入嵌套表达式或容器。
+- 运行时门现为 213 个 arm64 整数形态产物、16 个文本返回调用方存储产物（含 4 个新成功载荷用例）、162 个成功文本输入、349 个编译诊断和 123 个运行时拒绝样例；活动种子 12259/12260 行、C-1 4869/12078（40.3%）。P1b 阶段门仍未通过。
+
 ## [v0.1.0-dev.18] - 2026-11-25
 
 ### 新增/修复

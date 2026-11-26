@@ -12,6 +12,7 @@ import re
 import subprocess
 import sys
 import tarfile
+import tempfile
 
 
 ROOT = pathlib.Path(__file__).resolve().parent.parent
@@ -31,6 +32,12 @@ REQUIRED_FILES = (
     "bin/hello.serica",
     "examples/p0b-window.serica",
     "examples/p1b-runtime-text-return.serica",
+    "examples/community/fizzbuzz.serica",
+    "examples/community/gcd.serica",
+    "examples/community/text-counter.serica",
+    "conformance/cases.json",
+    "tools/check_conformance.py",
+    "tools/migrate",
     "compiler/parse-expression.serica",
     "compiler/emit-console.serica",
 )
@@ -79,9 +86,6 @@ def verify(release: pathlib.Path) -> dict:
                      and not path.name.endswith(".uploading.cfg"))
     if not entries or set(checksums) != set(entries):
         raise RuntimeError("SHA256SUMS 与发布目录文件集合不一致")
-    generated = ("bin/console", "bin/window")
-    if any(name in checksums for name in generated):
-        raise RuntimeError("发布目录包含测试生成的产物，请先清理 bin/console 与 bin/window")
     for name in entries:
         if digest(release / name) != checksums[name]:
             raise RuntimeError(f"校验和不匹配：{name}")
@@ -93,21 +97,22 @@ def verify(release: pathlib.Path) -> dict:
     serica = release / "bin" / "serica"
     if not serica.stat().st_mode & 0o111:
         raise RuntimeError("bin/serica 不可执行")
-    console = release / "bin" / "console"
-    run([str(serica), "build", str(release / "bin" / "hello.serica"), "-o", str(console)], cwd=release)
-    window = release / "bin" / "window"
-    run([str(serica), "build", str(release / "examples" / "p0b-window.serica"), "-o", str(window)], cwd=release)
-    for path in (window, console):
-        info = run(["file", str(path)], cwd=release).stdout
-        if "Mach-O 64-bit executable arm64" not in info:
-            raise RuntimeError(f"产物架构无效：{path}")
-        verify_result = run(["codesign", "--verify", "--strict", str(path)], cwd=release)
-        if verify_result.returncode != 0:
-            raise RuntimeError(f"签名验证失败：{path}")
+    with tempfile.TemporaryDirectory(prefix="serica-release-") as temporary:
+        console = pathlib.Path(temporary) / "console"
+        run([str(serica), "build", str(release / "bin" / "hello.serica"), "-o", str(console)], cwd=release)
+        window = pathlib.Path(temporary) / "window"
+        run([str(serica), "build", str(release / "examples" / "p0b-window.serica"), "-o", str(window)], cwd=release)
+        for path in (window, console):
+            info = run(["file", str(path)], cwd=release).stdout
+            if "Mach-O 64-bit executable arm64" not in info:
+                raise RuntimeError(f"产物架构无效：{path}")
+            verify_result = run(["codesign", "--verify", "--strict", str(path)], cwd=release)
+            if verify_result.returncode != 0:
+                raise RuntimeError(f"签名验证失败：{path}")
 
-    console_output = run([str(console)], cwd=release, stdin="行简\n").stdout
-    if console_output != "行简\n":
-        raise RuntimeError(f"控制台运行输出不符：{console_output!r}")
+        console_output = run([str(console)], cwd=release, stdin="行简\n").stdout
+        if console_output != "行简\n":
+            raise RuntimeError(f"控制台运行输出不符：{console_output!r}")
     archive = release.parent / f"{release.name}.tar.gz"
     if archive.is_file() and digest(archive) not in {checksums.get(archive.name), ""}:
         # The archive is intentionally not listed inside itself; verify a
@@ -127,11 +132,6 @@ def verify(release: pathlib.Path) -> dict:
             names = {member.name.split("/", 1)[-1] for member in tar.getmembers() if member.isfile()}
         if "VERSION" not in names or "bin/serica" not in names:
             raise RuntimeError("发布压缩包内容不完整")
-
-    # Keep the staged release identical to the checksum manifest after verification.
-    for path in (console, window):
-        if path.is_file() and path.name not in checksums:
-            path.unlink()
 
     print(f"发布验收通过：{release.name}（{version}）")
     return {

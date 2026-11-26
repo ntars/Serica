@@ -1,0 +1,45 @@
+{
+  "baseline": 10,
+  "cases": [
+    {
+      "id": "S6-R01",
+      "case": "integer-literal"
+    },
+    {
+      "id": "S6-R02",
+      "case": "integer-add"
+    },
+    {
+      "id": "S6-R03",
+      "case": "integer-sub"
+    },
+    {
+      "id": "S6-R04",
+      "case": "integer-mul"
+    },
+    {
+      "id": "S6-R05",
+      "case": "integer-div"
+    },
+    {
+      "id": "S6-R06",
+      "case": "integer-mod"
+    },
+    {
+      "id": "S6-R07",
+      "case": "integer-shift-left"
+    },
+    {
+      "id": "S6-R08",
+      "case": "integer-shift-right"
+    },
+    {
+      "id": "S6-R09",
+      "case": "division-by-zero"
+    },
+    {
+      "id": "S6-R10",
+      "case": "mismatched-operands"
+    }
+  ]
+}

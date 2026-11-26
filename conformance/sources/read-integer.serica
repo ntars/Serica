@@ -1,0 +1,2 @@
+变量 甲=readInteger（）。
+程序=【能力=array（『stdout』，『stdin』），输出=甲+1】。

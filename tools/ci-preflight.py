@@ -20,18 +20,14 @@ def run(*command: str) -> None:
 
 
 def main() -> int:
+    run("python3", "tools/check_decisions.py")
     data = json.loads((ROOT / "DECISIONS.json").read_text(encoding="utf-8"))
     decisions = data["decisions"]
-    ids = [entry["id"] for entry in decisions]
-    if len(ids) != len(set(ids)):
-        raise SystemExit("DECISIONS.json 存在重复决策编号")
-    for entry in decisions:
-        source = ROOT / entry["source"]
-        if not source.is_file():
-            raise SystemExit(f"决策记录缺失：{entry['source']}")
+    if not decisions:
+        raise SystemExit("DECISIONS.json 缺少决策记录")
     run("python3", "tools/check_seed_subset.py")
     run("python3", "tools/check_independence.py", "source")
-    print("CI 前置检查通过：决策记录、种子边界与源码独立性")
+    print("CI 前置检查通过：决策索引、种子边界与源码独立性")
     return 0
 
 

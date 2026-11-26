@@ -127,7 +127,7 @@ def verify_integer_edges(parser, work, artifact):
         "-4611686018427387904*2": -(1 << 63),
         "-9223372036854775808+9223372036854775807": -1,
         "textByteAt（『𠮷』，3）": "𠮷".encode()[3],
-        "textByteLength（『é』）+textLength（『é』）": 5,
+        "textByteLength（『é』）+textLength（『é』）": 3,
         "arrayLength（array（1/0））": 1,
     }
     source = "常量 数=array（" + "，".join(values) + "）。\n" + OUTPUT.replace("输出=0", "输出=arrayGet（数，0）")

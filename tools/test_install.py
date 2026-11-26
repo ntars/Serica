@@ -53,12 +53,18 @@ def verify(release: pathlib.Path) -> None:
         sample = pathlib.Path(tmp) / "hello.serica"
         shutil.copy(release / "bin/hello.serica", sample)
         run(["serica", "check", str(sample)], cwd=tmp, env=env)
+        run(["serica", "fmt", "--check", str(sample)], cwd=tmp, env=env)
         program = pathlib.Path(tmp) / "console"
         run(["serica", "build", str(sample), "-o", str(program)], cwd=tmp, env=env)
         output = run([str(program)], cwd=tmp, env=env, stdin="行简\n").stdout
         if output != "行简\n":
             raise RuntimeError(f"安装后控制台输出不符：{output!r}")
 
+        run(["/bin/sh", str(release / "tools/install.sh")], cwd=release, env=env)
+        expected = subprocess.run(["readlink", serica], capture_output=True,
+                                  text=True, check=True).stdout.strip()
+        if not expected.startswith(str(prefix / "lib/serica/")):
+            raise RuntimeError(f"重复安装后 serica 链接目标无效：{expected}")
         run(["/bin/sh", str(install_dir / "tools/uninstall.sh")], cwd=tmp, env=env)
         if (prefix / "bin/serica").exists():
             raise RuntimeError("卸载后命令链接仍存在")
@@ -66,6 +72,8 @@ def verify(release: pathlib.Path) -> None:
             raise RuntimeError("卸载后安装目录仍存在")
         if not (home / ".local").is_dir():
             raise RuntimeError("卸载误删了调用方 prefix")
+        run(["/bin/sh", str(release / "tools/install.sh")], cwd=release, env=env)
+        run(["/bin/sh", str(release / "tools/uninstall.sh")], cwd=release, env=env)
 
     print("本地安装与卸载验收通过")
 

@@ -56,13 +56,16 @@ def verify_types(parser, project, artifact):
         + "变量 文列=array（文，『𠮷』）。\n"
         + "变量 值=成功（textLength（恒（文）））。\n"
         + "变量 字=成功（文）。\n"
+        + "变量 写=writeText（『模』）。\n"
+        + "变量 警=writeError（『误』）。\n"
         + "变量 环境=readEnvironment（『SERICA_MODULE_TYPE_PROBE』）。\n"
+        + "变量 进程=runCommand（『true』）。\n"
         + "变量 对=映射（）。\n"
         + f"变量 追=appendFile（『{append_path}』，文）。\n"
         + f"变量 删=removeFile（『{remove_path}』）。\n"
         + f"变量 改=renameFile（『{rename_from}』，『{rename_to}』）。\n"
         + "若（标）【赋值 列=arrayPush（列，合）。】。\n"
-        + "程序=【能力=array（『stdout』，『args』，『array.write』，『filesystem.write』），"
+        + "程序=【能力=array（『stdout』，『stderr』，『args』，『array.write』，『filesystem.write』，『process』），"
         "输出=ifElse（arrayGet（旗，0），arrayLength（列）+结果值（值）+累（3），0）】。\n",
         "A.serica": source_text(["Z.serica"])
         + "函数 先（）=后（）。\n"
@@ -74,7 +77,7 @@ def verify_types(parser, project, artifact):
         ("合=", 3, 1), ("标=", 3, 3), ("列=", 3, 4), ("旗=", 3, 6),
         ("文列=", 3, 5), ("值=", 3, 10), ("字=", 3, 11), ("对=", 3, 7),
         ("追=", 3, 1), ("删=", 3, 1), ("改=", 3, 1),
-        ("先（）+2", 4, 1), ("恒（文）", 4, 2), ("底，1", 3, 4),
+        ("写=", 3, 1), ("警=", 3, 1), ("进程=", 3, 1), ("先（）+2", 4, 1), ("恒（文）", 4, 2), ("底，1", 3, 4),
         ("结果值（值）", 4, 1), ("ifElse（arrayGet", 4, 1), ("【能力=", 5, 8),
     )
     read = check_types(parser, project, files, expected)
@@ -82,7 +85,7 @@ def verify_types(parser, project, artifact):
     for name, shape in (("先", 1), ("后", 1), ("累", 1), ("恒", 0)):
         assert read(TYPE - functions[name]) == shape
     compile_source(project / "main.serica", artifact)
-    expect_run(artifact, b"7\n")
+    expect_run(artifact, "模7\n".encode(), stderr="误".encode())
     assert append_path.read_text(encoding="utf-8") == "𠮷"
     assert not remove_path.exists() and rename_to.read_text(encoding="utf-8") == "移"
     return len(expected) + len(functions)
@@ -122,6 +125,7 @@ def verify_recursive(parser, project, artifact):
 
 def verify_diagnostics(parser, project):
     ordinary = OUTPUT.replace("『stdout』", "『stdout』，『stdin』，『filesystem.write』")
+    stderr_ordinary = OUTPUT.replace("『stdout』", "『stdout』，『stderr』，『stdin』，『filesystem.write』")
     cases = (
         ("", "1+『字』", "+", 3023),
         ("", "-（『字』）", "-", 3023),
@@ -139,6 +143,13 @@ def verify_diagnostics(parser, project):
         ("", "映射长（1）", "映射长", 3011),
         ("", "bitAnd（1，『字』）", "bitAnd", 3021),
         ("", "readInteger（1）", "readInteger", 3043),
+        ("", "readByte（1）", "readByte", 3086),
+        ("", "directoryNames（）", "directoryNames", 3087),
+        ("", "directoryNames（1）", "1）", 3087),
+        ("", "runCommand（）", "runCommand", 3088),
+        ("", "runCommand（1）", "1）", 3088),
+        ("", "writeError（）", "writeError", 3085),
+        ("", "writeError（1）", "1）", 3085),
         ("", "appendFile（『x』）", "appendFile", 3071),
         ("", "appendFile（1，『x』）", "1，『x』", 3071),
         ("", "appendFile（『x』，1）", "1）", 3071),
@@ -150,7 +161,8 @@ def verify_diagnostics(parser, project):
         ("", "array（1）", "array（1", 3023),
     )
     for prefix, expression, marker, code in cases:
-        source = prefix + ordinary.replace("输出=0", "输出=" + expression)
+        root = stderr_ordinary if "writeError（" in expression else ordinary
+        source = prefix + root.replace("输出=0", "输出=" + expression)
         assert_diagnostic(parser, project, {"main.serica": source}, 1, "main.serica", marker, code)
     files = {
         "main.serica": source_text(["A.serica"]) + OUTPUT.replace("输出=0", "输出=外（）"),

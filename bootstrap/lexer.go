@@ -25,6 +25,9 @@ type issue struct {
 func validUTF8(data []byte) bool { return utf8.Valid(data) }
 
 func lex(source string) ([]token, *issue) {
+	if problem := sourceNFCError(source); problem != nil {
+		return nil, problem
+	}
 	runes := []rune(source)
 	tokens := []token{}
 	for i := 0; i < len(runes); {

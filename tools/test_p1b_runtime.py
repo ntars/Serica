@@ -188,7 +188,157 @@ CASES = [
         "0\n",
     ),
 ]
+TEXT_OUTPUT_DYNAMIC_LABELS = {
+    "runtime static text ifElse true",
+    "runtime static text ifElse false",
+    "runtime static text ifElse length true",
+    "runtime static text ifElse length false",
+    "runtime static text ifElse substring true",
+    "runtime static text ifElse substring false",
+    "runtime static text ifElse concat left true",
+    "runtime static text ifElse concat left false",
+    "runtime static text ifElse concat right true",
+    "runtime static text ifElse concat right false",
+    "runtime static text ifElse variable true",
+    "runtime static text ifElse variable false",
+    "runtime static text ifElse variable update true",
+    "runtime static text ifElse variable update false",
+    "runtime static text ifElse success true",
+    "runtime static text ifElse success false",
+    "runtime static text ifElse success variable true",
+    "runtime static text ifElse success variable false",
+    "runtime static text ifElse array constructor true",
+    "runtime static text ifElse array constructor false",
+    "runtime static text ifElse array set true",
+    "runtime static text ifElse array set false",
+    "runtime static text ifElse array push true",
+    "runtime static text ifElse array push false",
+    "runtime static text ifElse function local true",
+    "runtime static text ifElse function local false",
+    "runtime text variable success value",
+    "runtime text variable success direct",
+}
+RUNTIME_TEXT_IFELSE_FIXTURE = (
+    "变量 数值=readInteger（）。\n"
+    "程序=【能力=array（『stdout』，『stdin』），"
+    "输出=ifElse（数值==1，『甲』，『乙』）】。\n"
+)
+RUNTIME_TEXT_IFELSE_LENGTH_FIXTURE = RUNTIME_TEXT_IFELSE_FIXTURE.replace("输出=ifElse（数值==1，『甲』，『乙』）", "输出=textLength（ifElse（数值==1，『甲乙』，『丙』））")
+RUNTIME_IFELSE_COMPARISON_FIXTURE = (
+    "变量 数值=readInteger（）。\n"
+    "程序=【能力=array（『stdout』，『stdin』），"
+    "输出=ifElse（equals（ifElse（数值==1，『甲』，『乙』），『乙』），42，-1）】。\n"
+)
+RUNTIME_TEXT_IFELSE_SUBSTRING_FIXTURE = (
+    "变量 数值=readInteger（）。\n"
+    "程序=【能力=array（『stdout』，『stdin』），"
+    "输出=substring（ifElse（数值==1，『甲乙』，『丙丁』），1，2）】。\n"
+)
+RUNTIME_TEXT_IFELSE_SUBSTRING_ORDER_FIXTURE = (
+    "变量 文本=readText（）。\n"
+    "程序=【能力=array（『stdout』，『stdin』），"
+    "输出=ifElse（substring（ifElse（equals（文本，『x』），『ab』，『cd』），0，1）<『b』，1，0）】。\n"
+)
+RUNTIME_TEXT_IFELSE_CONCAT_LEFT_FIXTURE = RUNTIME_TEXT_IFELSE_FIXTURE.replace("输出=ifElse（数值==1，『甲』，『乙』）", "输出=textConcat（ifElse（数值==1，『甲』，『乙』），『丙』）")
+RUNTIME_TEXT_IFELSE_CONCAT_RIGHT_FIXTURE = RUNTIME_TEXT_IFELSE_FIXTURE.replace("输出=ifElse（数值==1，『甲』，『乙』）", "输出=textConcat（『丙』，ifElse（数值==1，『甲』，『乙』））")
+RUNTIME_TEXT_IFELSE_VARIABLE_FIXTURE = (
+    "变量 数值=readInteger（）。\n"
+    "变量 文本=ifElse（数值==1，『甲乙』，『丙丁』）。\n"
+    "程序=【能力=array（『stdout』，『stdin』），输出=文本】。\n"
+)
+RUNTIME_TEXT_IFELSE_VARIABLE_UPDATE_FIXTURE = (
+    "变量 文本=readText（）。\n"
+    "赋值 文本=ifElse（equals（文本，『x』），『甲乙』，『丙丁』）。\n"
+    "程序=【能力=array（『stdout』，『stdin』），输出=textConcat（文本，『尾』）】。\n"
+)
+RUNTIME_TEXT_IFELSE_SUCCESS_FIXTURE = (
+    "变量 数值=readInteger（）。\n"
+    "程序=【能力=array（『stdout』，『stdin』），"
+    "输出=结果值（成功（ifElse（数值==1，『甲乙』，『丙丁』）））】。\n"
+)
+RUNTIME_TEXT_IFELSE_SUCCESS_VARIABLE_FIXTURE = (
+    "变量 数值=readInteger（）。\n"
+    "变量 结果=成功（ifElse（数值==1，『甲乙』，『丙丁』））。\n"
+    "程序=【能力=array（『stdout』，『stdin』），输出=结果值（结果）】。\n"
+)
+RUNTIME_TEXT_IFELSE_ARRAY_CONSTRUCTOR_FIXTURE = (
+    "变量 数值=readInteger（）。\n"
+    "变量 数组=array（ifElse（数值==1，『甲乙』，『丙丁』））。\n"
+    "程序=【能力=array（『stdout』，『stdin』），输出=arrayGet（数组，0）】。\n"
+)
+RUNTIME_TEXT_IFELSE_ARRAY_SET_FIXTURE = (
+    "变量 数值=readInteger（）。\n"
+    "变量 数组=array（『旧』）。\n"
+    "赋值 数组=arraySet（数组，0，ifElse（数值==1，『甲乙』，『丙丁』））。\n"
+    "程序=【能力=array（『stdout』，『stdin』，『array.write』），输出=arrayGet（数组，0）】。\n"
+)
+RUNTIME_TEXT_IFELSE_ARRAY_PUSH_FIXTURE = (
+    "变量 数值=readInteger（）。\n"
+    "变量 数组=array（『旧』）。\n"
+    "赋值 数组=arrayPush（数组，ifElse（数值==1，『甲乙』，『丙丁』））。\n"
+    "程序=【能力=array（『stdout』，『stdin』，『array.write』），输出=arrayGet（数组，1）】。\n"
+)
+RUNTIME_TEXT_IFELSE_FUNCTION_LOCAL_FIXTURE = (
+    "函数 选择（数值）能力=array（『stdin』）【\n"
+    "  变量 文本=ifElse（数值==1，『甲乙』，『丙丁』）。\n"
+    "  返回 文本。\n"
+    "】。\n"
+    "变量 数值=readInteger（）。\n"
+    "程序=【能力=array（『stdout』，『stdin』），输出=选择（数值）】。\n"
+)
+RUNTIME_TEXT_VARIABLE_SUCCESS_FIXTURE = (
+    "变量 文本=readText（）。\n"
+    "变量 结果=成功（文本）。\n"
+    "赋值 文本=textConcat（文本，『尾』）。\n"
+    "程序=【能力=array（『stdout』，『stdin』），输出=结果值（结果）】。\n"
+)
+RUNTIME_TEXT_VARIABLE_SUCCESS_DIRECT_FIXTURE = (
+    "变量 文本=readText（）。\n"
+    "程序=【能力=array（『stdout』，『stdin』），输出=结果值（成功（文本））】。\n"
+)
+RUNTIME_TEXT_VARIABLE_SUCCESS_LENGTH_FIXTURE = (
+    "变量 文本=readText（）。\n"
+    "程序=【能力=array（『stdout』，『stdin』），输出=textLength（结果值（成功（文本）））】。\n"
+)
+RUNTIME_TEXT_VARIABLE_SUCCESS_STATUS_FIXTURE = (
+    "变量 文本=readText（）。\n"
+    "程序=【能力=array（『stdout』，『stdin』），输出=ifElse（是否失败（成功（文本）），100，错误码（成功（文本）））】。\n"
+)
 DYNAMIC_CASES = [
+    ("runtime static text ifElse true", RUNTIME_TEXT_IFELSE_FIXTURE, "1\n", "甲\n", ("adr\tx1",), True),
+    ("runtime static text ifElse false", RUNTIME_TEXT_IFELSE_FIXTURE, "2\n", "乙\n", ("adr\tx1",), True),
+    ("runtime static text ifElse length true", RUNTIME_TEXT_IFELSE_LENGTH_FIXTURE, "1\n", "2\n", (), True),
+    ("runtime static text ifElse length false", RUNTIME_TEXT_IFELSE_LENGTH_FIXTURE, "2\n", "1\n", (), True),
+    ("runtime static text ifElse comparison false", RUNTIME_IFELSE_COMPARISON_FIXTURE, "1\n", "-1\n", (), True),
+    ("runtime static text ifElse comparison true", RUNTIME_IFELSE_COMPARISON_FIXTURE, "2\n", "42\n", (), True),
+    ("runtime static text ifElse substring true", RUNTIME_TEXT_IFELSE_SUBSTRING_FIXTURE, "1\n", "乙\n", (), True),
+    ("runtime static text ifElse substring false", RUNTIME_TEXT_IFELSE_SUBSTRING_FIXTURE, "2\n", "丁\n", (), True),
+    ("runtime text ifElse substring order true", RUNTIME_TEXT_IFELSE_SUBSTRING_ORDER_FIXTURE, "x\n", "1\n", (), False),
+    ("runtime text ifElse substring order false", RUNTIME_TEXT_IFELSE_SUBSTRING_ORDER_FIXTURE, "y\n", "0\n", (), False),
+    ("runtime static text ifElse concat left true", RUNTIME_TEXT_IFELSE_CONCAT_LEFT_FIXTURE, "1\n", "甲丙\n", (), True),
+    ("runtime static text ifElse concat left false", RUNTIME_TEXT_IFELSE_CONCAT_LEFT_FIXTURE, "2\n", "乙丙\n", (), True),
+    ("runtime static text ifElse concat right true", RUNTIME_TEXT_IFELSE_CONCAT_RIGHT_FIXTURE, "1\n", "丙甲\n", (), True),
+    ("runtime static text ifElse concat right false", RUNTIME_TEXT_IFELSE_CONCAT_RIGHT_FIXTURE, "2\n", "丙乙\n", (), True),
+    ("runtime static text ifElse variable true", RUNTIME_TEXT_IFELSE_VARIABLE_FIXTURE, "1\n", "甲乙\n", (), True),
+    ("runtime static text ifElse variable false", RUNTIME_TEXT_IFELSE_VARIABLE_FIXTURE, "2\n", "丙丁\n", (), True),
+    ("runtime static text ifElse variable update true", RUNTIME_TEXT_IFELSE_VARIABLE_UPDATE_FIXTURE, "x\n", "甲乙尾\n", (), True),
+    ("runtime static text ifElse variable update false", RUNTIME_TEXT_IFELSE_VARIABLE_UPDATE_FIXTURE, "y\n", "丙丁尾\n", (), True),
+    ("runtime static text ifElse success true", RUNTIME_TEXT_IFELSE_SUCCESS_FIXTURE, "1\n", "甲乙\n", (), False),
+    ("runtime static text ifElse success false", RUNTIME_TEXT_IFELSE_SUCCESS_FIXTURE, "2\n", "丙丁\n", (), False),
+    ("runtime static text ifElse success variable true", RUNTIME_TEXT_IFELSE_SUCCESS_VARIABLE_FIXTURE, "1\n", "甲乙\n", (), True),
+    ("runtime static text ifElse success variable false", RUNTIME_TEXT_IFELSE_SUCCESS_VARIABLE_FIXTURE, "2\n", "丙丁\n", (), True),
+    ("runtime static text ifElse array constructor true", RUNTIME_TEXT_IFELSE_ARRAY_CONSTRUCTOR_FIXTURE, "1\n", "甲乙\n", (), True),
+    ("runtime static text ifElse array constructor false", RUNTIME_TEXT_IFELSE_ARRAY_CONSTRUCTOR_FIXTURE, "2\n", "丙丁\n", (), True),
+    ("runtime static text ifElse array set true", RUNTIME_TEXT_IFELSE_ARRAY_SET_FIXTURE, "1\n", "甲乙\n", (), True),
+    ("runtime static text ifElse array set false", RUNTIME_TEXT_IFELSE_ARRAY_SET_FIXTURE, "2\n", "丙丁\n", (), True),
+    ("runtime static text ifElse array push true", RUNTIME_TEXT_IFELSE_ARRAY_PUSH_FIXTURE, "1\n", "甲乙\n", (), True),
+    ("runtime static text ifElse array push false", RUNTIME_TEXT_IFELSE_ARRAY_PUSH_FIXTURE, "2\n", "丙丁\n", (), True),
+    ("runtime static text ifElse function local true", RUNTIME_TEXT_IFELSE_FUNCTION_LOCAL_FIXTURE, "1\n", "甲乙\n", (), True),
+    ("runtime static text ifElse function local false", RUNTIME_TEXT_IFELSE_FUNCTION_LOCAL_FIXTURE, "2\n", "丙丁\n", (), True),
+    ("runtime text variable success value", RUNTIME_TEXT_VARIABLE_SUCCESS_FIXTURE, "行简\n", "行简\n", (), True),
+    ("runtime text variable success direct", RUNTIME_TEXT_VARIABLE_SUCCESS_DIRECT_FIXTURE, "𠮷直接载荷\n", "𠮷直接载荷\n", (), False),
+    ("runtime text variable success length", RUNTIME_TEXT_VARIABLE_SUCCESS_LENGTH_FIXTURE, "行简\n", "2\n", (), False),
+    ("runtime text variable success status/error", RUNTIME_TEXT_VARIABLE_SUCCESS_STATUS_FIXTURE, "行简\n", "0\n", (), False),
     ("runtime boolean variable true", RUNTIME_BOOLEAN_FIXTURE, "1\n5\n", "42\n", "b.eq", True),
     ("runtime boolean variable false", RUNTIME_BOOLEAN_FIXTURE, "0\n0\n", "-1\n", "b.eq", True),
     ("runtime boolean comparison output true", "程序=【输出=readInteger（）<5】。\n", "4\n", "1\n", "b.ge", False),
@@ -368,6 +518,26 @@ RESULT_FUNCTION_CASES = [
         17,
     ),
     (
+        "block function directly forwards a result call",
+        "函数 内核（数值）【若（数值<0）【返回 失败（31）。】。返回 成功（数值+1）。】。\n"
+        "函数 代理（数值）【返回 内核（数值）。】。\n"
+        "变量 输入=readInteger（）。\n变量 结果=代理（输入）。\n"
+        "程序=【能力=array（『stdout』，『stdin』），输出=ifElse（是否失败（结果），错误码（结果），结果值（结果））】。\n",
+        "41\n",
+        "42\n",
+        0,
+    ),
+    (
+        "block function directly forwards a result failure",
+        "函数 内核（数值）【若（数值<0）【返回 失败（31）。】。返回 成功（数值+1）。】。\n"
+        "函数 代理（数值）【返回 内核（数值）。】。\n"
+        "变量 输入=readInteger（）。\n变量 结果=代理（输入）。\n"
+        "程序=【能力=array（『stdout』，『stdin』），输出=ifElse（是否失败（结果），错误码（结果），结果值（结果））】。\n",
+        "-1\n",
+        "31\n",
+        0,
+    ),
+    (
         "static text result selected by function",
         "函数 选择（）=ifElse（1==1，成功（『函数文本』），失败（8））。\n"
         "变量 结果=选择（）。\n程序=【能力=array（『stdout』），输出=结果值（结果）】。\n",
@@ -400,6 +570,33 @@ RESULT_FUNCTION_CASES = [
         "程序=【能力=array（『stdout』，『stdin』），输出=结果值（副本）】。\n",
         "跨函数文本载荷\n",
         "跨函数文本载荷\n",
+        0,
+    ),
+    (
+        "pure function packages a text parameter as success",
+        "函数 包装（文本）【\n"
+        "  变量 结果=成功（文本）。\n"
+        "  返回 结果。\n"
+        "】。\n"
+        "变量 文本=readText（）。\n"
+        "变量 结果=包装（文本）。\n"
+        "程序=【能力=array（『stdout』，『stdin』），输出=结果值（结果）】。\n",
+        "形参文本载荷\n",
+        "形参文本载荷\n",
+        0,
+    ),
+    (
+        "effectful function packages a reassigned read text local as success",
+        "函数 读取（）能力=array（『stdin』）【\n"
+        "  变量 文本=readText（）。\n"
+        "  赋值 文本=readText（）。\n"
+        "  变量 结果=成功（文本）。\n"
+        "  返回 结果。\n"
+        "】。\n"
+        "变量 结果=读取（）。\n"
+        "程序=【能力=array（『stdout』，『stdin』），输出=结果值（结果）】。\n",
+        "第一行\n𠮷第二行\n",
+        "𠮷第二行\n",
         0,
     ),
     (
@@ -624,6 +821,135 @@ RESULT_FUNCTION_CASES = [
         "0\n",
         "31\n",
         0,
+    ),
+    (
+        "integer array result direct literal",
+        "变量 结果=成功（array（7，8，9））。\n"
+        "程序=【能力=array（『stdout』），输出=arrayGet（结果值（结果），1）】。\n",
+        "",
+        "8\n",
+        0,
+    ),
+    (
+        "integer array result example file",
+        (ROOT / "examples" / "p1b-runtime-result-array.serica").read_text(encoding="utf-8"),
+        "4\n",
+        "40\n",
+        0,
+    ),
+    (
+        "integer array result example file failure",
+        (ROOT / "examples" / "p1b-runtime-result-array.serica").read_text(encoding="utf-8"),
+        "-1\n",
+        "",
+        12,
+    ),
+    (
+        "integer array result length literal",
+        "变量 结果=成功（array（1，2，3））。\n"
+        "程序=【能力=array（『stdout』），输出=arrayLength（结果值（结果））】。\n",
+        "",
+        "3\n",
+        0,
+    ),
+    (
+        "integer array result function literal",
+        "函数 建表（数）【返回 成功（array（数，数+1））。】。\n"
+        "变量 输入=readInteger（）。\n变量 结果=建表（输入）。\n"
+        "程序=【能力=array（『stdout』，『stdin』），输出=arrayLength（结果值（结果））】。\n",
+        "6\n",
+        "2\n",
+        0,
+    ),
+    (
+        "integer array result function call forward",
+        "函数 内核（数）【返回 成功（array（数*10，数*10+1，数*10+2））。】。\n"
+        "函数 代理（数）【返回 内核（数）。】。\n"
+        "变量 输入=readInteger（）。\n变量 结果=代理（输入）。\n"
+        "程序=【能力=array（『stdout』，『stdin』），输出=arrayGet（结果值（结果），2）】。\n",
+        "4\n",
+        "42\n",
+        0,
+    ),
+    (
+        "integer array result function call forward length",
+        "函数 内核（数）【返回 成功（array（数，数+1））。】。\n"
+        "函数 代理（数）【返回 内核（数）。】。\n"
+        "变量 输入=readInteger（）。\n变量 结果=代理（输入）。\n"
+        "程序=【能力=array（『stdout』，『stdin』），输出=arrayLength（结果值（结果））】。\n",
+        "6\n",
+        "2\n",
+        0,
+    ),
+    (
+        "integer array result function failure boundary",
+        "函数 内核（数）【若（数<0）【返回 失败（12）。】。返回 成功（array（数，0-数））。】。\n"
+        "函数 代理（数）【返回 内核（数）。】。\n"
+        "变量 输入=readInteger（）。\n变量 结果=代理（输入）。\n"
+        "程序=【能力=array（『stdout』，『stdin』），输出=arrayLength（结果值（结果））】。\n",
+        "-1\n",
+        "",
+        12,
+    ),
+    (
+        "integer array result function failure boundary success path",
+        "函数 内核（数）【若（数<0）【返回 失败（12）。】。返回 成功（array（数，0-数））。】。\n"
+        "函数 代理（数）【返回 内核（数）。】。\n"
+        "变量 输入=readInteger（）。\n变量 结果=代理（输入）。\n"
+        "程序=【能力=array（『stdout』，『stdin』），输出=arrayGet（结果值（结果），1）】。\n",
+        "5\n",
+        "-5\n",
+        0,
+    ),
+    (
+        "text array result direct length",
+        "变量 结果=成功（array（『甲』，『乙』））。\n"
+        "程序=【能力=array（『stdout』），输出=arrayLength（结果值（结果））】。\n",
+        "",
+        "2\n",
+        0,
+    ),
+    (
+        "text array result direct element",
+        "变量 结果=成功（array（『甲』，『乙』））。\n"
+        "程序=【能力=array（『stdout』），输出=arrayGet（结果值（结果），1）】。\n",
+        "",
+        "乙\n",
+        0,
+    ),
+    (
+        "runtime text array result element",
+        "变量 文本=readText（）。\n"
+        "变量 结果=成功（array（文本，『尾部』））。\n"
+        "程序=【能力=array（『stdout』，『stdin』），输出=arrayGet（结果值（结果），0）】。\n",
+        "动态元素\n",
+        "动态元素\n",
+        0,
+    ),
+    (
+        "text array result element codepoint length",
+        "变量 结果=成功（array（『甲』，『乙』））。\n"
+        "程序=【能力=array（『stdout』），输出=textLength（arrayGet（结果值（结果），0））】。\n",
+        "",
+        "1\n",
+        0,
+    ),
+    (
+        "text array result function forwarding and copy isolation",
+        (ROOT / "examples" / "p1b-runtime-result-text-array.serica").read_text(encoding="utf-8"),
+        "",
+        "乙完成\n",
+        0,
+    ),
+    (
+        "text array result failure boundary",
+        "函数 建表（开关）【若（开关==0）【返回 失败（13）。】。返回 成功（array（『甲』））。】。\n"
+        "变量 开关=readInteger（）。\n变量 结果=建表（开关）。\n"
+        "变量 副本=结果。\n"
+        "程序=【能力=array（『stdout』，『stdin』），输出=arrayLength（结果值（副本））】。\n",
+        "0\n",
+        "",
+        13,
     ),
 ]
 BLOCK_FUNCTION_CASES = [
@@ -978,8 +1304,43 @@ OWNED_TEXT_RETURN_CASES = [
         "\n",
         "\n",
     ),
+    (
+        "effectful text local direct return",
+        "函数 读取（）能力=array（『stdin』）【\n变量 文本=readText（）。\n返回 文本。\n】。\n"
+        "变量 文本=读取（）。\n"
+        "程序=【能力=array（『stdout』，『stdin』），输出=文本】。\n",
+        "𠮷效果返回\n",
+        "𠮷效果返回\n",
+    ),
 ]
 OWNED_TEXT_RETURN_STORAGE_CASES = [
+    (
+        "owned text return borrowed length into variable after mutation",
+        "函数 改写（来源）【变量 副本=来源。赋值 副本=textConcat（副本，『尾』）。返回 副本。】。\n"
+        "变量 输入=readText（）。\n"
+        "变量 长度=textLength（改写（输入））。\n"
+        "程序=【能力=array（『stdout』，『stdin』），输出=长度】。\n",
+        "行简\n",
+        "3\n",
+    ),
+    (
+        "owned text return borrowed equality into variable after mutation",
+        "函数 改写（来源）【变量 副本=来源。赋值 副本=textConcat（副本，『tail』）。返回 副本。】。\n"
+        "变量 输入=readText（）。\n"
+        "变量 相同=ifElse（equals（改写（输入），『行简tail』），1，0）。\n"
+        "程序=【能力=array（『stdout』，『stdin』），输出=相同】。\n",
+        "行简\n",
+        "1\n",
+    ),
+    (
+        "owned text return borrowed inequality into variable after mutation",
+        "函数 改写（来源）【变量 副本=来源。赋值 副本=textConcat（副本，『tail』）。返回 副本。】。\n"
+        "变量 输入=readText（）。\n"
+        "变量 不同=ifElse（notEquals（改写（输入），『行简』），1，0）。\n"
+        "程序=【能力=array（『stdout』，『stdin』），输出=不同】。\n",
+        "行简\n",
+        "1\n",
+    ),
     (
         "owned text return borrowed equality",
         "函数 欢迎（来源）【变量 副本=来源。返回 副本。】。\n"
@@ -1023,6 +1384,33 @@ OWNED_TEXT_RETURN_STORAGE_CASES = [
         "函数 欢迎（来源）【变量 副本=来源。返回 副本。】。\n"
         "变量 输入=readText（）。\n"
         "程序=【能力=array（『stdout』，『stdin』），输出=textLength（欢迎（输入））】。\n",
+        "行简\n",
+        "2\n",
+    ),
+    (
+        "owned text return borrowed length in a condition",
+        "函数 欢迎（来源）【变量 副本=来源。返回 副本。】。\n"
+        "变量 输入=readText（）。\n"
+        "变量 标记=0。\n若（textLength（欢迎（输入））>0）【赋值 标记=1。】。\n"
+        "程序=【能力=array（『stdout』，『stdin』），输出=0】。\n",
+        "行简\n",
+        "0\n",
+    ),
+    (
+        "owned text return borrowed equality in a condition",
+        "函数 欢迎（来源）【变量 副本=来源。返回 副本。】。\n"
+        "变量 输入=readText（）。\n"
+        "变量 标记=0。\n若（equals（欢迎（输入），『行简』））【赋值 标记=1。】。\n"
+        "程序=【能力=array（『stdout』，『stdin』），输出=0】。\n",
+        "行简\n",
+        "0\n",
+    ),
+    (
+        "owned text return borrowed length inside a function body",
+        "函数 欢迎（来源）【变量 副本=来源。返回 副本。】。\n"
+        "函数 代理（来源）【变量 长度=textLength（欢迎（来源））。返回 长度。】。\n"
+        "变量 输入=readText（）。\n"
+        "程序=【能力=array（『stdout』，『stdin』），输出=代理（输入）】。\n",
         "行简\n",
         "2\n",
     ),
@@ -1081,6 +1469,70 @@ OWNED_TEXT_RETURN_STORAGE_CASES = [
         "程序=【能力=array（『stdout』，『stdin』），输出=结果】。\n",
         "x" * 63 + "\n",
         "x" * 63 + "尾\n",
+    ),
+    (
+        "owned text return as runtime text success payload",
+        "函数 欢迎（来源）【变量 副本=来源。赋值 副本=textConcat（副本，『！』）。返回 副本。】。\n"
+        "变量 输入=readText（）。\n"
+        "变量 结果=成功（欢迎（输入））。\n"
+        "程序=【能力=array（『stdout』，『stdin』），输出=结果值（结果）】。\n",
+        "行简\n",
+        "行简！\n",
+    ),
+    (
+        "owned text return as direct runtime text success payload",
+        "函数 欢迎（来源）【变量 副本=来源。赋值 副本=textConcat（副本，『！』）。返回 副本。】。\n"
+        "变量 输入=readText（）。\n"
+        "程序=【能力=array（『stdout』，『stdin』），输出=结果值（成功（欢迎（输入）））】。\n",
+        "行简\n",
+        "行简！\n",
+    ),
+    (
+        "owned text return success payload failure observation",
+        "函数 欢迎（来源）【变量 副本=来源。返回 副本。】。\n"
+        "变量 输入=readText（）。\n"
+        "变量 结果=成功（欢迎（输入））。\n"
+        "程序=【能力=array（『stdout』，『stdin』），输出=是否失败（结果）】。\n",
+        "行简\n",
+        "0\n",
+    ),
+    (
+        "owned text return success payload error code observation",
+        "函数 欢迎（来源）【变量 副本=来源。返回 副本。】。\n"
+        "变量 输入=readText（）。\n"
+        "变量 结果=成功（欢迎（输入））。\n"
+        "程序=【能力=array（『stdout』，『stdin』），输出=错误码（结果）】。\n",
+        "行简\n",
+        "0\n",
+    ),
+    (
+        "owned text return initializes text array element",
+        "函数 欢迎（来源）【变量 副本=来源。赋值 副本=textConcat（副本，『！』）。返回 副本。】。\n"
+        "变量 输入=readText（）。\n"
+        "变量 数组=array（欢迎（输入），『尾』）。\n"
+        "程序=【能力=array（『stdout』，『stdin』），输出=arrayGet（数组，0）】。\n",
+        "行简\n",
+        "行简！\n",
+    ),
+    (
+        "owned text return pushes text array element",
+        "函数 欢迎（来源）【变量 副本=来源。赋值 副本=textConcat（副本，『！』）。返回 副本。】。\n"
+        "变量 输入=readText（）。\n"
+        "变量 数组=array（『头』）。\n"
+        "赋值 数组=arrayPush（数组，欢迎（输入））。\n"
+        "程序=【能力=array（『stdout』，『stdin』，『array.write』），输出=arrayGet（数组，1）】。\n",
+        "行简\n",
+        "行简！\n",
+    ),
+    (
+        "owned text return updates text array element",
+        "函数 欢迎（来源）【变量 副本=来源。赋值 副本=textConcat（副本，『！』）。返回 副本。】。\n"
+        "变量 输入=readText（）。\n"
+        "变量 数组=array（『头』，『尾』）。\n"
+        "赋值 数组=arraySet（数组，0，欢迎（输入））。\n"
+        "程序=【能力=array（『stdout』，『stdin』，『array.write』），输出=arrayGet（数组，0）】。\n",
+        "行简\n",
+        "行简！\n",
     ),
     (
         "owned text return repeatedly replaces a variable",
@@ -1182,6 +1634,22 @@ RUNTIME_TEXT_PARAMETER_CASES = [
         "2\n",
     ),
     (
+        "conditional text argument length true",
+        "函数 文本长度（来源）【返回 textLength（来源）。】。\n"
+        "变量 开关=readInteger（）。\n"
+        "程序=【能力=array（『stdout』，『stdin』），输出=文本长度（ifElse（开关==1，『甲乙』，『丙』））】。\n",
+        "1\n",
+        "2\n",
+    ),
+    (
+        "conditional text argument length false",
+        "函数 文本长度（来源）【返回 textLength（来源）。】。\n"
+        "变量 开关=readInteger（）。\n"
+        "程序=【能力=array（『stdout』，『stdin』），输出=文本长度（ifElse（开关==1，『甲乙』，『丙』））】。\n",
+        "2\n",
+        "1\n",
+    ),
+    (
         "two runtime text parameters",
         "函数 两段长度（甲，乙）【返回 textLength（甲）+textLength（乙）。】。\n"
         "变量 第一=readText（）。\n变量 第二=readText（）。\n"
@@ -1275,6 +1743,170 @@ RUNTIME_TEXT_PARAMETER_CASES = [
         "程序=【能力=array（『stdout』，『stdin』），输出=相同（第一，第二）】。\n",
         "7\n7\n",
         "1\n",
+    ),
+]
+STDOUT_WRITE_CASES = [
+    (
+        "writeText static supplementary bytes and count",
+        "程序=【能力=array（『stdout』），输出=writeText（『𠮷写入』）】。\n",
+        "",
+        "𠮷写入10\n",
+    ),
+    (
+        "writeText empty static text",
+        "程序=【能力=array（『stdout』），输出=writeText（『』）】。\n",
+        "",
+        "0\n",
+    ),
+    (
+        "writeText twice preserves order and sums byte counts",
+        "程序=【能力=array（『stdout』），输出=writeText（『甲乙』）+writeText（『丙』）】。\n",
+        "",
+        "甲乙丙9\n",
+    ),
+    (
+        "writeText runtime text",
+        "变量 文本=readText（）。\n"
+        "程序=【能力=array（『stdout』，『stdin』），输出=writeText（文本）】。\n",
+        "𠮷写入\n",
+        "𠮷写入10\n",
+    ),
+    (
+        "writeText root local stores byte count",
+        "变量 字节=writeText（『根级写入』）。\n"
+        "程序=【能力=array（『stdout』），输出=字节】。\n",
+        "",
+        "根级写入12\n",
+    ),
+    (
+        "writeText result survives directory stat",
+        "变量 字节=writeText（『帧』）。\n"
+        "变量 目录=isDirectory（『/』）。\n"
+        "程序=【能力=array（『stdout』，『filesystem.read』），输出=字节+目录】。\n",
+        "",
+        "帧4\n",
+    ),
+    (
+        "writeText result survives file size and existence stats",
+        "变量 字节=writeText（『统计』）。\n"
+        "变量 大小=fileSize（『examples/p1b-runtime-file-fixture.txt』）。\n"
+        "变量 存在=exists（『examples/p1b-runtime-file-fixture.txt』）。\n"
+        "程序=【能力=array（『stdout』，『filesystem.read』），输出=字节+大小+存在】。\n",
+        "",
+        "统计25\n",
+    ),
+    (
+        "writeText effectful expression function",
+        "函数 说（文本）能力=array（『stdout』）=writeText（文本）。\n"
+        "程序=【能力=array（『stdout』），输出=说（『函数写入』）】。\n",
+        "",
+        "函数写入12\n",
+    ),
+    (
+        "writeText effectful statement local",
+        "函数 说（）能力=array（『stdout』）【\n"
+        "变量 字节=writeText（『局部写入』）。\n"
+        "返回 字节。\n"
+        "】。\n"
+        "程序=【能力=array（『stdout』），输出=说（）】。\n",
+        "",
+        "局部写入12\n",
+    ),
+]
+STDERR_WRITE_CASES = [
+    (
+        "writeError static supplementary bytes and count",
+        "程序=【能力=array（『stdout』，『stderr』），输出=writeError（『𠮷错误』）】。\n",
+        "",
+        "10\n",
+        "𠮷错误",
+    ),
+    (
+        "writeError empty static text",
+        "程序=【能力=array（『stdout』，『stderr』），输出=writeError（『』）】。\n",
+        "",
+        "0\n",
+        "",
+    ),
+    (
+        "writeError twice preserves order and sums byte counts",
+        "程序=【能力=array（『stdout』，『stderr』），输出=writeError（『甲乙』）+writeError（『丙』）】。\n",
+        "",
+        "9\n",
+        "甲乙丙",
+    ),
+    (
+        "writeError runtime text",
+        "变量 文本=readText（）。\n"
+        "程序=【能力=array（『stdout』，『stdin』，『stderr』），输出=writeError（文本）】。\n",
+        "错误行\n",
+        "9\n",
+        "错误行",
+    ),
+    (
+        "writeError effectful statement local",
+        "函数 警告（）能力=array（『stderr』）【\n"
+        "变量 字节=writeError（『局部错误』）。\n"
+        "返回 字节。\n"
+        "】。\n"
+        "程序=【能力=array（『stdout』，『stderr』），输出=警告（）】。\n",
+        "",
+        "12\n",
+        "局部错误",
+    ),
+]
+BYTE_READ_CASES = [
+    (
+        "readByte ASCII byte",
+        "变量 字节=readByte（）。\n"
+        "程序=【能力=array（『stdout』，『stdin』），输出=字节】。\n",
+        b"A",
+        b"65\n",
+    ),
+    (
+        "readByte NUL byte",
+        "变量 字节=readByte（）。\n"
+        "程序=【能力=array（『stdout』，『stdin』），输出=字节】。\n",
+        b"\x00",
+        b"0\n",
+    ),
+    (
+        "readByte high unsigned byte",
+        "变量 字节=readByte（）。\n"
+        "程序=【能力=array（『stdout』，『stdin』），输出=字节】。\n",
+        b"\xff",
+        b"255\n",
+    ),
+    (
+        "readByte EOF",
+        "变量 字节=readByte（）。\n"
+        "程序=【能力=array（『stdout』，『stdin』），输出=字节】。\n",
+        b"",
+        b"-1\n",
+    ),
+    (
+        "readByte preserves stream order",
+        "变量 首=readByte（）。\n"
+        "变量 次=readByte（）。\n"
+        "程序=【能力=array（『stdout』，『stdin』），输出=首*1000+次】。\n",
+        b"AB",
+        b"65066\n",
+    ),
+    (
+        "readByte effectful function",
+        "函数 取（）能力=array（『stdin』）=readByte（）。\n"
+        "程序=【能力=array（『stdout』，『stdin』），输出=取（）】。\n",
+        b"Z",
+        b"90\n",
+    ),
+    (
+        "readByte effectful statement return",
+        "函数 取（）能力=array（『stdin』）【\n"
+        "返回 readByte（）。\n"
+        "】。\n"
+        "程序=【能力=array（『stdout』，『stdin』），输出=取（）】。\n",
+        b"\x00",
+        b"0\n",
     ),
 ]
 RUNTIME_FUNCTION_ABI_CASES = [
@@ -2277,8 +2909,43 @@ def main() -> int:
                 "程序=【能力=array（『stdout』，『args』），输出=textLength（readEnvironment（『SERICA_ENV_PROBE』））】。\n",
                 "4\n",
             ),
+            (
+                "argument text environment name direct output",
+                "程序=【能力=array（『stdout』，『args』），输出=readEnvironment（argumentText（1））】。\n",
+                "探针中文\n",
+                ["SERICA_ENV_PROBE"],
+            ),
+            (
+                "stored argument text environment name direct output",
+                "变量 名称=argumentText（1）。\n"
+                "程序=【能力=array（『stdout』，『args』），输出=readEnvironment（名称）】。\n",
+                "探针中文\n",
+                ["SERICA_ENV_PROBE"],
+            ),
+            (
+                "argument text environment name length",
+                "程序=【能力=array（『stdout』，『args』），输出=textLength（readEnvironment（argumentText（1）））】。\n",
+                "4\n",
+                ["SERICA_ENV_PROBE"],
+            ),
+            (
+                "stored argument text environment name comparison",
+                "变量 名称=argumentText（1）。\n"
+                "程序=【能力=array（『stdout』，『args』），输出=equals（readEnvironment（名称），『探针中文』）】。\n",
+                "1\n",
+                ["SERICA_ENV_PROBE"],
+            ),
+            (
+                "stored argument text environment name empty value",
+                "变量 名称=argumentText（1）。\n"
+                "程序=【能力=array（『stdout』，『args』），输出=readEnvironment（名称）】。\n",
+                "\n",
+                ["SERICA_EMPTY_PROBE"],
+            ),
         ]
-        for index, (label, source_text, expected) in enumerate(environment_examples):
+        for index, case in enumerate(environment_examples):
+            label, source_text, expected = case[:3]
+            supplied_arguments = case[3] if len(case) > 3 else []
             source = temp / f"environment-{index}.serica"
             source.write_text(source_text, encoding="utf-8")
             checked = run_unmodified("check", str(source))
@@ -2288,14 +2955,22 @@ def main() -> int:
                 sys.stderr.write(checked.stdout + checked.stderr + built.stdout + built.stderr)
                 print(f"环境变量读取产物检查或构建失败：{label}", file=sys.stderr)
                 return 1
+            required_imports = ("_getenv",)
+            if source_text.startswith("变量 "):
+                required_imports += ("_mmap", "_munmap")
             try:
-                verify_native_console_artifact(output, require_integer=False, required_imports=("_getenv",))
+                verify_native_console_artifact(output, require_integer=False, required_imports=required_imports)
             except RuntimeError as failure:
                 print(f"{label}：{failure}", file=sys.stderr)
                 return 1
+            environment = {
+                **{key: value for key, value in os.environ.items() if key != "SERICA_EMPTY_PROBE"},
+                "SERICA_ENV_PROBE": "探针中文",
+                "SERICA_EMPTY_PROBE": "",
+            }
             executed = subprocess.run(
-                [str(output)], cwd=ROOT, text=True, capture_output=True, check=False,
-                env={**os.environ, "SERICA_ENV_PROBE": "探针中文"},
+                [str(output), *supplied_arguments], cwd=ROOT, text=True, capture_output=True, check=False,
+                env=environment,
             )
             if executed.returncode != 0 or executed.stdout != expected or executed.stderr:
                 sys.stderr.write(executed.stdout + executed.stderr)
@@ -3102,6 +3777,196 @@ def main() -> int:
         if executed.returncode != 0 or executed.stdout != b"1\n" or executed.stderr:
             sys.stderr.buffer.write(executed.stdout[:256] + executed.stderr[:256])
             print("静态目录类型查询运行不符", file=sys.stderr)
+            return 1
+
+        directory_fixture = temp / "目录枚举夹具"
+        directory_fixture.mkdir()
+        for name in ("甲.txt", ".hidden", "beta.txt"):
+            (directory_fixture / name).write_bytes(b"x")
+        directory_names_source = temp / "directory-names.serica"
+        directory_names_source.write_text(
+            "程序=【能力=array（『stdout』，『args』，『filesystem.read』），"
+            "输出=directoryNames（argumentText（1））】。\n",
+            encoding="utf-8",
+        )
+        directory_names_output = temp / "directory-names"
+        checked = run_unmodified("check", str(directory_names_source))
+        built = run_unmodified("build", str(directory_names_source), "-o", str(directory_names_output))
+        if checked.returncode != 0 or built.returncode != 0:
+            sys.stderr.write(checked.stdout + checked.stderr + built.stdout + built.stderr)
+            print("动态目录枚举无法构建", file=sys.stderr)
+            return 1
+        try:
+            verify_native_console_artifact(
+                directory_names_output,
+                require_integer=False,
+                required_imports=("_opendir", "_readdir", "_closedir"),
+            )
+        except RuntimeError as failure:
+            print(f"目录枚举：{failure}", file=sys.stderr)
+            return 1
+        executed = subprocess.run(
+            [str(directory_names_output), str(directory_fixture)],
+            cwd=ROOT,
+            capture_output=True,
+            check=False,
+            timeout=5,
+        )
+        expected_entries = {name.encode() for name in ("甲.txt", ".hidden", "beta.txt")}
+        actual_entries = set(executed.stdout.splitlines())
+        if (
+            executed.returncode != 0
+            or executed.stderr
+            or actual_entries != expected_entries
+            or b"." in actual_entries
+            or b".." in actual_entries
+            or not executed.stdout.endswith(b"\n")
+        ):
+            sys.stderr.buffer.write(executed.stdout[:512] + executed.stderr[:512])
+            print("动态目录枚举运行不符", file=sys.stderr)
+            return 1
+        static_directory_names_source = temp / "directory-names-static.serica"
+        static_directory_names_source.write_text(
+            f"程序=【能力=array（『stdout』，『filesystem.read』），"
+            f"输出=directoryNames（『{directory_fixture}』）】。\n",
+            encoding="utf-8",
+        )
+        static_directory_names_output = temp / "directory-names-static"
+        checked = run_unmodified("check", str(static_directory_names_source))
+        built = run_unmodified(
+            "build", str(static_directory_names_source), "-o", str(static_directory_names_output)
+        )
+        if checked.returncode != 0 or built.returncode != 0:
+            sys.stderr.write(checked.stdout + checked.stderr + built.stdout + built.stderr)
+            print("静态目录枚举无法构建", file=sys.stderr)
+            return 1
+        executed = subprocess.run(
+            [str(static_directory_names_output)],
+            cwd=ROOT,
+            capture_output=True,
+            check=False,
+            timeout=5,
+        )
+        if executed.returncode != 0 or executed.stderr or set(executed.stdout.splitlines()) != expected_entries:
+            sys.stderr.buffer.write(executed.stdout[:512] + executed.stderr[:512])
+            print("静态目录枚举运行不符", file=sys.stderr)
+            return 1
+        missing_directory = subprocess.run(
+            [str(directory_names_output), str(temp / "不存在目录")],
+            cwd=ROOT,
+            capture_output=True,
+            check=False,
+            timeout=5,
+        )
+        if missing_directory.returncode == 0 or missing_directory.stdout:
+            sys.stderr.buffer.write(missing_directory.stdout[:512] + missing_directory.stderr[:512])
+            print("缺失目录枚举未以非零退出且无 stdout", file=sys.stderr)
+            return 1
+
+        run_command_source = temp / "run-command-static.serica"
+        run_command_source.write_text(
+            "程序=【能力=array（『stdout』，『process』），"
+            "输出=runCommand（『/bin/sh -c \"exit 7\"』）】。\n",
+            encoding="utf-8",
+        )
+        run_command_output = temp / "run-command-static"
+        checked = run_unmodified("check", str(run_command_source))
+        built = run_unmodified("build", str(run_command_source), "-o", str(run_command_output))
+        if checked.returncode != 0 or built.returncode != 0:
+            sys.stderr.write(checked.stdout + checked.stderr + built.stdout + built.stderr)
+            print("静态进程执行无法构建", file=sys.stderr)
+            return 1
+        try:
+            verify_native_console_artifact(
+                run_command_output,
+                require_integer=True,
+                required_imports=("_system",),
+            )
+        except RuntimeError as failure:
+            print(f"进程执行：{failure}", file=sys.stderr)
+            return 1
+        executed = subprocess.run(
+            [str(run_command_output)],
+            cwd=ROOT,
+            capture_output=True,
+            check=False,
+            timeout=5,
+        )
+        if executed.returncode != 0 or executed.stdout != b"7\n" or executed.stderr:
+            sys.stderr.buffer.write(executed.stdout[:512] + executed.stderr[:512])
+            print("静态进程执行状态不符", file=sys.stderr)
+            return 1
+
+        command_side_effect = temp / "进程执行副作用.txt"
+        side_effect_source = temp / "run-command-side-effect.serica"
+        side_effect_source.write_text(
+            "程序=【能力=array（『stdout』，『process』），"
+            f"输出=runCommand（『printf 执行 > \"{command_side_effect}\"』）】。\n",
+            encoding="utf-8",
+        )
+        side_effect_output = temp / "run-command-side-effect"
+        checked = run_unmodified("check", str(side_effect_source))
+        built = run_unmodified("build", str(side_effect_source), "-o", str(side_effect_output))
+        if checked.returncode != 0 or built.returncode != 0:
+            sys.stderr.write(checked.stdout + checked.stderr + built.stdout + built.stderr)
+            print("带副作用进程执行无法构建", file=sys.stderr)
+            return 1
+        executed = subprocess.run(
+            [str(side_effect_output)],
+            cwd=ROOT,
+            capture_output=True,
+            check=False,
+            timeout=5,
+        )
+        if (
+            executed.returncode != 0
+            or executed.stdout != b"0\n"
+            or executed.stderr
+            or not command_side_effect.exists()
+            or command_side_effect.read_text(encoding="utf-8") != "执行"
+        ):
+            sys.stderr.buffer.write(executed.stdout[:512] + executed.stderr[:512])
+            print("带副作用进程执行未实际运行", file=sys.stderr)
+            return 1
+
+        dynamic_command_source = temp / "run-command-dynamic.serica"
+        dynamic_command_source.write_text(
+            "变量 状态=runCommand（argumentText（1））。\n"
+            "程序=【能力=array（『stdout』，『process』，『args』），输出=状态】。\n",
+            encoding="utf-8",
+        )
+        dynamic_command_output = temp / "run-command-dynamic"
+        checked = run_unmodified("check", str(dynamic_command_source))
+        built = run_unmodified("build", str(dynamic_command_source), "-o", str(dynamic_command_output))
+        if checked.returncode != 0 or built.returncode != 0:
+            sys.stderr.write(checked.stdout + checked.stderr + built.stdout + built.stderr)
+            print("动态进程执行无法构建", file=sys.stderr)
+            return 1
+        for command, expected in (
+            ('/bin/sh -c "exit 9"', b"9\n"),
+            ("kill -TERM $$", b"143\n"),
+        ):
+            executed = subprocess.run(
+                [str(dynamic_command_output), command],
+                cwd=ROOT,
+                capture_output=True,
+                check=False,
+                timeout=5,
+            )
+            if executed.returncode != 0 or executed.stdout != expected or executed.stderr:
+                sys.stderr.buffer.write(executed.stdout[:512] + executed.stderr[:512])
+                print(f"动态进程执行 {command!r} 状态不符", file=sys.stderr)
+                return 1
+        empty_command = subprocess.run(
+            [str(dynamic_command_output), ""],
+            cwd=ROOT,
+            capture_output=True,
+            check=False,
+            timeout=5,
+        )
+        if empty_command.returncode == 0 or empty_command.stdout:
+            sys.stderr.buffer.write(empty_command.stdout[:512] + empty_command.stderr[:512])
+            print("空动态命令未以非零退出且无 stdout", file=sys.stderr)
             return 1
 
         out_of_range_source = temp / "file-mode-out-of-range.serica"
@@ -4134,10 +4999,11 @@ def main() -> int:
             try:
                 verify_native_console_artifact(
                     artifact,
+                    require_integer=label not in TEXT_OUTPUT_DYNAMIC_LABELS,
                     require_variable_storage=has_variable,
                     require_runtime_input=True,
                     required_instructions=() if "array" in label else instruction if isinstance(instruction, tuple) else (instruction,),
-                    required_imports=("_mmap", "_munmap") if "array" in label else (),
+                    required_imports=("_mmap", "_munmap") if "array" in label or "substring order" in label or label.startswith("runtime static text ifElse variable") or label.startswith("runtime static text ifElse success") or label.startswith("runtime text variable success") else (),
                 )
             except RuntimeError as failure:
                 print(failure, file=sys.stderr)
@@ -4355,6 +5221,11 @@ def main() -> int:
                     required_instructions=tuple(required_instructions),
                 )
                 if index >= len(RUNTIME_TEXT_PARAMETER_CASES) + len(OWNED_TEXT_RETURN_CASES):
+                    borrowed_consumer = any(
+                        marker in source_text
+                        for marker in ("textLength（改写（", "equals（改写（", "notEquals（改写（")
+                    )
+                if index >= len(RUNTIME_TEXT_PARAMETER_CASES) + len(OWNED_TEXT_RETURN_CASES) and not borrowed_consumer:
                     disassembly = subprocess.run(
                         ["otool", "-tV", str(artifact)], text=True, capture_output=True, check=False
                     )
@@ -4395,6 +5266,162 @@ def main() -> int:
                     file=sys.stderr,
                 )
                 return 1
+
+        for index, (label, source_text, supplied, expected) in enumerate(STDOUT_WRITE_CASES):
+            source = temp / f"stdout-write-{index}.serica"
+            source.write_text(source_text, encoding="utf-8")
+            checked = run("check", str(source))
+            artifact = temp / f"stdout-write-{index}"
+            built = run("build", str(source), "-o", str(artifact))
+            if checked.returncode != 0 or built.returncode != 0:
+                sys.stderr.write(checked.stdout + checked.stderr + built.stdout + built.stderr)
+                print(f"{label} 无法检查或构建", file=sys.stderr)
+                return 1
+            stdout_imports = ["_mmap", "_munmap"] if source_declares_runtime_text_variable(source_text) else []
+            if any(marker in source_text for marker in ("fileSize（", "exists（", "isDirectory（")):
+                stdout_imports.extend(("_fstat", "_open", "_close"))
+            try:
+                verify_native_console_artifact(
+                    artifact,
+                    require_integer=False,
+                    require_runtime_input="readText（" in source_text,
+                    required_imports=tuple(stdout_imports),
+                    required_instructions=("cmp\tx24, x22", "b.ge\t", "add\tx24, x24, x0"),
+                )
+            except RuntimeError as failure:
+                print(f"{label}：{failure}", file=sys.stderr)
+                return 1
+            executed = subprocess.run(
+                [str(artifact)], cwd=ROOT, input=supplied, text=True, capture_output=True, check=False
+            )
+            if executed.returncode != 0 or executed.stdout != expected or executed.stderr:
+                sys.stderr.write(executed.stdout + executed.stderr)
+                print(
+                    f"{label} 结果不符：期望 {expected!r}，实际 stdout={executed.stdout!r}，"
+                    f"退出码 {executed.returncode}",
+                    file=sys.stderr,
+                )
+                return 1
+
+        for index, (label, source_text, supplied, expected_stdout, expected_stderr) in enumerate(STDERR_WRITE_CASES):
+            source = temp / f"stderr-write-{index}.serica"
+            source.write_text(source_text, encoding="utf-8")
+            checked = run("check", str(source))
+            artifact = temp / f"stderr-write-{index}"
+            built = run("build", str(source), "-o", str(artifact))
+            if checked.returncode != 0 or built.returncode != 0:
+                sys.stderr.write(checked.stdout + checked.stderr + built.stdout + built.stderr)
+                print(f"{label} 无法检查或构建", file=sys.stderr)
+                return 1
+            try:
+                verify_native_console_artifact(
+                    artifact,
+                    require_integer=False,
+                    require_runtime_input="readText（" in source_text,
+                    required_instructions=("cmp\tx24, x22", "b.ge\t", "add\tx24, x24, x0"),
+                    required_imports=("_mmap", "_munmap") if "readText（" in source_text else (),
+                )
+            except RuntimeError as failure:
+                print(f"{label}：{failure}", file=sys.stderr)
+                return 1
+            executed = subprocess.run(
+                [str(artifact)], cwd=ROOT, input=supplied, text=True, capture_output=True, check=False
+            )
+            if executed.returncode != 0 or executed.stdout != expected_stdout or executed.stderr != expected_stderr:
+                sys.stderr.write(executed.stdout + executed.stderr)
+                print(
+                    f"{label} 结果不符：期望 stdout={expected_stdout!r} stderr={expected_stderr!r}，"
+                    f"实际 stdout={executed.stdout!r} stderr={executed.stderr!r}，退出码 {executed.returncode}",
+                    file=sys.stderr,
+                )
+                return 1
+
+        for index, (label, source_text, supplied, expected) in enumerate(BYTE_READ_CASES):
+            source = temp / f"byte-read-{index}.serica"
+            source.write_text(source_text, encoding="utf-8")
+            checked = run("check", str(source))
+            artifact = temp / f"byte-read-{index}"
+            built = run("build", str(source), "-o", str(artifact))
+            if checked.returncode != 0 or built.returncode != 0:
+                sys.stderr.write(checked.stdout + checked.stderr + built.stdout + built.stderr)
+                print(f"{label} 无法检查或构建", file=sys.stderr)
+                return 1
+            try:
+                verify_native_console_artifact(
+                    artifact,
+                    require_runtime_input=True,
+                    required_instructions=("mov\tx2, #0x1", "ldrb\tw0, [x1]"),
+                    forbidden_imports=("_mmap", "_munmap"),
+                )
+            except RuntimeError as failure:
+                print(f"{label}：{failure}", file=sys.stderr)
+                return 1
+            executed = subprocess.run(
+                [str(artifact)], cwd=ROOT, input=supplied, capture_output=True, check=False, timeout=5
+            )
+            if executed.returncode != 0 or executed.stdout != expected or executed.stderr:
+                sys.stderr.buffer.write(executed.stdout + executed.stderr)
+                print(
+                    f"{label} 结果不符：期望 stdout={expected!r}，"
+                    f"实际 stdout={executed.stdout!r}、stderr={executed.stderr!r}，退出码 {executed.returncode}",
+                    file=sys.stderr,
+                )
+                return 1
+
+        stdout_write_failures = [
+            (
+                "writeText missing stdout capability",
+                "程序=【能力=array（『stdin』），输出=writeText（『字』）】。\n",
+                "S-4102",
+            ),
+            (
+                "writeText hidden function effect",
+                "函数 写（）=writeText（『字』）。\n"
+                "程序=【能力=array（『stdout』），输出=写（）】。\n",
+                "S-4106",
+            ),
+            ("writeText wrong arity", "程序=【能力=array（『stdout』），输出=writeText（）】。\n", "S-3084"),
+            ("writeText non-text argument", "程序=【能力=array（『stdout』），输出=writeText（1）】。\n", "S-3084"),
+        ]
+        stderr_write_failures = [
+            (
+                "writeError missing stderr capability",
+                "程序=【能力=array（『stdout』），输出=writeError（『字』）】。\n",
+                "S-4102",
+            ),
+            (
+                "writeError hidden function effect",
+                "函数 写（）=writeError（『字』）。\n"
+                "程序=【能力=array（『stdout』，『stderr』），输出=写（）】。\n",
+                "S-4106",
+            ),
+            ("writeError wrong arity", "程序=【能力=array（『stdout』，『stderr』），输出=writeError（）】。\n", "S-3085"),
+            ("writeError non-text argument", "程序=【能力=array（『stdout』，『stderr』），输出=writeError（1）】。\n", "S-3085"),
+        ]
+        byte_read_failures = [
+            (
+                "readByte missing stdin capability",
+                "程序=【能力=array（『stdout』），输出=readByte（）】。\n",
+                "S-4102",
+            ),
+            (
+                "readByte hidden function effect",
+                "函数 取（）=readByte（）。\n"
+                "程序=【能力=array（『stdout』，『stdin』），输出=取（）】。\n",
+                "S-4106",
+            ),
+            ("readByte wrong arity", "程序=【能力=array（『stdout』，『stdin』），输出=readByte（1）】。\n", "S-3086"),
+        ]
+        for name, source_text, expected_code in stdout_write_failures + stderr_write_failures + byte_read_failures:
+            source = temp / f"{name}.serica"
+            source.write_text(source_text, encoding="utf-8")
+            for command in ("check", "build"):
+                rejected = run_unmodified(command, str(source), "-o", str(temp / f"{name}-{command}")) if command == "build" else run_unmodified(command, str(source))
+                diagnostic = rejected.stdout + rejected.stderr
+                if rejected.returncode == 0 or f"错误 {expected_code}：" not in diagnostic:
+                    sys.stderr.write(diagnostic)
+                    print(f"{name} 的 {command} 未返回 {expected_code}", file=sys.stderr)
+                    return 1
 
         text_parameter_failures = [
             (
@@ -4504,21 +5531,6 @@ def main() -> int:
                 "S-3023",
             ),
             (
-                "owned text return borrowed length in a condition",
-                "函数 欢迎（来源）【变量 副本=来源。返回 副本。】。\n"
-                "变量 输入=readText（）。\n若（textLength（欢迎（输入））>0）【】。\n"
-                "程序=【能力=array（『stdout』，『stdin』），输出=0】。\n",
-                "S-3023",
-            ),
-            (
-                "owned text return borrowed equality in a statement",
-                "函数 欢迎（来源）【变量 副本=来源。返回 副本。】。\n"
-                "变量 输入=readText（）。\n"
-                "若（equals（欢迎（输入），『行简』））【】。\n"
-                "程序=【能力=array（『stdout』，『stdin』），输出=0】。\n",
-                "S-3023",
-            ),
-            (
                 "owned text return in another function",
                 "函数 欢迎（来源）【变量 副本=来源。变量 长度=textLength（副本）。返回 副本。】。\n"
                 "函数 代理（来源）=欢迎（来源）。\n"
@@ -4526,19 +5538,11 @@ def main() -> int:
                 "S-3023",
             ),
             (
-                "owned text return inside a function body",
-                "函数 欢迎（来源）【变量 副本=来源。返回 副本。】。\n"
-                "函数 代理（来源）【变量 结果=欢迎（来源）。返回 textLength（结果）。】。\n"
-                "变量 输入=readText（）。\n"
-                "程序=【能力=array（『stdout』，『stdin』），输出=代理（输入）】。\n",
-                "S-3023",
-            ),
-            (
                 "owned text return nested in root expression",
                 "函数 欢迎（来源）【变量 副本=来源。返回 副本。】。\n"
                 "变量 输入=readText（）。\n"
                 "程序=【能力=array（『stdout』，『stdin』），输出=textConcat（欢迎（输入），『尾』）】。\n",
-                "S-3044",
+                "S-3023",
             ),
             (
                 "text parameter returned without owned copy",
@@ -4789,7 +5793,10 @@ def main() -> int:
                         or "变量 结果=ifElse" in source_text
                         or "变量 源=ifElse" in source_text
                         or "选择（）" in source_text
+                        or "包装（文本）" in source_text
+                        or "变量 结果=成功（文本）" in source_text
                         or ("变量 副本=" in source_text and "变量 原结果=失败（" not in source_text)
+                        or "成功（array（" in source_text
                         else ()
                     ),
                 )
@@ -6265,9 +7272,9 @@ def main() -> int:
                 "S-3083",
             ),
             (
-                "environment-dynamic-argument-text-name",
-                "程序=【能力=array（『stdout』），输出=readEnvironment（argumentText（1））】。\n",
-                "S-3083",
+                "environment-dynamic-argument-text-name-invalid-index",
+                "程序=【能力=array（『stdout』，『args』），输出=readEnvironment（argumentText（『一』））】。\n",
+                "S-3069",
             ),
             (
                 "environment-dynamic-hidden-effect",
@@ -6330,6 +7337,27 @@ def main() -> int:
                 "程序=【能力=array（『stdout』），输出=查目录（）】。\n",
                 "S-4106",
             ),
+            (
+                "directory-names-missing-read",
+                "程序=【能力=array（『stdout』），输出=directoryNames（『.』）】。\n",
+                "S-4102",
+            ),
+            (
+                "directory-names-bad-argument",
+                "程序=【能力=array（『stdout』，『filesystem.read』），输出=directoryNames（1）】。\n",
+                "S-3087",
+            ),
+            (
+                "directory-names-wrong-arity",
+                "程序=【能力=array（『stdout』，『filesystem.read』），输出=directoryNames（）】。\n",
+                "S-3087",
+            ),
+            (
+                "directory-names-hidden-effect",
+                "函数 列目录（）=directoryNames（『.』）。\n"
+                "程序=【能力=array（『stdout』，『filesystem.read』），输出=列目录（）】。\n",
+                "S-4106",
+            ),
         ]
         for name, source_text, expected_code in directory_diagnostic_cases:
             source = temp / f"{name}.serica"
@@ -6344,6 +7372,55 @@ def main() -> int:
                 if rejected.returncode == 0 or f"错误 {expected_code}：" not in diagnostic:
                     sys.stderr.write(diagnostic)
                     print(f"目录类型诊断 {name} 的 {command} 未返回 {expected_code}", file=sys.stderr)
+                    return 1
+
+        process_diagnostic_cases = [
+            (
+                "process-missing-capability",
+                "程序=【能力=array（『stdout』），输出=runCommand（『true』）】。\n",
+                "S-4102",
+            ),
+            (
+                "process-bad-argument",
+                "程序=【能力=array（『stdout』，『process』），输出=runCommand（1）】。\n",
+                "S-3088",
+            ),
+            (
+                "process-wrong-arity",
+                "程序=【能力=array（『stdout』，『process』），输出=runCommand（）】。\n",
+                "S-3088",
+            ),
+            (
+                "process-empty-command",
+                "程序=【能力=array（『stdout』，『process』），输出=runCommand（『』）】。\n",
+                "S-3088",
+            ),
+            (
+                "process-hidden-effect",
+                "函数 执行（）=runCommand（『true』）。\n"
+                "程序=【能力=array（『stdout』，『process』），输出=执行（）】。\n",
+                "S-4106",
+            ),
+            (
+                "process-dynamic-argument-index",
+                "程序=【能力=array（『stdout』，『process』，『args』），"
+                "输出=runCommand（argumentText（『一』））】。\n",
+                "S-3069",
+            ),
+        ]
+        for name, source_text, expected_code in process_diagnostic_cases:
+            source = temp / f"{name}.serica"
+            source.write_text(source_text, encoding="utf-8")
+            for command in ("check", "build"):
+                rejected = (
+                    run_unmodified(command, str(source), "-o", str(temp / f"{name}-{command}"))
+                    if command == "build"
+                    else run_unmodified(command, str(source))
+                )
+                diagnostic = rejected.stdout + rejected.stderr
+                if rejected.returncode == 0 or f"错误 {expected_code}：" not in diagnostic:
+                    sys.stderr.write(diagnostic)
+                    print(f"进程执行诊断 {name} 的 {command} 未返回 {expected_code}", file=sys.stderr)
                     return 1
 
         capability_cases = [
@@ -7074,7 +8151,6 @@ def main() -> int:
             ("ifelse-mismatched-branches", "程序=【输出=ifElse（equals（1，1），1，『x』）】。\n", "S-3023"),
             ("string-order-mixed-types", "程序=【输出=ifElse（『a』<1，1，2）】。\n", "S-3023"),
             ("runtime-text-order-wrong-type", "变量 文本=readText（）。\n若（文本<1）【】。\n程序=【输出=0】。\n", "S-3023"),
-            ("runtime-text-order-slice-dynamic-ifelse", "若（substring（ifElse（equals（readText（），『x』），『ab』，『cd』），0，1）<『z』）【】。\n程序=【能力=array（『stdout』，『stdin』），输出=0】。\n", "S-3042"),
             ("forbidden-not-equal-symbol", "程序=【输出=ifElse（1!=2，1，2）】。\n", "S-1001"),
             ("integer-if-condition", "变量 数值=1。\n若（数值）【赋值 数值=2。】。\n程序=【输出=数值】。\n", "S-3015"),
             ("unknown-assignment-in-control", "若（1<2）【赋值 未声明=1。】。\n程序=【输出=1】。\n", "S-3038"),
@@ -7354,9 +8430,9 @@ def main() -> int:
             return 1
 
     print(
-        f"P1b 原生输出子门通过：{len(CASES) + len(DYNAMIC_CASES) + len(MAP_CASES) + len(RESULT_FUNCTION_CASES) + len(BLOCK_FUNCTION_CASES) + len(RUNTIME_BLOCK_LOOP_CASES) + len(RUNTIME_TEXT_PARAMETER_CASES) + len(RUNTIME_FUNCTION_ABI_CASES) + len(RUNTIME_RESULT_ABI_CASES) + 8} 个 arm64 整数形态产物和 1 个静态 UTF-8 文本产物执行，其中 {len(MAP_CASES)} 个覆盖整数键值哈希映射；另有 5 个静态文件输入成功产物（另有 3 个无输出失败）、1 个参数文本动态路径读取产物（另有 {dynamic_file_path_failure_count // 2} 个无输出失败）、{len(file_variable_cases)} 个文件文本变量成功产物（另有 {len(file_variable_failures)} 个无输出失败）、{len(file_write_cases)} 个文件写入成功产物（另有 {len(file_write_failures) + 1} 个无输出失败）、{dynamic_write_success_count} 个参数文本动态路径写入产物（另有 {dynamic_file_path_failure_count - dynamic_file_path_failure_count // 2} 个无输出失败）、1 个参数文本删除/重命名产物（另有 {file_mutation_failure_count} 个无输出失败）和 1 个参数文本目录创建/删除产物（另有 {directory_failure_count} 个无输出失败）、1 个文件大小查询产物（另有 1 个无输出失败）、1 个路径存在性查询产物（文件/目录/缺失三种场景）、1 个目录类型查询产物（文件/目录/缺失三种场景及静态路径）、2 个文件权限设置/变更产物（另有 {mode_failure_count} 个拒绝样例）、{len(TEXT_RESULT_CASES)} 个静态文本结果产物、{len(DYNAMIC_TEXT_RESULT_CASES)} 个运行时文本结果产物、{len(RESULT_FUNCTION_CASES)} 个函数结果边界产物、{len(BLOCK_FUNCTION_CASES)} 个块体函数局部作用域产物、{len(RUNTIME_BLOCK_LOOP_CASES)} 个运行时整数块循环函数产物、{len(RUNTIME_TEXT_PARAMETER_CASES)} 个运行时文本参数比较/长度/本地副本桥产物、{len(OWNED_TEXT_RETURN_CASES)} 个文本所有权返回产物、{len(OWNED_TEXT_RETURN_STORAGE_CASES)} 个文本返回调用方存储产物、{len(RUNTIME_FUNCTION_ABI_CASES)} 个递归运行时函数调用帧产物、{len(RUNTIME_RESULT_ABI_CASES)} 个递归整数结果 ABI 产物、{len(RUNTIME_TEXT_RESULT_ABI_CASES)} 个递归编译期文本结果 ABI 产物、1 个直接输入、1 个运行时整数纯函数、1 个复合实参运行时整数纯函数、1 个运行时文本纯函数、1 个整数 stdin 效果函数、1 个文本 stdin 效果函数和 1 个嵌套 array.write 效果函数产物、4 个文本长度、2 个文本变量、4 个拼接、1 个 readText 拼接、1 个 readText 切片拼接、1 个文本数组元素切片、1 个数组元素切片拼接、10 个嵌套文本拼接、6 个文本相等比较（含五层拼接比较）、3 个文本排序比较（含五层拼接比较）、7 个文本切片及 1 个直接 readText 切片、1 个拼接结果切片、1 个拼接切片长度、1 个切片拼接操作数、1 个拼接源切片操作数、4 个文本数组及 {len(argument_examples)} 个参数文本产物（{len(RUNTIME_TEXT_CASES) + 2 * len(RUNTIME_TEXT_LENGTH_CASES) + len(RUNTIME_TEXT_VARIABLE_CASES) + len(RUNTIME_TEXT_CONCAT_CASES) + len(RUNTIME_TEXT_CONCAT_OUTPUT_CASES) + len(RUNTIME_TEXT_CONCAT_LITERAL_CASES) + len(RUNTIME_TEXT_CONCAT_READ_CASES) + len(RUNTIME_TEXT_CONCAT_READ_SLICE_CASES) + len(RUNTIME_TEXT_ARRAY_SLICE_CASES) + len(RUNTIME_TEXT_ARRAY_SLICE_CONCAT_CASES) + len(RUNTIME_TEXT_COMPARISON_CASES) + len(RUNTIME_TEXT_STATIC_COMPARISON_CASES) + len(RUNTIME_TEXT_NOT_EQUAL_CASES) + len(RUNTIME_TEXT_SHORT_CIRCUIT_CASES) + len(RUNTIME_TEXT_ORDERING_CASES) + len(RUNTIME_TEXT_ORDER_EXPRESSION_CASES) + len(RUNTIME_TEXT_SLICE_CASES) + len(RUNTIME_TEXT_READ_SLICE_CASES) + len(RUNTIME_TEXT_ALIAS_SLICE_CASES) + len(RUNTIME_TEXT_DYNAMIC_SLICE_CASES) + len(RUNTIME_TEXT_CONCAT_SLICE_CASES) + len(RUNTIME_TEXT_CONCAT_SLICE_LENGTH_CASES) + len(RUNTIME_TEXT_PARAMETER_CASES) + len(OWNED_TEXT_RETURN_CASES) + len(OWNED_TEXT_RETURN_STORAGE_CASES) + 18} 个成功文本输入）、{56 + len(capability_cases) + len(loop_control_cases) + len(function_cases) + 2 * len(text_parameter_failures) + 2 * len(file_write_diagnostics) + 2 * len(boolean_type_failures) + 2 * len(map_type_failures) + 2 * len(result_type_failures) + 1} 个编译诊断及 {21 + len(DYNAMIC_FAILURES) + len(RESULT_FAILURE_CASES) + 3 * len(RUNTIME_TEXT_FAILURES) + len(RUNTIME_TEXT_VARIABLE_FAILURES) + len(RUNTIME_TEXT_CONCAT_FAILURES) + len(RUNTIME_TEXT_CONCAT_OUTPUT_FAILURES) + len(RUNTIME_TEXT_CONCAT_LITERAL_FAILURES) + len(RUNTIME_TEXT_CONCAT_READ_FAILURES) + len(RUNTIME_TEXT_CONCAT_READ_SLICE_FAILURES) + len(RUNTIME_TEXT_ARRAY_SLICE_FAILURES) + len(RUNTIME_TEXT_ARRAY_SLICE_CONCAT_FAILURES) + len(RUNTIME_TEXT_SLICE_FAILURES) + len(RUNTIME_TEXT_DYNAMIC_SLICE_FAILURES) + len(RUNTIME_TEXT_CONCAT_SLICE_FAILURES) + len(RUNTIME_TEXT_CONCAT_SLICE_FAILURES) + len(RUNTIME_TEXT_READ_SLICE_FAILURES) + len(file_write_failures) + dynamic_file_path_failure_count + file_mutation_failure_count + directory_failure_count + 1} 个运行时拒绝样例"
+        f"P1b 原生输出子门通过：{len(CASES) + len(DYNAMIC_CASES) + len(MAP_CASES) + len(RESULT_FUNCTION_CASES) + len(BLOCK_FUNCTION_CASES) + len(RUNTIME_BLOCK_LOOP_CASES) + len(RUNTIME_TEXT_PARAMETER_CASES) + len(RUNTIME_FUNCTION_ABI_CASES) + len(RUNTIME_RESULT_ABI_CASES) + len(STDOUT_WRITE_CASES) + len(STDERR_WRITE_CASES) + len(BYTE_READ_CASES) + 8} 个 arm64 整数形态产物和 1 个静态 UTF-8 文本产物执行，其中 {len(MAP_CASES)} 个覆盖整数键值哈希映射；另有 5 个静态文件输入成功产物（另有 3 个无输出失败）、1 个参数文本动态路径读取产物（另有 {dynamic_file_path_failure_count // 2} 个无输出失败）、{len(file_variable_cases)} 个文件文本变量成功产物（另有 {len(file_variable_failures)} 个无输出失败）、{len(file_write_cases)} 个文件写入成功产物（另有 {len(file_write_failures) + 1} 个无输出失败）、{dynamic_write_success_count} 个参数文本动态路径写入产物（另有 {dynamic_file_path_failure_count - dynamic_file_path_failure_count // 2} 个无输出失败）、1 个参数文本删除/重命名产物（另有 {file_mutation_failure_count} 个无输出失败）和 1 个参数文本目录创建/删除产物（另有 {directory_failure_count} 个无输出失败）、1 个文件大小查询产物（另有 1 个无输出失败）、1 个路径存在性查询产物（文件/目录/缺失三种场景）、1 个目录类型查询产物（文件/目录/缺失三种场景及静态路径）、2 个目录枚举成功产物（另有 1 个缺失目录无输出失败）、3 个进程执行成功产物（另有 1 个空命令和 1 个信号终止规范化样例）、2 个文件权限设置/变更产物（另有 {mode_failure_count} 个拒绝样例）、{len(TEXT_RESULT_CASES)} 个静态文本结果产物、{len(DYNAMIC_TEXT_RESULT_CASES)} 个运行时文本结果产物、{len(RESULT_FUNCTION_CASES)} 个函数结果边界产物、{len(BLOCK_FUNCTION_CASES)} 个块体函数局部作用域产物、{len(RUNTIME_BLOCK_LOOP_CASES)} 个运行时整数块循环函数产物、{len(RUNTIME_TEXT_PARAMETER_CASES)} 个运行时文本参数比较/长度/本地副本桥产物、{len(OWNED_TEXT_RETURN_CASES)} 个文本所有权返回产物、{len(OWNED_TEXT_RETURN_STORAGE_CASES)} 个文本返回调用方存储产物、{len(RUNTIME_FUNCTION_ABI_CASES)} 个递归运行时函数调用帧产物、{len(RUNTIME_RESULT_ABI_CASES)} 个递归整数结果 ABI 产物、{len(RUNTIME_TEXT_RESULT_ABI_CASES)} 个递归编译期文本结果 ABI 产物、{len(STDOUT_WRITE_CASES)} 个 stdout 写入与 stat 槽保持产物、{len(STDERR_WRITE_CASES)} 个 stderr 精确写入产物、{len(BYTE_READ_CASES)} 个标准输入单字节读取产物、1 个直接输入、1 个运行时整数纯函数、1 个复合实参运行时整数纯函数、1 个运行时文本纯函数、1 个整数 stdin 效果函数、1 个文本 stdin 效果函数和 1 个嵌套 array.write 效果函数产物、4 个文本长度、2 个文本变量、4 个拼接、1 个 readText 拼接、1 个 readText 切片拼接、1 个文本数组元素切片、1 个数组元素切片拼接、10 个嵌套文本拼接、6 个文本相等比较（含五层拼接比较）、3 个文本排序比较（含五层拼接比较）、7 个文本切片及 1 个直接 readText 切片、1 个拼接结果切片、1 个拼接切片长度、1 个切片拼接操作数、1 个拼接源切片操作数、4 个文本数组及 {len(argument_examples)} 个参数文本产物（{len(RUNTIME_TEXT_CASES) + 2 * len(RUNTIME_TEXT_LENGTH_CASES) + len(RUNTIME_TEXT_VARIABLE_CASES) + len(RUNTIME_TEXT_CONCAT_CASES) + len(RUNTIME_TEXT_CONCAT_OUTPUT_CASES) + len(RUNTIME_TEXT_CONCAT_LITERAL_CASES) + len(RUNTIME_TEXT_CONCAT_READ_CASES) + len(RUNTIME_TEXT_CONCAT_READ_SLICE_CASES) + len(RUNTIME_TEXT_ARRAY_SLICE_CASES) + len(RUNTIME_TEXT_ARRAY_SLICE_CONCAT_CASES) + len(RUNTIME_TEXT_COMPARISON_CASES) + len(RUNTIME_TEXT_STATIC_COMPARISON_CASES) + len(RUNTIME_TEXT_NOT_EQUAL_CASES) + len(RUNTIME_TEXT_SHORT_CIRCUIT_CASES) + len(RUNTIME_TEXT_ORDERING_CASES) + len(RUNTIME_TEXT_ORDER_EXPRESSION_CASES) + len(RUNTIME_TEXT_SLICE_CASES) + len(RUNTIME_TEXT_READ_SLICE_CASES) + len(RUNTIME_TEXT_ALIAS_SLICE_CASES) + len(RUNTIME_TEXT_DYNAMIC_SLICE_CASES) + len(RUNTIME_TEXT_CONCAT_SLICE_CASES) + len(RUNTIME_TEXT_CONCAT_SLICE_LENGTH_CASES) + len(RUNTIME_TEXT_PARAMETER_CASES) + len(OWNED_TEXT_RETURN_CASES) + len(OWNED_TEXT_RETURN_STORAGE_CASES) + sum(1 for case in STDOUT_WRITE_CASES if case[2]) + sum(1 for case in STDERR_WRITE_CASES if case[2]) + 30} 个成功文本输入）、{56 + len(capability_cases) + len(loop_control_cases) + len(function_cases) + 2 * len(text_parameter_failures) + 2 * len(file_write_diagnostics) + 2 * len(boolean_type_failures) + 2 * len(map_type_failures) + 2 * len(result_type_failures) + 2 * len(stdout_write_failures) + 2 * len(stderr_write_failures) + 2 * len(byte_read_failures) + 2 * len(environment_diagnostic_cases) + 2 * len(directory_diagnostic_cases) + 2 * len(process_diagnostic_cases) + 1} 个编译诊断及 {21 + len(DYNAMIC_FAILURES) + len(RESULT_FAILURE_CASES) + 3 * len(RUNTIME_TEXT_FAILURES) + len(RUNTIME_TEXT_VARIABLE_FAILURES) + len(RUNTIME_TEXT_CONCAT_FAILURES) + len(RUNTIME_TEXT_CONCAT_OUTPUT_FAILURES) + len(RUNTIME_TEXT_CONCAT_LITERAL_FAILURES) + len(RUNTIME_TEXT_CONCAT_READ_FAILURES) + len(RUNTIME_TEXT_CONCAT_READ_SLICE_FAILURES) + len(RUNTIME_TEXT_ARRAY_SLICE_FAILURES) + len(RUNTIME_TEXT_ARRAY_SLICE_CONCAT_FAILURES) + len(RUNTIME_TEXT_SLICE_FAILURES) + len(RUNTIME_TEXT_DYNAMIC_SLICE_FAILURES) + len(RUNTIME_TEXT_CONCAT_SLICE_FAILURES) + len(RUNTIME_TEXT_CONCAT_SLICE_FAILURES) + len(RUNTIME_TEXT_READ_SLICE_FAILURES) + len(file_write_failures) + dynamic_file_path_failure_count + file_mutation_failure_count + directory_failure_count + 3} 个运行时拒绝样例"
     )
-    print("证明静态/运行时整数运算和六种比较、且/故短路逻辑、若/否分支、凡/跳出/继续嵌套控制流、有符号 64 位整数键值哈希映射的碰撞链、覆盖更新、3/4 负载几何扩容和 200 项重排、映射式动态整数和文本数组追加/增长/索引/更新及边界拒绝、最多 16 MiB 的动态 UTF-8 文本变量、输入与变量拼接/切片写回、最多五层的动态文本拼接和相等比较、63 字节根输出/切片、文本长度/相等/码位顺序比较、布尔值 1/0 输出及带标签的整数、编译期文本或直接运行时输入成功载荷、失败结果替换、复制、重赋值、错误码观察和有界失败传播、无效果块体运行时函数通过相邻指针/长度寄存器接收只读 UTF-8 文本参数并保存到调用帧槽位、以八寄存器展平预算调用并返回 textLength 整数或六种文本比较结果、由函数体文本证据或顶层调用实参确定比较参数 ABI、将文本参数或受支持拼接/切片结果复制到函数顶层文本局部并在统一收束点清理、将已初始化函数文本局部的所有权通过 x1/x2/x3 返回给程序根输出并由调用方释放、先在调用后保存返回描述符再释放旧目标映射并由顶层文本变量接管、递归纯整数函数独立保存帧指针/链接寄存器/整数参数槽并以寄存器传参和直接链接调用返回、自递归和互递归及 200 层调用、整数及编译期静态文本成功/失败结果的调用帧返回和失败码传播、命令行参数计数与静态或运行时整数下标 UTF-8 文本输出、参数文本存储和未存储拼接/切片/相等以及成功结果载荷，以及静态或参数文本动态路径文件直接输出、装入动态文本变量和从静态或参数文本动态路径覆盖写入后的有限原生输入，运行时文本结果的独立缓冲复制、拼接/切片/文本数组元素成功载荷及复制到普通文本变量或数组元素（含越界与负索引拒绝）；支持函数顶层文本参数本地副本；D-0151/D-0152/D-0153/D-0154 另外证明效果语句体函数可直接构造整数或文本结果局部（含拼接与切片文本载荷），以及单次引用的直接或显式效果调用可进入纯函数唯一形参位；仍不证明通用文本/容器结果载荷、文本返回在表达式/条件/函数体/容器中的嵌套存储或容器逃逸、完整效果函数运行时 ABI、通用调用求值顺序、跨函数恢复、容器通用载荷、通用键值类型、通用容器、通用文件/进程 IO 或完整 P1b")
+    print("证明静态/运行时整数运算和六种比较、且/故短路逻辑、若/否分支、凡/跳出/继续嵌套控制流、有符号 64 位整数键值哈希映射的碰撞链、覆盖更新、3/4 负载几何扩容和 200 项重排、映射式动态整数和文本数组追加/增长/索引/更新及边界拒绝、最多 16 MiB 的动态 UTF-8 文本变量、输入与变量拼接/切片写回、最多五层的动态文本拼接和相等比较、63 字节根输出/切片、文本长度/相等/码位顺序比较、布尔值 1/0 输出及带标签的整数、编译期文本、直接运行时输入或普通文本变量成功载荷、失败结果替换、复制、重赋值、错误码观察和有界失败传播、无效果块体运行时函数通过相邻指针/长度寄存器接收只读 UTF-8 文本参数并保存到调用帧槽位、以八寄存器展平预算调用并返回 textLength 整数或六种文本比较结果、由函数体文本证据或顶层调用实参确定比较参数 ABI、将文本参数或受支持拼接/切片结果复制到函数顶层文本局部并在统一收束点清理、将已初始化函数文本局部的所有权通过 x1/x2/x3 返回给程序根输出并由调用方释放、先在调用后保存返回描述符再释放旧目标映射并由顶层文本变量接管、递归纯整数函数独立保存帧指针/链接寄存器/整数参数槽并以寄存器传参和直接链接调用返回、自递归和互递归及 200 层调用、整数及编译期静态文本成功/失败结果的调用帧返回和失败码传播、命令行参数计数与静态或运行时整数下标 UTF-8 文本输出、参数文本存储和未存储拼接/切片/相等以及成功结果载荷，以及静态或参数文本动态路径文件直接输出、装入动态文本变量和从静态或参数文本动态路径覆盖写入后的有限原生输入，运行时文本结果的独立缓冲复制、拼接/切片/文本数组元素成功载荷及复制到普通文本变量或数组元素（含越界与负索引拒绝）；支持函数顶层文本参数本地副本；D-0151/D-0152/D-0153/D-0154 另外证明效果语句体函数可直接构造整数或文本结果局部（含拼接与切片文本载荷），以及单次引用的直接或显式效果调用可进入纯函数唯一形参位；仍不证明通用文本/容器结果载荷、文本返回在表达式/条件/函数体/容器中的嵌套存储或容器逃逸、完整效果函数运行时 ABI、通用调用求值顺序、跨函数恢复、容器通用载荷、通用键值类型、通用容器、通用文件/进程 IO 或完整 P1b")
     return 0
 
 

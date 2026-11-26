@@ -22,10 +22,10 @@ def compile_source(source, artifact):
             raise RuntimeError(result.stdout + result.stderr)
 
 
-def expect_run(artifact, stdout, status=0, args=(), stdin=b"", env=None):
+def expect_run(artifact, stdout, status=0, args=(), stdin=b"", env=None, stderr=b""):
     result = run([artifact, *args], input=stdin, capture_output=True, timeout=10, env=env)
     actual = result.returncode, result.stdout, result.stderr
-    if actual != (status, stdout, b""):
+    if actual != (status, stdout, stderr):
         raise RuntimeError(f"{artifact.name} {args}: {actual!r}")
 
 
