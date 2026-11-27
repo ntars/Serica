@@ -13,7 +13,7 @@
 
 [简体中文](README.md) | [English](README_EN.md)
 
-**仓库描述**：【面向多端同步应用的全中文编程语言，直出原生可执行文件 | A Chinese-first programming language for multi-device sync apps that emits native executables】
+**仓库描述**：【面向多端同步应用的全中文编程语言，直出原生可执行文件，种子编译器自举中 | A Chinese-first programming language for multi-device sync apps that emits native executables.】
 
 **话题标签**：`programming-language` `compiler` `compilers` `language-design` `chinese` `cjk` `unicode` `native-code` `mach-o` `macos` `appkit` `self-hosting` `bootstrap` `zero-dependency` `reproducible-builds` `cross-platform` `declarative-ui` `developer-tools` `code-generation` `programming`
 
