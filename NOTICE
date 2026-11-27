@@ -1,0 +1,57 @@
+Serica
+Copyright © 2026 行简（Serica）贡献者
+
+本产品采用 Apache License 2.0 许可证，全文见本仓库根目录 LICENSE 文件。
+
+---
+
+## 一、第三方源代码依赖
+
+无。
+
+本仓库的编译器、运行时、标准库与工具链均为自研实现，不包含任何第三方源代码。构建产物中不得出现 `.c` 中间文件、`libLLVM`、`libpython`、`libnode` 等第三方运行时或工具链组件。此约束由规格 0.1 红线第 1 条规定。
+
+## 二、构建期工具链
+
+| 工具 | 版本约束 | 是否随本项目分发 | 许可证 | 说明 |
+| --- | --- | --- | --- | --- |
+| Go 工具链 | `>=1.23` | 否 | BSD-3-Clause | 仅用于构建种子编译器。种子编译器在自举完成后整体删除，Go 工具链不再是构建依赖。 |
+
+Go 工具链由使用者自行安装，不随本项目分发，其许可证不构成本项目的分发义务。
+
+## 三、链接期组件
+
+Serica 编译器自行完成机器码生成，仅调用操作系统自带的链接器完成最终链接。链接器不随本项目分发，不构成本项目的分发义务。
+
+| 平台 | 链接器 | 是否随本项目分发 |
+| --- | --- | --- |
+| macOS | `ld`、`ld64` | 否，系统自带 |
+| Linux | `ld`、`lld` | 否，系统自带 |
+| Windows | `link.exe`、`lld-link` | 否，系统自带 |
+| 裸机 | `ld.lld` | 否，随工具链提供 |
+
+## 四、文档中引用的第三方名称
+
+规格文档与首页为说明设计差异，提及了若干第三方语言与项目的名称，包括但不限于：C、C++、Rust、Go、Zig、Python、JavaScript、易语言、文言语（wenyan-lang）、段言（duan）、LLVM、WebAssembly。
+
+上述名称仅用于对比说明。本仓库不包含这些项目的任何源代码、二进制文件、文档内容或其衍生作品。相关名称与商标归各自所有者。
+
+## 五、字体与图像素材
+
+本仓库不含图像与字体文件。首页徽章由 shields.io 动态生成，不存储在本仓库内，其可用性由该服务提供方负责。
+
+---
+
+## English Summary
+
+Serica is licensed under the Apache License 2.0. The full text is in the LICENSE file at the repository root.
+
+**Third-party source dependencies: none.** The compiler, runtime, standard library, and toolchain are all original implementations. Build outputs must not contain `.c` intermediate files, `libLLVM`, `libpython`, or `libnode`.
+
+**Build-time toolchain:** the Go toolchain (`>=1.23`, BSD-3-Clause) is required only to build the seed compiler. It is not distributed with this project, and it ceases to be a build dependency once self-hosting is complete and the seed compiler is removed.
+
+**Link-time components:** only operating-system-provided linkers are invoked. They are not distributed with this project.
+
+**Third-party names in documentation:** names such as C, C++, Rust, Go, Zig, Python, JavaScript, LLVM, and WebAssembly appear in the specification and README solely for design comparison. No source code, binaries, or documentation from those projects are included. All such names and trademarks belong to their respective owners.
+
+**Fonts and images:** this repository contains no image or font assets. README badges are rendered dynamically by shields.io and are not stored in this repository.
