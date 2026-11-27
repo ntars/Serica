@@ -102,7 +102,13 @@
 - `例：` 段作为编译期断言。
 - 三行诊断格式与错误代号分层方案。
 
-[v3.1]: https://github.com/ntars/Serica/compare/v3.0...v3.1
-[v3.0]: https://github.com/ntars/Serica/compare/v2.0...v3.0
-[v2.0]: https://github.com/ntars/Serica/compare/v1.0...v2.0
-[v1.0]: https://github.com/ntars/Serica/releases/tag/v1.0
+[v3.1]: ./spec/Serica-开发手册.md
+[v3.0]: ./spec/Serica-开发手册.md
+[v2.0]: ./spec/Serica-开发手册.md
+[v1.0]: ./spec/Serica-开发手册.md
+
+<!--
+说明：本仓库在文档重建后从单一提交起始，历史版本不保留独立 Git tag，
+因此上列版本号链接统一指向当前规格全文，不提供逐版本差异对比。
+待实现阶段发布可执行产物时，将按语义化版本建立正式 tag 并改为 compare 链接。
+-->
