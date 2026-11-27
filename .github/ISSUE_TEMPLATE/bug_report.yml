@@ -1,0 +1,112 @@
+name: 缺陷报告
+description: 报告缺陷、错误或异常行为
+title: "[缺陷] "
+labels: ["bug"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        提交前请先检索既有 Issue，避免重复。
+
+        **本仓库当前处于规格冻结、实现未启动阶段，没有可执行编译器。**
+        若你遇到的问题是「无法编译」「找不到命令」一类，这不是缺陷，属预期状态，
+        请查阅首页「已知问题与限制」章节。
+
+        安全漏洞**不要**在此提交，请按 SECURITY.md 私下上报。
+  - type: checkboxes
+    id: preflight
+    attributes:
+      label: 提交前确认
+      options:
+        - label: 我已检索既有 Issue，未找到重复项
+          required: true
+        - label: 我已阅读首页「已知问题与限制」章节，本问题未被列为已知限制
+          required: true
+        - label: 本问题不涉及安全漏洞
+          required: true
+  - type: dropdown
+    id: area
+    attributes:
+      label: 影响范围
+      description: 问题出现在哪一部分
+      options:
+        - 规格文档（spec/）
+        - 词法分析
+        - 语法分析
+        - 名字检查与类型检查
+        - 中间表示与优化
+        - 代码生成与后端
+        - 运行时
+        - 标准库
+        - 工具链（格式化、语言服务、包管理）
+        - 种子编译器
+        - 构建与持续集成
+        - 文档（首页、贡献指南等）
+        - 其它
+    validations:
+      required: true
+  - type: textarea
+    id: what-happened
+    attributes:
+      label: 现象
+      description: 实际发生了什么
+      placeholder: 简述现象，避免「不工作」一类描述
+    validations:
+      required: true
+  - type: textarea
+    id: expected
+    attributes:
+      label: 预期行为
+      description: 你认为应该发生什么，依据是什么
+      placeholder: 引用规格章节号或给出明确理由
+    validations:
+      required: true
+  - type: textarea
+    id: reproduce
+    attributes:
+      label: 复现步骤
+      description: 最小可复现步骤。若涉及源码，请贴出完整可运行片段
+      render: text
+      placeholder: |
+        1. 创建文件 加法.serica，内容为 …
+        2. 执行 serica check 加法.serica
+        3. 观察到 …
+    validations:
+      required: true
+  - type: input
+    id: version
+    attributes:
+      label: 版本
+      description: 规格版本或编译器版本。规格版本见首页徽章
+      placeholder: 规格 v3.1
+    validations:
+      required: true
+  - type: dropdown
+    id: os
+    attributes:
+      label: 操作系统
+      options:
+        - macOS (arm64)
+        - macOS (x86_64)
+        - Linux (x86_64)
+        - Linux (arm64)
+        - Windows (x86_64)
+        - Windows (arm64)
+        - 其它
+    validations:
+      required: false
+  - type: textarea
+    id: output
+    attributes:
+      label: 实际输出
+      description: 完整的错误输出。诊断格式固定为三行（位置 / 建议 / 示例），请照原样粘贴
+      render: text
+    validations:
+      required: false
+  - type: textarea
+    id: extra
+    attributes:
+      label: 补充信息
+      description: 其它有助于定位的信息。**请勿粘贴凭证、内网地址、个人隐私**
+    validations:
+      required: false

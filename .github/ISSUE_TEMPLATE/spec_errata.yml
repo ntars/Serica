@@ -1,0 +1,107 @@
+name: 规格勘误
+description: 指出规格文档中的内部矛盾、遗漏、歧义或错误代号冲突
+title: "[规格] "
+labels: ["spec", "documentation"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        规格是本项目唯一事实来源，改动成本高于代码改动。本模板要求给出**可核对的位置与依据**，
+        而非「感觉不对」。
+
+        提交前请先阅读 CONTRIBUTING.md 第六节「规格改动的特殊流程」。
+  - type: checkboxes
+    id: preflight
+    attributes:
+      label: 提交前确认
+      options:
+        - label: 我已检索既有 Issue 与既有决策记录，未找到相同提议
+          required: true
+        - label: 我理解规格改动需附决策记录并经维护者签字
+          required: true
+        - label: 我理解词表计数、句式数、语义规则条数已封版，改动需说明影响
+          required: true
+  - type: dropdown
+    id: kind
+    attributes:
+      label: 问题类型
+      options:
+        - 内部矛盾（两处条款互相冲突）
+        - 语法空洞（定义了类型但未定义写法）
+        - 语义歧义（可作出多种解释）
+        - 反例缺失（应判错的写法未被覆盖）
+        - 错误代号冲突或号段复用
+        - 计数错误（条目数、句式数、规则条数与实际不符）
+        - 示例自身违规（示例违反规格自身规则）
+        - 文档断链或表述错误
+        - 其它
+    validations:
+      required: true
+  - type: textarea
+    id: location
+    attributes:
+      label: 位置
+      description: 精确到章节号与行号。可用 `grep -n` 定位
+      placeholder: |
+        spec/Serica-开发手册.md 第 1.8.2 节，第 1240 至 1255 行
+    validations:
+      required: true
+  - type: textarea
+    id: problem
+    attributes:
+      label: 问题描述
+      description: 具体是什么问题。请引用原文，不要转述
+      render: text
+    validations:
+      required: true
+  - type: textarea
+    id: evidence
+    attributes:
+      label: 依据
+      description: 为什么这是问题。若是矛盾，请列出冲突的另一处；若是空洞，请给出无法书写的源码
+      render: text
+    validations:
+      required: true
+  - type: textarea
+    id: proposal
+    attributes:
+      label: 建议改法
+      description: 给出具体条文，而非「应该更清楚」。若能保持词表与句式不变，请说明
+      render: text
+    validations:
+      required: true
+  - type: textarea
+    id: rejected
+    attributes:
+      label: 已排除的替代方案
+      description: 你考虑过但不采用的写法，以及否决理由。此项体现方案已被充分权衡
+    validations:
+      required: false
+  - type: textarea
+    id: impact
+    attributes:
+      label: 影响评估
+      description: 逐项确认。这是评审的关键依据
+      value: |
+        - 是否影响词表条目数（当前 115 条目 / 112 词形）：
+        - 是否影响句式数（当前 16 种）：
+        - 是否影响语义硬规则条数（当前 28 条）：
+        - 是否影响反例条数（当前 60 条）：
+        - 是否新增错误代号：
+        - 是否使既有示例失效：
+    validations:
+      required: true
+  - type: textarea
+    id: sync
+    attributes:
+      label: 需同步修改的位置
+      description: 一次规格改动通常需同步四处：条款正文、语义硬规则、反例、错误代号表。四处不一致即为未完成
+      value: |
+        - [ ] 条款正文
+        - [ ] 1.15 语义硬规则
+        - [ ] 1.19 反例
+        - [ ] 9.3.1 错误代号表
+        - [ ] 目录（TOC）
+        - [ ] 首页 README 与 README_EN
+    validations:
+      required: true

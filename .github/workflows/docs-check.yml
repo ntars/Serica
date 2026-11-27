@@ -1,0 +1,148 @@
+name: 文档校验
+
+# 本仓库处于规格冻结、实现未启动阶段，没有可编译的源码。
+# 因此持续集成只做文档层校验，不执行构建。
+# 待 M0 建立构建系统后，在此追加构建与一致性套件任务。
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  docs-check:
+    name: 文档完整性
+    runs-on: ubuntu-latest
+    steps:
+      - name: 检出
+        uses: actions/checkout@v4
+
+      - name: 校验必需文件存在
+        run: |
+          set -euo pipefail
+          fail=0
+          for f in README.md README_EN.md LICENSE NOTICE CHANGELOG.md \
+                   CONTRIBUTING.md SECURITY.md CODE_OF_CONDUCT.md \
+                   .gitignore "spec/Serica-开发手册.md"; do
+            if [ ! -f "$f" ]; then
+              echo "::error file=$f::必需文件缺失"
+              fail=1
+            fi
+          done
+          for d in .github/ISSUE_TEMPLATE; do
+            if [ ! -d "$d" ]; then
+              echo "::error file=$d::必需目录缺失"
+              fail=1
+            fi
+          done
+          exit $fail
+
+      - name: 校验相对链接可达
+        run: |
+          set -euo pipefail
+          fail=0
+          for doc in README.md README_EN.md CONTRIBUTING.md SECURITY.md; do
+            [ -f "$doc" ] || continue
+            while IFS= read -r link; do
+              [ -z "$link" ] && continue
+              case "$link" in
+                http://*|https://*|mailto:*|\#*) continue ;;
+              esac
+              target="${link%%#*}"
+              target="${target%%\?*}"
+              [ -z "$target" ] && continue
+              if [ ! -e "$target" ]; then
+                echo "::error file=$doc::断链 $link"
+                fail=1
+              fi
+            done < <(grep -oE '\]\([^)]+\)' "$doc" | sed -e 's/^](//' -e 's/)$//' | sort -u)
+          done
+          exit $fail
+
+      - name: 校验无第三方依赖清单文件
+        run: |
+          set -euo pipefail
+          # 规格 0.1 红线第 1 条：不引入第三方运行时依赖。
+          # 判定依据是「是否存在依赖清单文件」，而非文档中是否提及第三方语言名——
+          # 规格本身需要用这些名称来说明禁止事项与其被否决的理由。
+          fail=0
+          for f in package.json package-lock.json yarn.lock pnpm-lock.yaml \
+                   requirements.txt Pipfile poetry.lock Cargo.toml Cargo.lock \
+                   Gemfile Gemfile.lock CMakeLists.txt meson.build; do
+            if [ -e "$f" ]; then
+              echo "::error file=$f::出现第三方依赖清单文件，违反规格 0.1 红线第 1 条"
+              fail=1
+            fi
+          done
+          exit $fail
+
+      - name: 校验无 .c 中间产物
+        run: |
+          set -euo pipefail
+          # 规格 0.1 红线第 1 条：构建产物中不得出现 .c 中间文件
+          hits=$(git ls-files '*.c' '*.cc' '*.cpp' '*.h' '*.hpp' 2>/dev/null | grep -v '^spec/' || true)
+          if [ -n "$hits" ]; then
+            echo "::error::出现 C/C++ 源码文件，违反自研约束"
+            echo "$hits"
+            exit 1
+          fi
+          echo "通过"
+
+      - name: 校验规格计数口径一致
+        run: |
+          set -euo pipefail
+          spec="spec/Serica-开发手册.md"
+          if [ ! -f "$spec" ]; then
+            echo "规格缺失，跳过"
+            exit 0
+          fi
+          # 词表计数必须同时出现 115 条目与 112 词形
+          for n in 115 112; do
+            if ! grep -q "$n" "$spec"; then
+              echo "::error file=$spec::未找到词表计数 $n"
+              exit 1
+            fi
+          done
+          echo "通过"
+
+  secret-scan:
+    name: 凭证扫描
+    runs-on: ubuntu-latest
+    steps:
+      - name: 检出
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: 扫描常见凭证模式
+        run: |
+          set -euo pipefail
+          fail=0
+          patterns='gh[pousr]_[A-Za-z0-9]{36,}|github_pat_[A-Za-z0-9_]{50,}|-----BEGIN [A-Z ]*PRIVATE KEY-----|AKIA[0-9A-Z]{16}'
+          while IFS= read -r hit; do
+            [ -z "$hit" ] && continue
+            echo "::error::$hit"
+            fail=1
+          done < <(grep -rInE "$patterns" . --exclude-dir=.git --exclude-dir=.github 2>/dev/null || true)
+          if [ "$fail" -eq 1 ]; then
+            echo "发现疑似凭证，请移出仓库并轮换"
+            exit 1
+          fi
+          echo "未发现凭证"
+
+      - name: 校验无构建产物与垃圾文件入库
+        run: |
+          set -euo pipefail
+          fail=0
+          banned='(^|/)\.DS_Store$|\.exe$|\.dylib$|\.so$|\.o$|\.a$|(^|/)node_modules/|(^|/)\.env$|\.pem$|\.key$'
+          while IFS= read -r f; do
+            [ -z "$f" ] && continue
+            echo "::error file=$f::禁止入库的文件"
+            fail=1
+          done < <(git ls-files | grep -E "$banned" || true)
+          exit $fail
