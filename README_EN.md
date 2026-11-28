@@ -2,18 +2,18 @@
 
 # Serica
 
-[![Project status](https://img.shields.io/badge/status-spec%20frozen-8957e5?style=flat-square)](#known-issues-and-limitations)
+[![Project status](https://img.shields.io/badge/status-spec%20frozen%20%2F%20lexer%20only-lightgrey?style=flat-square)](#known-issues-and-limitations)
 [![Spec version](https://img.shields.io/badge/spec-v3.1-blue?style=flat-square)](#changelog)
 [![License](https://img.shields.io/badge/license-Apache--2.0-blue?style=flat-square)](./LICENSE)
 [![Targets](https://img.shields.io/badge/targets-10%20platforms-informational?style=flat-square)](#compatibility)
 [![Dependencies](https://img.shields.io/badge/dependencies-0-brightgreen?style=flat-square)](#technology-stack-and-dependencies)
 [![Language](https://img.shields.io/badge/language-Chinese--first-red?style=flat-square)](#introduction)
 
-**Repository description**: A general-purpose programming language entirely in Chinese — Chinese identifiers, keywords and punctuation, so writing code no longer requires English; by design the compiler writes itself in its own language and emits executables directly, without going through C or depending on LLVM | 一门全中文的通用编程语言——变量名、关键字与标点均为中文，编写代码不再需要使用英语；设计上编译器以自身语言编写自身，直接产出可执行程序，不经过 C 语言，也不依赖 LLVM.
+**Repository description**: `行简 Serica：一门全中文的通用编程语言——变量名、关键字、标点均为中文；设计上自举并直接产出原生程序，不经过 C、不依赖 LLVM。当前规格已冻结，实现止于词法分析。 | Serica: a Chinese-first general-purpose language — Chinese identifiers, keywords and punctuation; designed to self-host and emit native binaries without C or LLVM. Spec frozen; implementation stops at the lexer.`
 
 **Topics**: `arm64` `automatic-reference-counting` `bare-metal` `bootstrap` `chinese` `chinese-programming` `cjk` `compiler` `concurrency` `cross-platform` `general-purpose-language` `language-design` `monomorphization` `native-code` `non-english` `programming-language` `self-hosting` `systems-programming` `unicode` `wasm`
 
-**One-line positioning**: A systems programming language that lets Chinese speakers write code the way they write prose, compiled by a self-hosted toolchain to native artifacts for ten platforms.
+**One-line positioning**: A systems programming language that lets Chinese speakers write code the way they write prose, designed to be compiled by a self-hosted toolchain to native artifacts for ten platforms.
 
 [English](./README_EN.md) | [简体中文](./README.md)
 
@@ -169,35 +169,37 @@ Third-party runtime dependencies are zero. The only external build-time dependen
 
 ## Installation and deployment
 
-There is currently **no installable release**. The repository is at the specification-frozen, implementation-not-started stage: no executable compiler exists and no package manager entry exists. The steps below describe the future installation shape; running them today yields no working toolchain.
+There is currently **no installable release**. The language specification is frozen at v3.1 and the seed implementation stops at the lexer: the `lex`, `check` and `test` commands work, while parsing, type checking, IR generation, code generation, the runtime and self-hosting are unimplemented. No executable compiler and no package-manager entry exist.
 
-Environment requirements (once implemented): macOS 13 or later, Linux kernel 5.10 or later, Windows 10 or later; Go 1.23 or later, needed only to build the seed compiler from source.
+Environment requirements: Go 1.27, as pinned in `go.mod`; the lexer is platform-independent.
 
-Build from source (available once the build system lands in M0):
+Build the seed lexer from source:
 
 ```bash
 git clone https://github.com/ntars/Serica.git
 cd Serica
-make seed
+go build -o serica ./seed/main.go
 ```
 
-Verify the installation:
+`go build ./seed` currently fails because `seed/test_main.go` and `seed/main.go` both declare `main`; the command above names the entry file explicitly.
+
+Verify the lexer:
 
 ```bash
-./build/serica --version
+./serica check tests/示例/加法.serica
 ```
 
-Expected output (shape only; not executable today):
+Expected output:
 
 ```text
-serica 0.1.0 (spec v3.1)
+加法.serica: 词法检查通过（33 tokens）
 ```
 
-Upgrade and uninstall: once implemented, handled by the `serica` package commands; see release notes. Containerized deployment: no image is provided; section 7.4 lists containerization as out of scope.
+Upgrade and uninstall: not applicable; there is no release. Containerized deployment: no image is provided; section 7.4 lists containerization as out of scope.
 
 ## Quick start
 
-The program below is example 1 from section 4.5 of the specification, included to show how the language reads. It **cannot be compiled or run yet**, because the compiler implementation has not started. The program takes two integers and outputs their sum; the `例：` section asserts that with `甲` as 2 and `乙` as 3, `和` must be 5, and that assertion is checked at compile time.
+The program below is example 1 from section 4.5 of the specification, included to show how the language reads. It **cannot be compiled or run yet**, because code generation and the runtime are unimplemented. The program takes two integers and outputs their sum; the `例：` section asserts that with `甲` as 2 and `乙` as 3, `和` must be 5, and that assertion is checked at compile time.
 
 ```text
 《加法》
@@ -314,7 +316,7 @@ Directory responsibilities: `spec/` holds specifications and decision records on
 
 ## Performance
 
-No measurements exist yet. Implementation has not started, so every performance number would be an estimate; this section therefore reports none.
+No measurements exist yet. Only the lexer is implemented, so every performance number would be an estimate; this section therefore reports none.
 
 Measurement plan (written into the acceptance criteria in section 0.2 and the stage gates): compiling 100000 lines of source takes at most 60 seconds single-threaded in a debug build; zero reference-count leaks are verified by `--检查泄漏` in CI; exceptions are table-driven with no extra instructions on the normal path, and whether that is truly zero-cost is proven by intermediate-representation comparison rather than by timing. Test environment, method and metrics will be added to this section after M11.
 
@@ -350,7 +352,7 @@ Explicitly unsupported: 32-bit x86 targets, MSVC runtime dependency on Windows, 
 
 **Current status**
 
-The repository is at the specification-frozen, implementation-not-started stage. The language specification is complete at v3.1, spanning 3593 lines with 13 symbol classes, 115 vocabulary entries, 16 sentence patterns, 28 semantic rules, 60 negative cases, 52 intermediate-representation instructions, 9 optimization passes, 10 target backends, 12 milestones, 33 task cards and 12 stage gates. No implementation code has been written.
+The repository is at the specification-frozen stage, and the seed implementation stops at lexical analysis. The language specification is complete at v3.1, spanning 3593 lines with 13 symbol classes, 115 vocabulary entries, 16 sentence patterns, 28 semantic rules, 60 negative cases, 52 intermediate-representation instructions, 9 optimization passes, 10 target backends, 12 milestones, 33 task cards and 12 stage gates. The only implementation is the Go lexer under `seed/lex`; every later stage is unimplemented.
 
 **Known issues**
 
@@ -359,7 +361,6 @@ The repository is at the specification-frozen, implementation-not-started stage.
 | No executable compiler | Nothing can be compiled, run or benchmarked | Read as a specification only | See [Roadmap](#roadmap) M0 to M9 |
 | No standard library implementation | No input/output, text or math functions | Section 4.3 lists the minimal set with signatures | Roadmap M4 to M7 |
 | No release or package manager entry | Cannot install through a package manager | Build from source once M0 establishes the build system | Roadmap M0 |
-| No CI workflow | No automated verification | Run the conformance suite manually per section 9.2 | Roadmap M0 |
 
 **Current limitations**
 
@@ -378,7 +379,7 @@ Each item above has a stated reason and alternative in section 1.18 of the speci
 
 | Feature | Reason not implemented | Planned status |
 | --- | --- | --- |
-| Lexer and parser | Implementation not started | Scheduled M1 |
+| Parser, name and type checking | AST types defined (`seed/parse/ast.go`, 559 lines); parser, name and type checking unimplemented | Scheduled M1 to M2 |
 | Type checking and monomorphization | Depends on the front end | Scheduled M2 |
 | Intermediate representation and interpreter | Depends on type checking | Scheduled M3 |
 | First backend (macOS arm64) | Depends on the intermediate representation | Scheduled M4 |

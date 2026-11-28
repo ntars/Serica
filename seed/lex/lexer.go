@@ -603,6 +603,7 @@ func (l *Lexer) Tokenize() ([]Token, []Error) {
 		// 4. 若是 ASCII 数字 → 累积连续数字与至多一个小数点 → 数字 token
 		if isDigit(r) {
 			startCol := l.column
+			digitStart := l.pos
 			hasDecimal := false
 			for {
 				r = l.currentRune()
@@ -615,9 +616,10 @@ func (l *Lexer) Tokenize() ([]Token, []Error) {
 					break
 				}
 			}
+			digitText := l.source[digitStart:l.pos]
 			l.tokens = append(l.tokens, Token{
 				Type:    TOK_数字,
-				Literal: l.source[startCol-1 : l.pos], // 列号从 1 起，pos 是下一个位置
+				Literal: digitText,
 				Line:    l.line,
 				Column:  startCol,
 			})
@@ -641,6 +643,7 @@ func (l *Lexer) Tokenize() ([]Token, []Error) {
 			// 5.c. 都未命中 → 把当前一个汉字并入标识符缓冲，位置前移 1
 			// 累积整个标识符（汉字、`_`、ASCII 数字）
 			startCol := l.column
+			idStart := l.pos
 			for {
 				r = l.currentRune()
 				if isIdentContinuation(r) {
@@ -649,7 +652,7 @@ func (l *Lexer) Tokenize() ([]Token, []Error) {
 					break
 				}
 			}
-			idLiteral := l.source[startCol-1 : l.pos]
+			idLiteral := l.source[idStart:l.pos]
 
 			// 5.d. 标识符缓冲非空且下一步命中内置名或词表词 → 先输出标识符 token，再处理
 			l.tokens = append(l.tokens, Token{
