@@ -9,9 +9,9 @@
 [![Dependencies](https://img.shields.io/badge/dependencies-0-brightgreen?style=flat-square)](#technology-stack-and-dependencies)
 [![Language](https://img.shields.io/badge/language-Chinese--first-red?style=flat-square)](#introduction)
 
-**Repository description**: A Chinese-first systems programming language with a self-hosted compiler and ten native targets | 全中文系统级编程语言，零空格、全角定界，自研编译器与十个目标后端.
+**Repository description**: A general-purpose programming language entirely in Chinese — Chinese identifiers, keywords and punctuation, so writing code no longer requires English; by design the compiler writes itself in its own language and emits executables directly, without going through C or depending on LLVM | 一门全中文的通用编程语言——变量名、关键字与标点均为中文，编写代码不再需要使用英语；设计上编译器以自身语言编写自身，直接产出可执行程序，不经过 C 语言，也不依赖 LLVM.
 
-**Topics**: `chinese` `cjk` `programming-language` `compiler` `language-design` `self-hosting` `bootstrap` `native-code` `cross-platform` `code-generation` `arm64` `wasm` `bare-metal` `operating-system` `automatic-reference-counting` `monomorphization` `unicode` `developer-tools` `static-analysis` `concurrency`
+**Topics**: `arm64` `automatic-reference-counting` `bare-metal` `bootstrap` `chinese` `chinese-programming` `cjk` `compiler` `concurrency` `cross-platform` `general-purpose-language` `language-design` `monomorphization` `native-code` `non-english` `programming-language` `self-hosting` `systems-programming` `unicode` `wasm`
 
 **One-line positioning**: A systems programming language that lets Chinese speakers write code the way they write prose, compiled by a self-hosted toolchain to native artifacts for ten platforms.
 

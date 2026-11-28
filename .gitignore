@@ -1,116 +1,25 @@
-# ---- 构建产物 ----
-# 编译器可执行文件
-/build/
-/bin/
-/dist/
-/out/
-serica
-serica.exe
-*.exe
-*.dll
-*.dylib
-*.so
-*.a
-*.o
-*.obj
-*.lib
+# Built binaries and artifacts
+bin/
+build/
 
-# 中间表示与临时文件
-*.ir
-*.ll
-*.s
-*.asm.tmp
-*.tmp
-*.temp
-*.swp
-*.swo
+# Build artifacts
+*.o *.a *.so *.dylib
+
+# Temporary files
+.tmp.* .temp.*
+
+# Editor backup files
 *~
 
-# 本次编译产物
-*.wasm
-*.wat
-*.hap
-*.apk
-*.app/
-*.ipa
+# macOS junk files
+.DDS
 
-# 覆盖率与性能剖析
-*.prof
-*.pprof
-coverage.out
-coverage.html
-*.cover
-
-# 测试临时目录
-/tests/tmp/
-/tests/out/
-
-# ---- 种子编译器 ----
-# 自举完成后 seed/ 整体删除；期间其产物不入库
-/seed/build/
-/seed/serica-seed
-
-# ---- 依赖与包管理 ----
-# 本项目不引入第三方运行时依赖，以下为防御性忽略
-/vendor/
-node_modules/
-.pnp/
-.pnp.js
-
-# ---- Go 工具链 ----
-# go.sum 需入库；以下为本地缓存与工作区文件
-go.work
-go.work.sum
-*.test
-
-# ---- 编辑器与 IDE ----
+# IDE files
 .vscode/
 .idea/
-*.iml
-*.ipr
-*.iws
-.fleet/
-*.code-workspace
-.project
-.classpath
-.settings/
-nbproject/
-*.suo
-*.user
-*.userosscache
-*.sln.docstates
 
-# ---- 操作系统垃圾文件 ----
-.DS_Store
-.DS_Store?
-._*
-.Spotlight-V100
-.Trashes
-ehthumbs.db
-Thumbs.db
-desktop.ini
-$RECYCLE.BIN/
-*.lnk
+# Temporary logs/output files
+*.log *.out *.err
 
-# 云同步客户端的临时上传标记
-*.baiduyun.uploading.cfg
-*.icloud
-*.dropbox
-
-# ---- 本地环境与密钥 ----
-# 严禁提交任何凭证；以下为防御性忽略
-.env
+# User-specific config files
 .env.*
-!.env.example
-*.pem
-*.key
-*.p12
-*.pfx
-*.keystore
-secrets/
-credentials.json
-token.txt
-
-# ---- 日志与诊断 ----
-*.log
-logs/
